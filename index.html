@@ -197,9 +197,51 @@
               </div>
               <div class="priority-box"><p class="small-label">YOUR PRIORITIES</p><ol id="priorityList"></ol></div>
               <div class="roadmap-preview"><p class="small-label">FIRST TRAINING BLOCK</p><h4>Your programme starts here</h4><div id="roadmapCards" class="roadmap-grid"></div></div>
+              <div class="plan-launch">
+                <div><p class="small-label">PERSONALISED ROADMAP</p><h4>Turn these results into a training plan.</h4><p>The site will select four starting modules and adapt the language focus to the gaps identified above.</p></div>
+                <button class="primary-button" id="openPlanBtn" type="button">Open my training plan →</button>
+              </div>
               <p class="microcopy">This profile is an orientation tool, not a CEFR certification. Speaking and writing are self-rated in this prototype and should later be reviewed by a teacher.</p>
             </div>
           </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section plan-section" id="my-plan">
+      <div class="section-heading">
+        <p class="eyebrow">MY PERSONALISED TRAINING PLAN</p>
+        <h2>Your next steps should depend on your diagnostic.</h2>
+        <p id="planIntro">Complete the diagnostic to unlock a four-block starter programme built around your weakest areas and your SOC/client-facing work.</p>
+      </div>
+
+      <div id="planLocked" class="plan-locked">
+        <div class="lock-icon" aria-hidden="true">↗</div>
+        <div><h3>Your roadmap is waiting for your diagnostic.</h3><p>Once the profile is calculated, this section will automatically select the most useful starting modules.</p></div>
+        <button class="secondary-button" type="button" data-go="diagnostic">Go to diagnostic</button>
+      </div>
+
+      <div id="planUnlocked" hidden>
+        <div class="plan-summary">
+          <div>
+            <p class="small-label">STARTER BLOCK</p>
+            <h3>4 focused modules · one operational goal at a time</h3>
+            <p id="planReason">Your plan is based on the lowest-scoring areas in your diagnostic.</p>
+          </div>
+          <div class="progress-card">
+            <div class="progress-head"><strong>Starter-plan progress</strong><span id="planProgressText">0 / 4</span></div>
+            <div class="bar large"><div class="bar-fill" id="planProgressBar" style="width:0%"></div></div>
+          </div>
+        </div>
+
+        <div class="personal-plan-grid" id="personalPlanGrid"></div>
+
+        <div class="lesson-workspace" id="lessonWorkspace" hidden>
+          <div class="lesson-topline">
+            <button class="back-link" id="closeLessonBtn" type="button">← Back to my plan</button>
+            <span class="lesson-position" id="lessonPosition"></span>
+          </div>
+          <div id="lessonContent"></div>
         </div>
       </div>
     </section>

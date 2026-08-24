@@ -155,9 +155,203 @@ document.getElementById("calculateBtn").addEventListener("click",()=>{
   const writingWords=document.getElementById("writingTask").value.trim().split(/\s+/).filter(Boolean).length;
   const speakingPct=speakingRating?speakingRating*20:50;let writingPct=writingRating?writingRating*20:50;if(writingWords>=90&&writingWords<=140)writingPct=Math.min(100,writingPct+5);if(writingWords>0&&writingWords<60)writingPct=Math.max(20,writingPct-10);
   const results={grammar:grammar.pct,cyber:cyber.pct,listening:listening.pct,pronunciation:pronunciation.pct,speaking:speakingPct,writing:writingPct};
-  const details={grammar,cyber,listening,pronunciation}; localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details})); renderProfile(results,details); showSection("results");
+  const details={grammar,cyber,listening,pronunciation}; localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details})); renderProfile(results,details); renderTrainingPlan(results,details); showSection("results");
 });
 
-document.getElementById("resetBtn").addEventListener("click",()=>{if(!confirm("Reset all answers and local diagnostic results?"))return;localStorage.removeItem("ebackontrack-v2");document.querySelectorAll("input[type=radio]").forEach(i=>i.checked=false);document.querySelectorAll("textarea").forEach(t=>t.value="");document.querySelectorAll("select").forEach(s=>s.value="");document.getElementById("wordCount").textContent="0";document.getElementById("resultsEmpty").hidden=false;document.getElementById("resultsContent").hidden=true;showSection("grammar");});
+document.getElementById("resetBtn").addEventListener("click",()=>{if(!confirm("Reset all answers and local diagnostic results?"))return;localStorage.removeItem("ebackontrack-v2");localStorage.removeItem("ebackontrack-v3-progress");document.querySelectorAll("input[type=radio]").forEach(i=>i.checked=false);document.querySelectorAll("textarea").forEach(t=>t.value="");document.querySelectorAll("select").forEach(s=>s.value="");document.getElementById("wordCount").textContent="0";document.getElementById("resultsEmpty").hidden=false;document.getElementById("resultsContent").hidden=true;document.getElementById("planUnlocked").hidden=true;document.getElementById("planLocked").hidden=false;showSection("grammar");});
 
 try{const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));if(saved?.results&&saved?.details)renderProfile(saved.results,saved.details);}catch(e){}
+
+
+// ---------- V3: personalised training plan ----------
+const trainingModules = {
+  role: {
+    title:"Explain your SOC role", short:"Explain your work clearly without drowning the listener in jargon.", tags:["Speaking","Plain English","SOC workflow"],
+    objective:"By the end of this module, you can explain your role, the purpose of a SOC and what happens after an alert in 60–90 seconds.",
+    scenario:"A new international client asks: “So what exactly do you and the SOC team do for us?”",
+    language:["We monitor your environment for signs of suspicious activity.","When an alert is triggered, we first assess whether it requires further investigation.","If necessary, we escalate the case and work with the relevant teams.","Our role is to reduce the time between detection, investigation and response.","In simple terms, we help identify threats early and coordinate the right response."],
+    grammar:"Present Simple for roles and processes; passive voice for processes when the actor is less important.",
+    pronunciation:"Chunk long explanations. Stress the content words: MONITOR · ALERT · INVESTIGATION · RESPONSE.",
+    mission:"Record a 75-second explanation of your role for a non-specialist client. Do not read a script.",
+    checkpoint:"Can you explain what happens from alert detection to escalation using at least three sequencing expressions?"
+  },
+  alert: {
+    title:"Qualify an alert", short:"Describe evidence, uncertainty, severity and the next checks accurately.", tags:["SOC English","Risk language","Modals"],
+    objective:"You can distinguish facts from hypotheses and explain why an alert is or is not concerning.",
+    scenario:"A detection has fired on unusual PowerShell activity. You have indicators, but not enough evidence to call it malicious yet.",
+    language:["The alert was triggered by…","At this stage, we have evidence of…, but no indication of…","This could be consistent with…, although we still need to rule out…","The activity appears unusual because…","The next step is to verify whether…"],
+    grammar:"Modals and hedging: may, might, could, appears to, seems to, is likely to. Avoid stating a hypothesis as a fact.",
+    pronunciation:"Practise contrastive stress: We have evidence of EXECUTION, but NOT of persistence.",
+    mission:"Give a 60-second alert qualification: evidence → uncertainty → severity → next check.",
+    checkpoint:"Can you make three cautious statements using could / appears to / no evidence of?"
+  },
+  incident: {
+    title:"Give an incident update", short:"Communicate what happened, what is known and what happens next.", tags:["Client communication","Listening","Perfect forms"],
+    objective:"You can give a calm, structured incident update while separating confirmed facts from ongoing investigation.",
+    scenario:"A suspicious login was detected. The account has been disabled and investigation is continuing. There is no evidence of data exfiltration so far.",
+    language:["We detected suspicious activity at approximately…","The account has been temporarily disabled as a precaution.","So far, we have found no evidence of data exfiltration.","We are currently reviewing…","We will provide the next update once…"],
+    grammar:"Past Simple for the event; Present Perfect for current findings and actions with a present result; Present Continuous for ongoing investigation.",
+    pronunciation:"Final consonants matter in incident language: detected, blocked, reviewed, logs, accounts.",
+    mission:"Deliver a 90-second client update with five parts: detection → action → current findings → uncertainty → next update.",
+    checkpoint:"Can you use Past Simple, Present Perfect and Present Continuous once each in the same update?"
+  },
+  handover: {
+    title:"Investigate & hand over", short:"Summarise evidence and actions so another analyst can continue efficiently.", tags:["Handover","Past forms","Reporting"],
+    objective:"You can give a concise shift handover with a timeline, evidence, actions already taken and outstanding checks.",
+    scenario:"Your shift is ending while an investigation is still open. Another analyst needs to take over without repeating your work.",
+    language:["The alert came in at…","I checked…, which showed…","We ruled out…","The endpoint has already been isolated.","The main outstanding point is…","The next analyst should check…"],
+    grammar:"Past Simple and sequencing: initially, then, after that, by the time, so far. Use reported language to summarise findings.",
+    pronunciation:"Use pauses between information blocks. A handover should sound segmented, not rushed.",
+    mission:"Give a two-minute handover from a short incident timeline. Keep it chronological and action-focused.",
+    checkpoint:"Can another analyst identify what happened, what you did and what remains to be done?"
+  },
+  risk: {
+    title:"Explain risk to a client", short:"Translate technical evidence into likelihood, impact and business relevance.", tags:["Risk language","Plain English","Client communication"],
+    objective:"You can explain why something matters without exaggerating certainty or relying on unexplained jargon.",
+    scenario:"A manager asks why a critical vulnerability is important if there is no evidence that it has been exploited.",
+    language:["The vulnerability increases the risk because…","There is currently no evidence that it has been exploited.","The likelihood depends on…","The potential impact would be…","Our recommendation is to prioritise remediation because…"],
+    grammar:"Conditionals for consequences and modals for probability: if…, could…, may…, would… .",
+    pronunciation:"Stress the contrast between VULNERABILITY and COMPROMISE; LIKELIHOOD and IMPACT.",
+    mission:"Explain a high-risk vulnerability to a non-technical manager in 90 seconds, with no more than two technical terms.",
+    checkpoint:"Can you state likelihood, impact and recommendation as three separate ideas?"
+  },
+  remediation: {
+    title:"Recommend remediation", short:"Make clear, prioritised recommendations without sounding abrupt.", tags:["Recommendations","Diplomacy","Conditionals"],
+    objective:"You can distinguish immediate containment from short- and long-term remediation and phrase recommendations diplomatically.",
+    scenario:"The client needs to act quickly, but several remediation options have different operational costs.",
+    language:["As an immediate containment measure, we recommend…","In the short term, it would be advisable to…","To reduce the likelihood of recurrence, you may also want to…","If this cannot be completed today, we recommend…","The priority should be… because…"],
+    grammar:"Recommendation structures: recommend + -ing / recommend that + clause / should / it would be advisable to. Conditionals for fallback plans.",
+    pronunciation:"Use falling intonation for clear recommendations and softer intonation for optional suggestions.",
+    mission:"Give three prioritised recommendations: immediate, short term and long term. Justify each one.",
+    checkpoint:"Can you recommend actions without using ‘you must’ for every point?"
+  },
+  threat: {
+    title:"Threat intelligence", short:"Discuss actors, campaigns, IOCs and TTPs with evidence-based caution.", tags:["Threat intelligence","Hedging","Technical vocabulary"],
+    objective:"You can summarise threat intelligence while clearly separating observed behaviour from attribution or speculation.",
+    scenario:"You need to brief a client on activity that resembles a known threat actor's TTPs, but attribution is not confirmed.",
+    language:["The observed activity is consistent with…","The TTPs overlap with those previously associated with…","This does not by itself confirm attribution.","We have observed indicators including…","Based on the available evidence, the most likely explanation is…"],
+    grammar:"Hedging and evidence language. Practise relative clauses to add technical detail without creating sentence fragments.",
+    pronunciation:"Word stress: attribution, indicator, persistence, credential, malicious, exfiltration.",
+    mission:"Give a 90-second threat-intelligence briefing that includes one strong fact, two cautious interpretations and one limitation.",
+    checkpoint:"Can you explain the difference between ‘associated with’ and ‘attributed to’?"
+  },
+  meetings: {
+    title:"Meetings under pressure", short:"Clarify, interrupt, challenge assumptions and buy thinking time naturally.", tags:["Listening","Speaking","Meetings"],
+    objective:"You can stay active in a fast meeting even when you miss information or need time to formulate an answer.",
+    scenario:"During an incident call, several people are speaking quickly and a client asks you a question before the investigation is complete.",
+    language:["Sorry to jump in, but can I clarify one point?","Could you run that by me again?","If I understood correctly, you're asking whether…","Let me think that through for a second.","I don't want to jump to conclusions, but at this stage…","Can I come back to that once we've checked the logs?"],
+    grammar:"Question structure and indirect questions: Could you clarify what…? Do we know whether…? Can you confirm if…?",
+    pronunciation:"Connected speech and listening chunks: could_you, do_we_know, at_this_stage. Focus on meaning groups, not individual words.",
+    mission:"Run a three-minute mock incident call. Use one interruption, one clarification, one reformulation and one cautious answer.",
+    checkpoint:"Can you recover naturally when you do not understand something the first time?"
+  },
+  review: {
+    title:"Post-incident review", short:"Discuss root cause, lessons learned and improvements without assigning blame.", tags:["Past forms","Reporting","Diplomacy"],
+    objective:"You can describe the incident timeline, explain contributing factors and formulate lessons learned constructively.",
+    scenario:"The incident is closed. You are presenting what happened and what should change before the next similar event.",
+    language:["The incident began when…","One contributing factor was…","This meant that…","In hindsight, we could have…","A key lesson learned is…","Going forward, we recommend…"],
+    grammar:"Past narrative + past modals: could have, should have, might have. Use passive structures when the process matters more than blame.",
+    pronunciation:"Use sentence stress to highlight cause, consequence and action rather than stressing every word.",
+    mission:"Give a two-minute post-incident summary: timeline → contributing factors → lesson → action.",
+    checkpoint:"Can you describe a missed opportunity using could have / should have without sounding accusatory?"
+  }
+};
+
+function chooseOperationalModules(results, details){
+  const selected=[];
+  const add=k=>{if(trainingModules[k]&&!selected.includes(k))selected.push(k);};
+  const cyberWeak=tagWeaknesses(details.cyber,5).map(x=>x.name);
+  const grammarWeak=tagWeaknesses(details.grammar,5).map(x=>x.name);
+  const pronWeak=tagWeaknesses(details.pronunciation,5).map(x=>x.name);
+
+  if(cyberWeak.some(x=>["Risk language","Risk explanation","Plain English"].includes(x))) add("risk");
+  if(cyberWeak.some(x=>["Incident update","Incident response","Escalation"].includes(x))) add("incident");
+  if(cyberWeak.some(x=>["Threat intelligence","Attack lifecycle"].includes(x))) add("threat");
+  if(cyberWeak.some(x=>["Handover","Reporting"].includes(x))) add("handover");
+  if(cyberWeak.some(x=>["Recommendations"].includes(x))) add("remediation");
+  if(cyberWeak.some(x=>["Client communication","Meetings"].includes(x))) add("meetings");
+  if(cyberWeak.some(x=>["SOC terminology","SOC workflow"].includes(x))) add("role");
+
+  if(results.listening<70 || results.speaking<70) add("meetings");
+  if(grammarWeak.some(x=>x.includes("Past")||x.includes("perfect"))) add("incident");
+  if(grammarWeak.some(x=>x.includes("Conditional")||x.includes("Modals"))) add("risk");
+  if(grammarWeak.some(x=>x.includes("Passive"))) add("incident");
+  if(pronWeak.some(x=>["Connected speech","Sentence stress"].includes(x))) add("meetings");
+  if(pronWeak.some(x=>["Word stress","-ed endings","-s endings"].includes(x))) add("incident");
+
+  ["role","incident","risk","meetings","handover","remediation","threat","review"].forEach(add);
+  return selected.slice(0,4);
+}
+
+function focusFromDetails(details){
+  const g=tagWeaknesses(details.grammar,1)[0]?.name || "core accuracy";
+  const p=tagWeaknesses(details.pronunciation,1)[0]?.name || "intelligibility";
+  const c=tagWeaknesses(details.cyber,1)[0]?.name || "SOC communication";
+  return {g,p,c};
+}
+
+function planStorage(){try{return JSON.parse(localStorage.getItem("ebackontrack-v3-progress"))||{completed:[]};}catch(e){return{completed:[]};}}
+function savePlanStorage(data){localStorage.setItem("ebackontrack-v3-progress",JSON.stringify(data));}
+let currentPlan=[]; let currentDetails=null; let currentResults=null;
+
+function renderTrainingPlan(results,details){
+  currentResults=results; currentDetails=details; currentPlan=chooseOperationalModules(results,details);
+  const focus=focusFromDetails(details); const state=planStorage();
+  document.getElementById("planLocked").hidden=true; document.getElementById("planUnlocked").hidden=false;
+  document.getElementById("planIntro").textContent=`Your starter programme targets ${focus.c.toLowerCase()}, ${focus.g.toLowerCase()} and ${focus.p.toLowerCase()} while keeping every activity tied to cybersecurity work.`;
+  document.getElementById("planReason").textContent=`Diagnostic focus: ${focus.c} · ${focus.g} · ${focus.p}. The order below prioritises operational communication before isolated language study.`;
+  document.getElementById("personalPlanGrid").innerHTML=currentPlan.map((key,i)=>{
+    const m=trainingModules[key],done=state.completed.includes(key);
+    return `<article class="personal-module ${done?'completed':''}" data-module-card="${key}">
+      <div class="module-order"><span>${i+1}</span><span class="module-state">${done?'Completed':'To do'}</span></div>
+      <h3>${m.title}</h3><p>${m.short}</p>
+      <div class="module-tags">${m.tags.map(t=>`<span class="module-tag">${t}</span>`).join('')}</div>
+      <button class="secondary-button open-module" type="button" data-module="${key}">${done?'Review module':'Start module'} →</button>
+    </article>`;
+  }).join('');
+  updatePlanProgress();
+  document.querySelectorAll('.open-module').forEach(btn=>btn.addEventListener('click',()=>openTrainingModule(btn.dataset.module)));
+}
+
+function updatePlanProgress(){
+  const state=planStorage(); const done=currentPlan.filter(k=>state.completed.includes(k)).length; const pct=currentPlan.length?Math.round(done/currentPlan.length*100):0;
+  document.getElementById('planProgressText').textContent=`${done} / ${currentPlan.length||4}`;
+  document.getElementById('planProgressBar').style.width=`${pct}%`;
+}
+
+function openTrainingModule(key){
+  const m=trainingModules[key]; if(!m)return; const focus=focusFromDetails(currentDetails||{grammar:{tags:{}},cyber:{tags:{}},pronunciation:{tags:{}}});
+  const pos=currentPlan.indexOf(key)+1;
+  document.getElementById('lessonPosition').textContent=`Starter module ${pos} of ${currentPlan.length}`;
+  document.getElementById('lessonContent').innerHTML=`
+    <section class="lesson-hero">
+      <div><p class="small-label">MODULE ${String(pos).padStart(2,'0')}</p><h2>${m.title}</h2><p>${m.objective}</p></div>
+      <div class="mission-box"><strong>Professional scenario</strong><span>${m.scenario}</span></div>
+    </section>
+    <div class="lesson-grid">
+      <article class="lesson-block"><p class="small-label">1 · USEFUL LANGUAGE</p><h3>Build reusable chunks</h3><div class="language-list">${m.language.map(x=>`<div class="language-item">${x}</div>`).join('')}</div></article>
+      <article class="lesson-block"><p class="small-label">2 · ACCURACY FOCUS</p><h3>Fix the language that breaks down</h3><span class="focus-pill">Diagnostic gap: ${focus.g}</span><p>${m.grammar}</p><div class="practice-prompt"><strong>Micro-practice:</strong> Say three original sentences from your own work using this pattern.</div></article>
+      <article class="lesson-block"><p class="small-label">3 · PRONUNCIATION & LISTENING</p><h3>Make technical English easier to say and hear</h3><span class="focus-pill">Diagnostic gap: ${focus.p}</span><p>${m.pronunciation}</p><div class="practice-prompt"><strong>Shadowing:</strong> read the useful-language chunks aloud once slowly, then again at natural speed without stopping between every word.</div></article>
+      <article class="lesson-block"><p class="small-label">4 · SPEAKING MISSION</p><h3>Use it under pressure</h3><p>${m.mission}</p><div class="practice-prompt"><strong>Rule:</strong> maximum 60 seconds of preparation. Keywords are allowed; a written script is not.</div></article>
+      <article class="lesson-block full checkpoint"><p class="small-label">5 · CHECKPOINT</p><h3>Before you move on</h3><p>${m.checkpoint}</p><div class="checkpoint-actions"><button class="primary-button" type="button" id="completeModuleBtn" data-complete="${key}">Mark this module complete ✓</button><span class="checkpoint-status" id="checkpointStatus"></span></div></article>
+    </div>`;
+  document.getElementById('lessonWorkspace').hidden=false; document.getElementById('personalPlanGrid').hidden=true;
+  const state=planStorage(); if(state.completed.includes(key))document.getElementById('checkpointStatus').textContent='Already completed — reviewing is encouraged.';
+  document.getElementById('completeModuleBtn').addEventListener('click',()=>completeTrainingModule(key));
+  document.getElementById('lessonWorkspace').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function completeTrainingModule(key){
+  const state=planStorage(); if(!state.completed.includes(key))state.completed.push(key); savePlanStorage(state);
+  document.getElementById('checkpointStatus').textContent='Completed. Progress saved on this device.';
+  updatePlanProgress();
+}
+
+document.getElementById('closeLessonBtn').addEventListener('click',()=>{document.getElementById('lessonWorkspace').hidden=true;document.getElementById('personalPlanGrid').hidden=false; if(currentResults&&currentDetails)renderTrainingPlan(currentResults,currentDetails); document.getElementById('my-plan').scrollIntoView({behavior:'smooth',block:'start'});});
+document.addEventListener('click',e=>{if(e.target?.id==='openPlanBtn'){if(currentResults&&currentDetails){renderTrainingPlan(currentResults,currentDetails);document.getElementById('my-plan').scrollIntoView({behavior:'smooth'});}}});
+
+// Keep plan links working even though they are inserted below the original event-binding code.
+document.querySelectorAll('#my-plan [data-go="diagnostic"]').forEach(btn=>btn.addEventListener('click',()=>document.getElementById('diagnostic').scrollIntoView({behavior:'smooth'})));
+
+// Upgrade saved V2 diagnostic results into the V3 roadmap without changing the diagnostic itself.
+try{const saved=JSON.parse(localStorage.getItem('ebackontrack-v2'));if(saved?.results&&saved?.details){renderTrainingPlan(saved.results,saved.details);}}catch(e){}
