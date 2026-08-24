@@ -17,6 +17,7 @@
       <a class="nav-pill" href="#progress-check">Progress</a>
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
       <a class="nav-pill" href="#speaking-lab">Speaking Lab</a>
+      <a class="nav-pill" href="#pronunciation-lab">Pronunciation</a>
       <a class="nav-pill" href="#writing-lab">Writing Lab</a>
       <a class="nav-pill" href="#grammar-lab">Grammar Repair</a>
       <a class="nav-pill" href="#phrasebook">Phrasebook</a>
@@ -644,6 +645,176 @@
 
 
 
+
+
+    <section class="section pronunciation-lab-section" id="pronunciation-lab">
+      <div class="section-heading pronunciation-lab-heading">
+        <div>
+          <p class="eyebrow">PRONUNCIATION & INTELLIGIBILITY LAB</p>
+          <h2>Be easy to understand, not “accent-free”.</h2>
+          <p>The goal is not to sound native. It is to make technical English easy to follow in calls, handovers and client explanations. The lab prioritises the areas flagged by the diagnostic.</p>
+        </div>
+        <div class="pronunciation-lab-stats">
+          <div><strong id="pronUnitsComplete">0</strong><span>units complete</span></div>
+          <div><strong id="pronShadowAttempts">0</strong><span>shadowing attempts</span></div>
+          <div><strong id="pronClosedAccuracy">—</strong><span>closed-task accuracy</span></div>
+        </div>
+      </div>
+
+      <div class="pronunciation-controls">
+        <div>
+          <p class="small-label">BROWSER VOICE</p>
+          <p>Use the model to hear rhythm and target forms. Browser voices are synthetic and are not presented as authentic speakers.</p>
+        </div>
+        <label>
+          <span>Voice</span>
+          <select id="pronVoice">
+            <option value="en-GB">UK English</option>
+            <option value="en-US">US English</option>
+            <option value="en-AU">Australian English</option>
+          </select>
+        </label>
+        <label>
+          <span>Speed</span>
+          <select id="pronSpeed">
+            <option value="0.88">Training · 0.88×</option>
+            <option value="0.98" selected>Natural · 0.98×</option>
+            <option value="1.08">Pressure · 1.08×</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="pron-priority-shell">
+        <div class="pron-priority-head">
+          <div>
+            <p class="small-label">YOUR PRIORITY QUEUE</p>
+            <h3 id="pronPriorityTitle">Pronunciation selected from your diagnostic</h3>
+          </div>
+          <button class="secondary-button" id="refreshPronQueueBtn" type="button">Refresh priorities</button>
+        </div>
+        <div id="pronPriorityQueue" class="pron-priority-queue"></div>
+      </div>
+
+      <div class="pron-library-shell">
+        <div class="pron-priority-head">
+          <div>
+            <p class="small-label">ALL TRAINING UNITS</p>
+            <h3>Seven intelligibility skills</h3>
+          </div>
+          <span class="question-count">Cybersecurity context throughout</span>
+        </div>
+        <div id="pronUnitLibrary" class="pron-unit-library"></div>
+      </div>
+
+      <div class="pron-workspace" id="pronWorkspace" hidden>
+        <div class="pron-workspace-top">
+          <button class="back-link" id="closePronWorkspaceBtn" type="button">← Back to Pronunciation Lab</button>
+          <span class="speaking-status-pill" id="pronWorkspaceStatus">Training</span>
+        </div>
+
+        <div class="pron-unit-hero">
+          <div>
+            <p class="small-label" id="pronUnitTag">WORD STRESS</p>
+            <h2 id="pronUnitTitle">Word stress</h2>
+            <p id="pronUnitSubtitle"></p>
+          </div>
+          <div class="pron-signal-box">
+            <span>Diagnostic signal</span>
+            <strong id="pronDiagnosticSignal">—</strong>
+            <small id="pronDiagnosticNote">Starter unit</small>
+          </div>
+        </div>
+
+        <div class="pron-training-flow">
+          <article class="pron-stage">
+            <div class="pron-stage-number">1</div>
+            <div class="pron-stage-body">
+              <p class="small-label">HEAR THE TARGET</p>
+              <h3 id="pronModelHeading">Listen to the pattern</h3>
+              <p id="pronRuleText"></p>
+              <div id="pronExampleBank" class="pron-example-bank"></div>
+            </div>
+          </article>
+
+          <article class="pron-stage">
+            <div class="pron-stage-number">2</div>
+            <div class="pron-stage-body">
+              <p class="small-label">NOTICE</p>
+              <h3 id="pronNoticeQuestion"></h3>
+              <div id="pronNoticeOptions" class="activity-options pron-options"></div>
+              <button class="secondary-button" id="checkPronNoticeBtn" type="button">Check answer</button>
+              <div id="pronNoticeFeedback" class="activity-summary" aria-live="polite"></div>
+            </div>
+          </article>
+
+          <article class="pron-stage">
+            <div class="pron-stage-number">3</div>
+            <div class="pron-stage-body">
+              <p class="small-label">CHOOSE THE CLEARER VERSION</p>
+              <h3 id="pronChooseQuestion"></h3>
+              <div id="pronChooseOptions" class="activity-options pron-options"></div>
+              <button class="secondary-button" id="checkPronChooseBtn" type="button">Check answer</button>
+              <div id="pronChooseFeedback" class="activity-summary" aria-live="polite"></div>
+            </div>
+          </article>
+
+          <article class="pron-stage pron-shadow-stage">
+            <div class="pron-stage-number">4</div>
+            <div class="pron-stage-body">
+              <p class="small-label">SHADOW</p>
+              <h3>Listen → repeat immediately → listen back</h3>
+              <div class="shadow-target">
+                <span>TARGET LINE</span>
+                <strong id="pronShadowLine"></strong>
+                <div class="shadow-actions">
+                  <button class="secondary-button" id="pronHearShadowBtn" type="button">🔊 Hear model</button>
+                  <button class="primary-button" id="pronRecordBtn" type="button">● Record shadowing</button>
+                  <button class="secondary-button" id="pronStopBtn" type="button" disabled>■ Stop</button>
+                </div>
+                <audio id="pronPlayback" controls hidden></audio>
+                <p class="microcopy" id="pronRecordStatus">The recording stays on this device and disappears when the page is reloaded.</p>
+              </div>
+              <div id="pronShadowChecks" class="pron-shadow-checks"></div>
+            </div>
+          </article>
+
+          <article class="pron-stage">
+            <div class="pron-stage-number">5</div>
+            <div class="pron-stage-body">
+              <p class="small-label">USE IT IN A CLIENT LINE</p>
+              <h3 id="pronClientPrompt"></h3>
+              <p id="pronClientHelp" class="pron-client-help"></p>
+              <div class="pron-client-actions">
+                <button class="secondary-button" id="pronHearClientBtn" type="button">🔊 Hear target line</button>
+                <button class="primary-button" id="completePronUnitBtn" type="button">Complete this unit</button>
+              </div>
+              <div id="pronCompleteFeedback" class="activity-summary" aria-live="polite"></div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="client-rehearsal-card">
+        <div class="client-rehearsal-head">
+          <div>
+            <p class="small-label">5 MINUTES BEFORE A CLIENT CALL</p>
+            <h3>Client Call Rehearsal</h3>
+            <p>Five lines worth saying aloud before a meeting. Focus on stress, chunking and keeping the end of each phrase audible.</p>
+          </div>
+          <button class="secondary-button" id="newRehearsalBtn" type="button">New rehearsal set</button>
+        </div>
+        <div id="clientRehearsalLines" class="client-rehearsal-lines"></div>
+        <div class="rehearsal-footer">
+          <button class="primary-button" id="logRehearsalBtn" type="button">Log rehearsal complete</button>
+          <span class="microcopy">No recording required. Say all five lines aloud once slowly, then once at natural speed.</span>
+        </div>
+      </div>
+
+      <div class="pronunciation-philosophy">
+        <strong>Intelligibility rule:</strong>
+        <span>Do not spend time polishing a harmless French accent. Train the features that make a listener miss information: misplaced stress, swallowed endings, unclear chunks and difficult sound contrasts.</span>
+      </div>
+    </section>
 
     <section class="section writing-lab-section" id="writing-lab">
       <div class="section-heading writing-lab-heading">

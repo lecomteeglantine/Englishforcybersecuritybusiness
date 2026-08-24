@@ -488,10 +488,11 @@ function checkpointReadiness(){
   const completedModules=plan.completed.length;
   const speaking=loadSpeakingState().attempts;
   const writing=loadWritingState().attempts.length;
+  const pronunciation=loadPronunciationLabState().completed.length;
   const grammar=loadGrammarRepairState().completed.length;
   const listening=listeningLabCompletedCount();
-  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
-  return {completedModules,speaking,writing,grammar,listening,evidence};
+  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
+  return {completedModules,speaking,writing,pronunciation,grammar,listening,evidence};
 }
 function renderProgressSkillComparison(state){
   const target=document.getElementById("progressSkillComparison");if(!target)return;
@@ -569,6 +570,7 @@ function renderProgressCheck(){
     <div class="readiness-item"><span>Personalised modules completed</span><strong>${ready.completedModules}</strong></div>
     <div class="readiness-item"><span>Speaking Lab attempts</span><strong>${ready.speaking}</strong></div>
     <div class="readiness-item"><span>Writing Lab attempts</span><strong>${ready.writing}</strong></div>
+    <div class="readiness-item"><span>Pronunciation units completed</span><strong>${ready.pronunciation}</strong></div>
     <div class="readiness-item"><span>Grammar Repair units completed</span><strong>${ready.grammar}</strong></div>
     <div class="readiness-item"><span>Listening Lab tasks completed</span><strong>${ready.listening} / 5</strong></div>`;
 }
@@ -1306,7 +1308,8 @@ function dashboardReasonCards(results,details){
     if(results.listening<75) cards.push({title:"Listening needs structured work",text:"That usually means gist, decoding and note-taking rather than simply 'more English audio'."});
     if(results.speaking<75) cards.push({title:"Speaking needs activation",text:"The goal is to move useful language from recognition to spontaneous use."});
     if(results.writing<75) cards.push({title:"Writing needs consolidation",text:"Short client-facing writing is now trained through incident updates, handovers, risk explanations and follow-ups."});
-    if(results.grammar<75 || results.pronunciation<75) cards.push({title:"Accuracy still matters",text:"But it is built into cyber tasks, not treated as isolated textbook drilling."});
+    if(results.grammar<75) cards.push({title:"Accuracy still matters",text:"But it is built into cyber tasks, not treated as isolated textbook drilling."});
+    if(results.pronunciation<75) cards.push({title:"Intelligibility needs targeted work",text:"The Pronunciation Lab now focuses on stress, endings, connected speech and chunking rather than trying to erase an accent."});
     const detailsWeak = details?.cyber ? tagWeaknesses(details.cyber,1)[0]?.name : null;
     if(detailsWeak) cards.push({title:"Cyber focus",text:`Your current plan is also shaped by ${detailsWeak.toLowerCase()}.`});
   }
@@ -1359,7 +1362,7 @@ function buildRoutineTasks(minutes){
     add({id:"grammar-repair",tag:"ACCURACY",title:"Repair one recurring grammar issue",desc:"Open the adaptive Grammar Repair Lab and fix one pattern selected from your diagnostic.",duration:durations[3],anchor:"#grammar-lab",cta:"Open Grammar Repair"});
   }
   if(results.pronunciation < 75 && tasks.length < 4){
-    add({id:"pron",tag:"PRONUNCIATION",title:"Say it clearly, not perfectly",desc:"Record a short answer and listen specifically for stress, endings and linked speech.",duration:durations[3],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
+    add({id:"pron",tag:"PRONUNCIATION",title:"Pronunciation & Intelligibility Lab",desc:"Train the pronunciation feature your diagnostic currently flags: stress, endings, connected speech or chunking.",duration:durations[3],anchor:"#pronunciation-lab",cta:"Open Pronunciation Lab"});
   }
   if(tasks.length < 4 && typeof checkpointReadiness==="function" && checkpointReadiness().evidence>=4){
     add({id:"progress-check",tag:"CHECKPOINT",title:"Take a quick progress check",desc:"You have done enough targeted practice for a fresh snapshot to be useful.",duration:durations[Math.min(tasks.length, durations.length-1)],anchor:"#progress-check",cta:"Open Progress Check"});
@@ -1408,6 +1411,7 @@ function renderQuickLinks(){
     {anchor:"#my-plan", title:"My personalised plan", sub:"Resume the selected cyber modules"},
     {anchor:"#listening-lab", title:"Listening Lab", sub:"Gist, decoding, dictation and note-taking"},
     {anchor:"#speaking-lab", title:"Speaking Lab", sub:"Quick responses, client questions and roleplay"},
+    {anchor:"#pronunciation-lab", title:"Pronunciation Lab", sub:"Stress, endings, connected speech, chunking and shadowing"},
     {anchor:"#writing-lab", title:"Writing Lab", sub:"Client emails, handovers, risk and remediation"},
     {anchor:"#grammar-lab", title:"Grammar Repair", sub:"Adaptive repair based on diagnostic weak points"},
     {anchor:"#progress-check", title:"Progress Check", sub:"Fresh checkpoint and baseline comparison"},
@@ -1523,6 +1527,480 @@ function initDashboard(){
 
 
 
+
+
+
+
+// V13 · Pronunciation & Intelligibility Lab
+const pronunciationLabStateKey="ebackontrack-v13-pronunciation";
+
+const pronunciationUnits={
+  wordStress:{
+    tag:"WORD STRESS",
+    diagTags:["Word stress"],
+    title:"Word stress in cyber vocabulary",
+    short:"Make long technical words recognisable the first time you say them.",
+    rule:"English listeners use stressed syllables as anchors. In long technical words, getting the main stress right matters more than pronouncing every unstressed vowel perfectly.",
+    examples:[
+      ["security","se-CUR-i-ty"],
+      ["vulnerability","vul-ner-a-BIL-i-ty"],
+      ["authentication","au-then-ti-CA-tion"],
+      ["investigation","in-ves-ti-GA-tion"],
+      ["remediation","re-me-di-A-tion"],
+      ["administrator","ad-MIN-is-tra-tor"]
+    ],
+    notice:{q:"Where is the main stress in “vulnerability”?",a:["VUL-ner-a-bil-i-ty","vul-NER-a-bil-i-ty","vul-ner-a-BIL-i-ty","vul-ner-a-bil-i-TY"],c:2,explain:"The main stress falls on BIL: vul-ner-a-BIL-i-ty."},
+    choose:{q:"Which version will make “authentication” easier to recognise?",a:["AU-then-ti-ca-tion","au-then-ti-CA-tion","au-THEN-ti-ca-tion","every syllable equally strong"],c:1,explain:"A clear stressed CA gives the listener the right rhythmic anchor."},
+    shadow:"The authentication logs show suspicious activity on one administrator account.",
+    checks:["I made the stressed syllables noticeably stronger.","I reduced the less important syllables instead of stressing everything.","The final syllables remained audible.","I could say the sentence in meaningful chunks."],
+    client:"Say this as a client update: “We are reviewing the authentication logs as part of the investigation.”",
+    clientLine:"We are reviewing the authentication logs as part of the investigation."
+  },
+  sentenceStress:{
+    tag:"SENTENCE STRESS",
+    diagTags:["Sentence stress"],
+    title:"Sentence stress: make the key information land",
+    short:"Guide the listener towards the words that carry the operational message.",
+    rule:"Content words normally carry more stress than grammar words. Move the strongest stress when you need to contrast or correct information: no evidence YET; one ACCOUNT, not three; isolated, not rebuilt.",
+    examples:[
+      ["We need to ISOLATE the endpoint.","Action is new/important."],
+      ["We have NO evidence of exfiltration.","Negative finding is important."],
+      ["The SECOND login was not recognised.","Contrast the second login."],
+      ["We need MORE evidence before attribution.","Amount of evidence is the focus."]
+    ],
+    notice:{q:"In “We still need MORE EVIDENCE”, which words should carry the strongest information stress?",a:["we / still","need / the","more / evidence","every word equally"],c:2,explain:"MORE EVIDENCE carries the key new information."},
+    choose:{q:"The client thinks three accounts are affected, but only one is. Which stress pattern helps correct them?",a:["ONLY ONE account is affected.","Only one ACCOUNT is AFFECTED with every word equal.","only one account is affected with no stress.","Every syllable should be equally loud."],c:0,explain:"Strong stress on ONLY ONE highlights the correction."},
+    shadow:"At this stage, we have NO evidence of lateral movement, but the review is still ONGOING.",
+    checks:["I stressed the key content words more than small grammar words.","My strongest stress matched the message I wanted to highlight.","I did not speak with flat, equal stress.","The sentence still sounded calm rather than dramatic."],
+    client:"Correct this assumption aloud: the client thinks compromise is confirmed, but it is not.",
+    clientLine:"We have confirmed suspicious activity, but we have NOT confirmed compromise."
+  },
+  edEndings:{
+    tag:"-ED ENDINGS",
+    diagTags:["-ed endings"],
+    title:"-ed endings: keep past actions audible",
+    short:"Make incident timelines easier to follow by pronouncing past-tense endings clearly.",
+    rule:"-ed is /t/ after an unvoiced sound (blocked), /d/ after a voiced sound (logged), and /ɪd/ after /t/ or /d/ (detected, isolated). The ending is grammatical information: swallowing it can blur the timeline.",
+    examples:[
+      ["blocked","/t/"],
+      ["breached","/t/"],
+      ["logged","/d/"],
+      ["confirmed","/d/"],
+      ["detected","/ɪd/"],
+      ["isolated","/ɪd/"]
+    ],
+    notice:{q:"The -ed ending in “isolated” is pronounced…",a:["/t/","/d/","/ɪd/","silent"],c:2,explain:"The base ends in /t/, so -ed adds a syllable: /ɪd/."},
+    choose:{q:"Which pair has the same -ed sound?",a:["blocked / detected","confirmed / logged","isolated / breached","detected / confirmed"],c:1,explain:"Confirmed and logged both end with /d/."},
+    shadow:"We detected suspicious activity, blocked the connection and isolated the endpoint.",
+    checks:["I pronounced detected and isolated with an extra /ɪd/ syllable.","I kept the final /t/ in blocked audible.","I did not add an extra syllable to every -ed verb.","The sequence of past actions was easy to hear."],
+    client:"Give this timeline aloud with clear endings.",
+    clientLine:"We identified the account, revoked the session and isolated the affected device."
+  },
+  sEndings:{
+    tag:"-S ENDINGS",
+    diagTags:["-s endings"],
+    title:"Final -s: plurals that carry technical meaning",
+    short:"Keep singular/plural and third-person endings audible in fast technical English.",
+    rule:"Final -s is /s/ after an unvoiced sound (alerts), /z/ after a voiced sound (logs, rules), and /ɪz/ after sibilant sounds (patches, addresses). In cyber English, losing final -s can change the operational meaning.",
+    examples:[
+      ["alerts","/s/"],
+      ["accounts","/s/"],
+      ["logs","/z/"],
+      ["rules","/z/"],
+      ["patches","/ɪz/"],
+      ["addresses","/ɪz/"]
+    ],
+    notice:{q:"The final -s in “logs” is pronounced…",a:["/s/","/z/","/ɪz/","silent"],c:1,explain:"The final sound of log is voiced, so plural -s is /z/."},
+    choose:{q:"Which word has an /ɪz/ ending?",a:["alerts","logs","patches","rules"],c:2,explain:"Patches ends in a sibilant sound, so -es adds /ɪz/."},
+    shadow:"The alerts show repeated logins from several addresses, and the rules need reviewing.",
+    checks:["I kept plural endings audible.","I used /z/ rather than /s/ in logs and rules.","I gave patches/addresses an extra /ɪz/ syllable when needed.","My final consonants stayed clear at natural speed."],
+    client:"Say this clearly enough that singular and plural are unambiguous.",
+    clientLine:"The logs show three failed logins from two unfamiliar addresses."
+  },
+  connectedSpeech:{
+    tag:"CONNECTED SPEECH",
+    diagTags:["Connected speech"],
+    title:"Connected speech without losing the message",
+    short:"Recognise and produce common spoken reductions in meetings and incident calls.",
+    rule:"Natural English links words and reduces unstressed forms. You do not need to imitate every reduction, but recognising them stops phrases like could you, did you and should have from sounding like unknown vocabulary.",
+    examples:[
+      ["could you","often → couldja"],
+      ["did you","often → didja"],
+      ["should have","often → should've"],
+      ["we have been","often → we've been"],
+      ["there has been","often → there's been"],
+      ["want to","often → wanna in informal speech; keep want to in formal client speech"]
+    ],
+    notice:{q:"In natural speech, “could you” often sounds closest to…",a:["could / you","couldja","cold you","could yoo-uh"],c:1,explain:"The /d/ and /j/ often merge in connected speech."},
+    choose:{q:"Which skill matters most here?",a:["Forcing every word to remain isolated.","Recognising reduced forms while keeping your own message clear.","Using slang in every client call.","Speaking as quickly as possible."],c:1,explain:"Understanding natural reductions matters more than copying them aggressively."},
+    shadow:"Could you send it over when you get a chance? We've been reviewing the logs since the alert came in.",
+    checks:["I linked words without rushing.","Small grammar words were lighter than key content words.","I could still hear the ends of important technical words.","My rhythm sounded like chunks rather than isolated words."],
+    client:"Ask for clarification naturally, then buy one second of thinking time.",
+    clientLine:"Could you run that by me again? Let me think that through for a second."
+  },
+  chunking:{
+    tag:"CHUNKING",
+    diagTags:["Intelligibility"],
+    title:"Chunking: make long updates easy to follow",
+    short:"Break technical sentences into meaning groups instead of producing one long stream.",
+    rule:"Pause at meaning boundaries, not after random words. A useful client update often chunks as: finding / scope / action / uncertainty / next step. Short pauses improve comprehension without making speech unnaturally slow.",
+    examples:[
+      ["We've identified suspicious activity / on one endpoint / and we're reviewing the logs.","finding / scope / next action"],
+      ["At this stage / we have no evidence of lateral movement / but the investigation is ongoing.","time frame / finding / uncertainty"],
+      ["The account has been disabled / as a precaution / while we review recent sign-ins.","action / reason / ongoing work"],
+      ["If we find additional activity / we'll widen the investigation / and update you immediately.","condition / action / communication"]
+    ],
+    notice:{q:"Which chunking is easiest to follow?",a:["We'veidentified/suspiciousactivityononeendpoint.","We've identified suspicious activity / on one endpoint / and we're reviewing the logs.","We've / identified suspicious / activity on / one endpoint.","Every word separated by a long pause."],c:1,explain:"The pauses match meaning groups rather than individual words."},
+    choose:{q:"Where is the most useful first boundary in “At this stage we have no evidence of lateral movement but the investigation is ongoing”?",a:["At / this stage we have…","At this stage / we have no evidence…","At this stage we / have no evidence…","No pause anywhere."],c:1,explain:"At this stage works as one framing chunk."},
+    shadow:"At this stage / we have no evidence of lateral movement / but the investigation is still ongoing.",
+    checks:["My pauses matched meaning groups.","I did not pause after random short words.","Each chunk had one clear stressed idea.","I kept the final word of each chunk audible."],
+    client:"Deliver this three-part update as three clear chunks.",
+    clientLine:"The account has been disabled / there is no evidence of further access / and we'll update you after the log review."
+  },
+  soundClarity:{
+    tag:"SOUND CLARITY",
+    diagTags:["Intelligibility"],
+    title:"Sound clarity: contrasts that can change the word",
+    short:"Target only a few sound contrasts and final consonants that can affect intelligibility.",
+    rule:"A French accent is not the problem. Train contrasts only when they can make a common word hard to recognise: /ɪ/ vs /iː/ (live/leave), TH in threat/this, /h/ in host, and final consonants in risk, patch, breach and log.",
+    examples:[
+      ["live / leave","/lɪv/ vs /liːv/"],
+      ["ship / sheep","/ʃɪp/ vs /ʃiːp/"],
+      ["threat / this","/θ/ vs /ð/"],
+      ["host","keep the initial /h/ audible"],
+      ["risk","keep final /sk/ audible"],
+      ["breach","keep final /tʃ/ audible"]
+    ],
+    notice:{q:"Which contrast could change the word a listener hears?",a:["live / leave","security / SECURITY with identical sounds","SOC / SOC","log / log"],c:0,explain:"The vowel contrast /ɪ/ vs /iː/ distinguishes live and leave."},
+    choose:{q:"What is the most useful pronunciation goal for “host” in a technical call?",a:["Remove the /h/.","Keep the initial /h/ audible so the word is recognised quickly.","Add a vowel before /h/.","Stress every letter."],c:1,explain:"A clear initial /h/ helps distinguish the word quickly in running speech."},
+    shadow:"The live host is still at risk, so leave the endpoint isolated until the patch is applied.",
+    checks:["I kept live and leave distinct.","I pronounced the /h/ in host.","I kept final consonants in risk and patch audible.","I prioritised clarity rather than exaggerating every sound."],
+    client:"Say the line once slowly, then at normal speed without losing the final consonants.",
+    clientLine:"The host is still at risk, but the patch should reduce the exposure."
+  }
+};
+
+const rehearsalPool=[
+  ["At this stage, we have NO evidence of lateral movement.","Stress the negative finding, but keep the tone calm."],
+  ["We've IDENTIFIED suspicious activity / on ONE endpoint.","Chunk the scope clearly."],
+  ["The account has been temporarily DISABLED as a precaution.","Make the final -ed audible."],
+  ["We will provide the NEXT UPDATE / once the log review is complete.","Stress the communication promise."],
+  ["Could you run that by me again?","Link naturally; do not over-pronounce every word."],
+  ["The ALERTS show repeated LOGINS from two unfamiliar ADDRESSES.","Keep all plural endings audible."],
+  ["The vulnerability is severe / but there is currently NO evidence of exploitation.","Separate severity from evidence."],
+  ["We DETECTED the activity at 09:20 / and ISOLATED the endpoint shortly afterwards.","Keep /ɪd/ endings clear."],
+  ["Our current ASSESSMENT is that the activity was CONTAINED.","Use stress to guide the listener."],
+  ["If we find ADDITIONAL activity / we'll widen the INVESTIGATION.","Chunk condition and consequence."],
+  ["The AUTHENTICATION logs are still being reviewed.","Keep the stress in au-then-ti-CA-tion."],
+  ["We need MORE evidence / before we make an attribution.","Do not flatten the sentence."]
+];
+
+function loadPronunciationLabState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(pronunciationLabStateKey))||{};
+    return {
+      completed:Array.isArray(raw.completed)?raw.completed:[],
+      shadowAttempts:Number(raw.shadowAttempts||0),
+      closedCorrect:Number(raw.closedCorrect||0),
+      closedTotal:Number(raw.closedTotal||0),
+      rehearsals:Number(raw.rehearsals||0),
+      unitAttempts:raw.unitAttempts||{}
+    };
+  }catch(e){
+    return {completed:[],shadowAttempts:0,closedCorrect:0,closedTotal:0,rehearsals:0,unitAttempts:{}};
+  }
+}
+function savePronunciationLabState(state){
+  localStorage.setItem(pronunciationLabStateKey,JSON.stringify(state));
+}
+function pronVoiceFor(lang){
+  const voices=window.speechSynthesis?.getVoices?.()||[];
+  return voices.find(v=>v.lang===lang) ||
+         voices.find(v=>v.lang?.toLowerCase().startsWith(lang.toLowerCase().split("-")[0])) ||
+         null;
+}
+function speakPron(text){
+  if(!("speechSynthesis" in window))return false;
+  const lang=document.getElementById("pronVoice")?.value||"en-GB";
+  const rate=Number(document.getElementById("pronSpeed")?.value||0.98);
+  const u=new SpeechSynthesisUtterance(text.replace(/\s*\/\s*/g,", "));
+  u.lang=lang;u.rate=rate;
+  const voice=pronVoiceFor(lang);if(voice)u.voice=voice;
+  speechSynthesis.cancel();speechSynthesis.speak(u);
+  return true;
+}
+function savedPronDiagnostic(){
+  try{
+    const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));
+    if(saved?.details?.pronunciation)return saved.details.pronunciation;
+  }catch(e){}
+  return null;
+}
+function pronUnitSignal(id){
+  const diag=savedPronDiagnostic(),unit=pronunciationUnits[id];
+  if(!diag)return {pct:null,label:"Starter unit",className:""};
+  const vals=unit.diagTags.map(tag=>{
+    const v=diag.tags?.[tag];
+    return v?Math.round(v.score/v.total*100):null;
+  }).filter(v=>v!==null);
+  if(!vals.length)return {pct:null,label:"No signal",className:""};
+  const pct=Math.min(...vals);
+  if(pct<55)return {pct,label:`${pct}% · priority`,className:"critical"};
+  if(pct<75)return {pct,label:`${pct}% · review`,className:"review"};
+  return {pct,label:`${pct}% · maintain`,className:"good"};
+}
+function pronunciationPriorityQueue(){
+  const diag=savedPronDiagnostic();
+  const fallback=["wordStress","sentenceStress","chunking","connectedSpeech"];
+  if(!diag)return fallback;
+  const weakness=Object.entries(diag.tags||{})
+    .map(([name,v])=>({name,pct:Math.round(v.score/v.total*100)}))
+    .sort((a,b)=>a.pct-b.pct);
+  const queue=[];
+  weakness.forEach(w=>{
+    Object.entries(pronunciationUnits).forEach(([id,u])=>{
+      if(u.diagTags.includes(w.name)&&!queue.includes(id))queue.push(id);
+    });
+  });
+  ["wordStress","sentenceStress","edEndings","sEndings","connectedSpeech","chunking","soundClarity"].forEach(id=>{
+    if(!queue.includes(id))queue.push(id);
+  });
+  return queue.slice(0,4);
+}
+function renderPronStats(){
+  const s=loadPronunciationLabState();
+  document.getElementById("pronUnitsComplete").textContent=s.completed.length;
+  document.getElementById("pronShadowAttempts").textContent=s.shadowAttempts;
+  document.getElementById("pronClosedAccuracy").textContent=s.closedTotal?`${Math.round(s.closedCorrect/s.closedTotal*100)}%`:"—";
+}
+function renderPronunciationLab(){
+  if(!document.getElementById("pronunciation-lab"))return;
+  const diag=savedPronDiagnostic();
+  document.getElementById("pronPriorityTitle").textContent=diag
+    ?"Pronunciation selected from your diagnostic"
+    :"Starter priority queue until the diagnostic is complete";
+  const state=loadPronunciationLabState();
+  const queue=pronunciationPriorityQueue();
+  document.getElementById("pronPriorityQueue").innerHTML=queue.map((id,i)=>{
+    const u=pronunciationUnits[id],sig=pronUnitSignal(id),done=state.completed.includes(id);
+    return `<button class="pron-priority-card ${done?"completed":""}" type="button" data-pron-unit="${id}">
+      <div class="pron-card-top">
+        <span class="pron-rank">${i+1}</span>
+        <span class="pron-signal ${sig.className}">${done?"✓ complete":sig.label}</span>
+      </div>
+      <h4>${u.title}</h4>
+      <p>${u.short}</p>
+      <span class="pron-card-action">${done?"Review again":"Start training"} →</span>
+    </button>`;
+  }).join("");
+  document.getElementById("pronUnitLibrary").innerHTML=Object.entries(pronunciationUnits).map(([id,u])=>{
+    const sig=pronUnitSignal(id),done=state.completed.includes(id);
+    return `<button class="pron-library-card ${done?"completed":""}" type="button" data-pron-unit="${id}">
+      <div class="pron-card-top"><span class="pron-signal ${sig.className}">${done?"✓ complete":sig.label}</span></div>
+      <h4>${u.title}</h4><p>${u.short}</p>
+    </button>`;
+  }).join("");
+  document.querySelectorAll("[data-pron-unit]").forEach(btn=>btn.addEventListener("click",()=>openPronUnit(btn.dataset.pronUnit)));
+  renderPronStats();
+  renderRehearsal();
+}
+let currentPronUnitId=null;
+let currentPronClosed={notice:null,choose:null};
+let pronMediaRecorder=null;
+let pronAudioChunks=[];
+let pronPlaybackUrl=null;
+let pronRecordedThisUnit=false;
+
+function renderPronExamples(unit){
+  const target=document.getElementById("pronExampleBank");
+  target.innerHTML=unit.examples.map(([term,note],i)=>`
+    <div class="pron-example">
+      <div><strong>${term}</strong><small>${note}</small></div>
+      <button type="button" data-pron-example="${i}" aria-label="Hear example">🔊</button>
+    </div>`).join("");
+  target.querySelectorAll("[data-pron-example]").forEach(btn=>btn.addEventListener("click",()=>{
+    const item=unit.examples[Number(btn.dataset.pronExample)];
+    speakPron(item[0]);
+  }));
+}
+function renderPronOptions(targetId,name,item){
+  document.getElementById(targetId).innerHTML=item.a.map((opt,i)=>`
+    <label><input type="radio" name="${name}" value="${i}"><span>${opt}</span></label>`).join("");
+}
+function openPronUnit(id){
+  const u=pronunciationUnits[id];if(!u)return;
+  currentPronUnitId=id;
+  currentPronClosed={notice:null,choose:null};
+  pronRecordedThisUnit=false;
+  const sig=pronUnitSignal(id);
+  document.getElementById("pronUnitTag").textContent=u.tag;
+  document.getElementById("pronUnitTitle").textContent=u.title;
+  document.getElementById("pronUnitSubtitle").textContent=u.short;
+  document.getElementById("pronDiagnosticSignal").textContent=sig.pct===null?"—":`${sig.pct}%`;
+  document.getElementById("pronDiagnosticNote").textContent=sig.pct===null?"No diagnostic signal yet":sig.label.replace(/^\d+%\s*·\s*/,"");
+  document.getElementById("pronRuleText").textContent=u.rule;
+  renderPronExamples(u);
+
+  document.getElementById("pronNoticeQuestion").textContent=u.notice.q;
+  renderPronOptions("pronNoticeOptions",`pron-notice-${id}`,u.notice);
+  document.getElementById("pronChooseQuestion").textContent=u.choose.q;
+  renderPronOptions("pronChooseOptions",`pron-choose-${id}`,u.choose);
+
+  document.getElementById("pronShadowLine").textContent=u.shadow;
+  document.getElementById("pronShadowChecks").innerHTML=u.checks.map((x,i)=>`
+    <label><input type="checkbox" data-pron-shadow-check="${i}"><span>${x}</span></label>`).join("");
+  document.getElementById("pronClientPrompt").textContent=u.client;
+  document.getElementById("pronClientHelp").textContent=u.clientLine;
+  ["pronNoticeFeedback","pronChooseFeedback","pronCompleteFeedback"].forEach(fid=>{
+    const f=document.getElementById(fid);f.textContent="";f.className="activity-summary";
+  });
+  const playback=document.getElementById("pronPlayback");
+  playback.hidden=true;playback.removeAttribute("src");
+  document.getElementById("pronRecordStatus").textContent="The recording stays on this device and disappears when the page is reloaded.";
+  document.getElementById("pronWorkspaceStatus").textContent="Training";
+  document.getElementById("pronWorkspace").hidden=false;
+  document.querySelector(".pron-priority-shell").hidden=true;
+  document.querySelector(".pron-library-shell").hidden=true;
+  document.querySelector(".client-rehearsal-card").hidden=true;
+  document.querySelector(".pronunciation-philosophy").hidden=true;
+  document.getElementById("pronWorkspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closePronWorkspace(){
+  if(pronMediaRecorder?.state==="recording")pronMediaRecorder.stop();
+  document.getElementById("pronWorkspace").hidden=true;
+  document.querySelector(".pron-priority-shell").hidden=false;
+  document.querySelector(".pron-library-shell").hidden=false;
+  document.querySelector(".client-rehearsal-card").hidden=false;
+  document.querySelector(".pronunciation-philosophy").hidden=false;
+  currentPronUnitId=null;
+  renderPronunciationLab();
+  document.getElementById("pronunciation-lab").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function checkPronClosed(kind){
+  if(!currentPronUnitId)return;
+  const u=pronunciationUnits[currentPronUnitId],item=u[kind];
+  const picked=document.querySelector(`input[name="pron-${kind}-${currentPronUnitId}"]:checked`);
+  const fb=document.getElementById(kind==="notice"?"pronNoticeFeedback":"pronChooseFeedback");
+  if(!picked){fb.className="activity-summary neutral";fb.textContent="Choose an answer first.";return;}
+  const ok=Number(picked.value)===item.c;
+  currentPronClosed[kind]=ok;
+  fb.className=`activity-summary ${ok?"correct":"wrong"}`;
+  fb.textContent=ok?`Correct ✓ ${item.explain}`:`Best answer: “${item.a[item.c]}” — ${item.explain}`;
+}
+async function startPronRecording(){
+  if(!currentPronUnitId)return;
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    pronAudioChunks=[];
+    pronMediaRecorder=new MediaRecorder(stream);
+    pronMediaRecorder.ondataavailable=e=>pronAudioChunks.push(e.data);
+    pronMediaRecorder.onstop=()=>{
+      const blob=new Blob(pronAudioChunks,{type:"audio/webm"});
+      if(pronPlaybackUrl)URL.revokeObjectURL(pronPlaybackUrl);
+      pronPlaybackUrl=URL.createObjectURL(blob);
+      const audio=document.getElementById("pronPlayback");
+      audio.src=pronPlaybackUrl;audio.hidden=false;
+      stream.getTracks().forEach(t=>t.stop());
+      document.getElementById("pronRecordBtn").disabled=false;
+      document.getElementById("pronStopBtn").disabled=true;
+      document.getElementById("pronRecordStatus").textContent="Listen back and check the four intelligibility criteria. Nothing has been uploaded.";
+      pronRecordedThisUnit=true;
+      const state=loadPronunciationLabState();
+      state.shadowAttempts++;
+      savePronunciationLabState(state);
+      renderPronStats();
+    };
+    pronMediaRecorder.start();
+    document.getElementById("pronRecordBtn").disabled=true;
+    document.getElementById("pronStopBtn").disabled=false;
+    document.getElementById("pronRecordStatus").textContent="Recording… shadow the model immediately and keep going.";
+  }catch(e){
+    document.getElementById("pronRecordStatus").textContent="Microphone access was not granted. You can still shadow aloud and complete the self-check manually.";
+  }
+}
+function stopPronRecording(){
+  if(pronMediaRecorder?.state==="recording")pronMediaRecorder.stop();
+}
+function completePronUnit(){
+  if(!currentPronUnitId)return;
+  const correct=Object.values(currentPronClosed).filter(Boolean).length;
+  const answered=Object.values(currentPronClosed).filter(v=>v!==null).length;
+  const checks=[...document.querySelectorAll("[data-pron-shadow-check]")];
+  const checked=checks.filter(x=>x.checked).length;
+  const fb=document.getElementById("pronCompleteFeedback");
+  if(answered<2){
+    fb.className="activity-summary neutral";fb.textContent="Complete the two closed tasks first.";return;
+  }
+  if(correct<1){
+    fb.className="activity-summary wrong";fb.textContent="Review the target and get at least one of the two closed tasks right before completing the unit.";return;
+  }
+  if(checked<3){
+    fb.className="activity-summary neutral";fb.textContent="Shadow the target aloud and confirm at least three intelligibility checks.";return;
+  }
+  const state=loadPronunciationLabState();
+  state.closedCorrect+=correct;
+  state.closedTotal+=2;
+  state.unitAttempts[currentPronUnitId]=(state.unitAttempts[currentPronUnitId]||0)+1;
+  if(!state.completed.includes(currentPronUnitId))state.completed.push(currentPronUnitId);
+  savePronunciationLabState(state);
+  document.getElementById("pronWorkspaceStatus").textContent="Unit complete ✓";
+  fb.className="activity-summary correct";
+  fb.textContent=`Unit complete ✓ ${correct}/2 closed tasks correct · ${checked}/${checks.length} intelligibility checks confirmed. Use the same feature in your next Speaking Lab task.`;
+  renderPronStats();
+  if(typeof renderDashboard==="function")renderDashboard();
+  if(typeof renderProgressCheck==="function")renderProgressCheck();
+}
+let currentRehearsalSet=[];
+function renderRehearsal(){
+  const target=document.getElementById("clientRehearsalLines");if(!target)return;
+  if(!currentRehearsalSet.length){
+    const seed=(new Date().getDate()+loadPronunciationLabState().rehearsals)%rehearsalPool.length;
+    const rotated=[...rehearsalPool.slice(seed),...rehearsalPool.slice(0,seed)];
+    currentRehearsalSet=rotated.slice(0,5);
+  }
+  target.innerHTML=currentRehearsalSet.map(([line,focus],i)=>`
+    <div class="rehearsal-line">
+      <span>${i+1}</span>
+      <div><strong>${line}</strong><small>${focus}</small></div>
+      <button type="button" data-rehearsal-hear="${i}" aria-label="Hear line">🔊</button>
+    </div>`).join("");
+  target.querySelectorAll("[data-rehearsal-hear]").forEach(btn=>btn.addEventListener("click",()=>{
+    speakPron(currentRehearsalSet[Number(btn.dataset.rehearsalHear)][0]);
+  }));
+}
+function newRehearsalSet(){
+  const start=Math.floor(Math.random()*rehearsalPool.length);
+  const rotated=[...rehearsalPool.slice(start),...rehearsalPool.slice(0,start)];
+  currentRehearsalSet=rotated.slice(0,5);
+  renderRehearsal();
+}
+function logRehearsal(){
+  const state=loadPronunciationLabState();
+  state.rehearsals++;
+  savePronunciationLabState(state);
+  document.getElementById("logRehearsalBtn").textContent="Rehearsal logged ✓";
+  setTimeout(()=>document.getElementById("logRehearsalBtn").textContent="Log rehearsal complete",1600);
+  if(typeof renderDashboard==="function")renderDashboard();
+}
+function initPronunciationLab(){
+  if(!document.getElementById("pronunciation-lab"))return;
+  document.getElementById("refreshPronQueueBtn")?.addEventListener("click",renderPronunciationLab);
+  document.getElementById("closePronWorkspaceBtn")?.addEventListener("click",closePronWorkspace);
+  document.getElementById("checkPronNoticeBtn")?.addEventListener("click",()=>checkPronClosed("notice"));
+  document.getElementById("checkPronChooseBtn")?.addEventListener("click",()=>checkPronClosed("choose"));
+  document.getElementById("pronHearShadowBtn")?.addEventListener("click",()=>{
+    if(currentPronUnitId)speakPron(pronunciationUnits[currentPronUnitId].shadow);
+  });
+  document.getElementById("pronHearClientBtn")?.addEventListener("click",()=>{
+    if(currentPronUnitId)speakPron(pronunciationUnits[currentPronUnitId].clientLine);
+  });
+  document.getElementById("pronRecordBtn")?.addEventListener("click",startPronRecording);
+  document.getElementById("pronStopBtn")?.addEventListener("click",stopPronRecording);
+  document.getElementById("completePronUnitBtn")?.addEventListener("click",completePronUnit);
+  document.getElementById("newRehearsalBtn")?.addEventListener("click",newRehearsalSet);
+  document.getElementById("logRehearsalBtn")?.addEventListener("click",logRehearsal);
+  renderPronunciationLab();
+}
 
 
 // V12 · Writing Lab
@@ -3261,6 +3739,7 @@ renderLab();
 
 initPhrasebook();
 initSpeakingLab();
+initPronunciationLab();
 initWritingLab();
 initDashboard();
 initGrammarRepairLab();
