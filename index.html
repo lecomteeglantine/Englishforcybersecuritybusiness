@@ -13,6 +13,7 @@
       <span class="brand-mark">↗</span><span>English, Back on Track</span>
     </a>
     <div class="top-actions">
+      <a class="nav-pill" href="#listening-lab">Listening Lab</a>
       <span class="role-chip">Cybersecurity · SOC</span>
       <button class="ghost-button" id="resetBtn" type="button">Reset diagnostic</button>
     </div>
@@ -201,6 +202,10 @@
                 <div><p class="small-label">PERSONALISED ROADMAP</p><h4>Turn these results into a training plan.</h4><p>The site will select four starting modules and adapt the language focus to the gaps identified above.</p></div>
                 <button class="primary-button" id="openPlanBtn" type="button">Open my training plan →</button>
               </div>
+              <div class="listening-recommendation" id="listeningRecommendation" hidden>
+                <div><p class="small-label">LISTENING PRIORITY</p><h4>Your diagnostic says this deserves extra training.</h4><p id="listeningRecommendationText">Use the Listening Lab alongside your first four modules.</p></div>
+                <a class="primary-button" href="#listening-lab">Open Listening Lab →</a>
+              </div>
               <p class="microcopy">This profile is an orientation tool, not a CEFR certification. Speaking and writing are self-rated in this prototype and should later be reviewed by a teacher.</p>
             </div>
           </section>
@@ -243,6 +248,120 @@
           </div>
           <div id="lessonContent"></div>
         </div>
+      </div>
+    </section>
+
+
+    <section class="section listening-lab-section" id="listening-lab">
+      <div class="section-heading listening-heading">
+        <div>
+          <p class="eyebrow">LISTENING LAB</p>
+          <h2>Train your ears for the moments that matter.</h2>
+          <p>Do not try to understand every word. Each drill gives you one listening target: identify the message, decode reduced speech, capture key facts or reconstruct an incident call.</p>
+        </div>
+        <div class="lab-score-card">
+          <span class="small-label">LAB PROGRESS</span>
+          <strong id="labProgressScore">0 / 5</strong>
+          <span id="labProgressLabel">Start with the 5-minute warm-up.</span>
+          <button class="tiny-reset" id="resetLabBtn" type="button">Reset lab</button>
+        </div>
+      </div>
+
+      <div class="listening-principles">
+        <article><span>1</span><strong>Listen for a job</strong><p>Know what information you are hunting before the audio starts.</p></article>
+        <article><span>2</span><strong>Do not translate</strong><p>Capture meaning in chunks. Missing one word is not a failure.</p></article>
+        <article><span>3</span><strong>Reconstruct</strong><p>After listening, rebuild the message from the facts you caught.</p></article>
+      </div>
+
+      <div class="lab-toolbar">
+        <div>
+          <label for="labVoice">Practice voice</label>
+          <select id="labVoice">
+            <option value="en-GB">UK English</option>
+            <option value="en-US">US English</option>
+            <option value="en-AU">Australian English</option>
+          </select>
+        </div>
+        <div>
+          <label for="labSpeed">Playback speed</label>
+          <select id="labSpeed">
+            <option value="0.92">Training · 0.92×</option>
+            <option value="1.00" selected>Natural · 1.00×</option>
+            <option value="1.10">Pressure · 1.10×</option>
+          </select>
+        </div>
+        <p class="lab-device-note">Voice quality and exact accent depend on the voices installed on this device. These are practice voices, not authentic human recordings.</p>
+      </div>
+
+      <div class="lab-grid">
+        <article class="lab-card" id="lab-gist">
+          <div class="lab-card-top"><span class="lab-number">01</span><span class="lab-skill">GIST</span></div>
+          <h3>What is the actual message?</h3>
+          <p class="lab-instruction"><strong>Your target:</strong> ignore technical detail. Decide what the speaker wants the team to understand.</p>
+          <button class="listen-button lab-play" type="button" data-lab-play="gist">▶ Play incident update</button>
+          <span class="play-count" id="labPlay-gist">0 / 2 plays</span>
+          <div class="lab-question" id="labQuestion-gist"></div>
+          <button class="secondary-button lab-check" type="button" data-lab-check="gist">Check gist</button>
+          <div class="activity-summary" id="labFeedback-gist"></div>
+        </article>
+
+        <article class="lab-card" id="lab-decoding">
+          <div class="lab-card-top"><span class="lab-number">02</span><span class="lab-skill">DECODING</span></div>
+          <h3>Hear the words that disappear.</h3>
+          <p class="lab-instruction"><strong>Your target:</strong> recognise reduced forms and connected speech instead of expecting dictionary pronunciation.</p>
+          <div id="decodingDrills" class="decoding-list"></div>
+          <div class="activity-summary" id="labFeedback-decoding"></div>
+        </article>
+
+        <article class="lab-card" id="lab-dictation">
+          <div class="lab-card-top"><span class="lab-number">03</span><span class="lab-skill">MICRO-DICTATION</span></div>
+          <h3>Catch the operational chunk.</h3>
+          <p class="lab-instruction"><strong>Your target:</strong> write one short phrase exactly enough to recognise its structure.</p>
+          <button class="listen-button lab-play" type="button" data-lab-play="dictation">▶ Play phrase</button>
+          <span class="play-count" id="labPlay-dictation">0 / 3 plays</span>
+          <label class="lab-input-label">What did you hear?
+            <input type="text" id="dictationInput" autocomplete="off" placeholder="Type the phrase here">
+          </label>
+          <button class="secondary-button" id="dictationCheck" type="button">Check phrase</button>
+          <div class="activity-summary" id="labFeedback-dictation"></div>
+        </article>
+
+        <article class="lab-card lab-card-wide" id="lab-notes">
+          <div class="lab-card-top"><span class="lab-number">04</span><span class="lab-skill">NOTE-TAKING</span></div>
+          <h3>Leave the call with the five facts that matter.</h3>
+          <p class="lab-instruction"><strong>Your target:</strong> capture <em>time · scope · evidence · action · next update</em>. Do not write full sentences while listening.</p>
+          <button class="listen-button lab-play" type="button" data-lab-play="notes">▶ Play SOC handover</button>
+          <span class="play-count" id="labPlay-notes">0 / 2 plays</span>
+          <textarea id="notesInput" rows="6" placeholder="Keywords only. Example: 09:15 / 3 endpoints / unusual PowerShell / isolated / update 11:00"></textarea>
+          <button class="secondary-button" id="notesCheck" type="button">Check the facts I captured</button>
+          <div class="key-fact-grid" id="notesFacts"></div>
+          <div class="activity-summary" id="labFeedback-notes"></div>
+        </article>
+
+        <article class="lab-card lab-card-wide" id="lab-call">
+          <div class="lab-card-top"><span class="lab-number">05</span><span class="lab-skill">INCIDENT CALL</span></div>
+          <h3>Reconstruct the call after one listen.</h3>
+          <p class="lab-instruction"><strong>Your target:</strong> build a mental timeline. Listen for sequence markers such as <em>initially, after that, at this stage, next</em>.</p>
+          <button class="listen-button lab-play" type="button" data-lab-play="call">▶ Play client call</button>
+          <span class="play-count" id="labPlay-call">0 / 2 plays</span>
+          <div id="callOrdering" class="ordering-list"></div>
+          <button class="secondary-button" id="callCheck" type="button">Check my timeline</button>
+          <div class="activity-summary" id="labFeedback-call"></div>
+          <details class="transcript-box"><summary>Reveal transcript after completing the task</summary><p id="callTranscript"></p></details>
+        </article>
+      </div>
+
+      <div class="lab-routine">
+        <div>
+          <p class="small-label">A ROUTINE THAT IS ACTUALLY SUSTAINABLE</p>
+          <h3>10 minutes is enough for a useful listening session.</h3>
+        </div>
+        <ol>
+          <li><strong>2 min</strong> — one gist listen, no pause.</li>
+          <li><strong>3 min</strong> — replay and capture five facts.</li>
+          <li><strong>2 min</strong> — check transcript only now.</li>
+          <li><strong>3 min</strong> — retell the message aloud from your notes.</li>
+        </ol>
       </div>
     </section>
 
