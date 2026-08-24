@@ -13,6 +13,7 @@
       <span class="brand-mark">↗</span><span>English, Back on Track</span>
     </a>
     <div class="top-actions">
+      <a class="nav-pill" href="#dashboard">Dashboard</a>
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
       <a class="nav-pill" href="#speaking-lab">Speaking Lab</a>
       <a class="nav-pill" href="#phrasebook">Phrasebook</a>
@@ -47,6 +48,107 @@
           <div><strong>Cyber English</strong><span>Job-specific</span></div>
         </div>
       </aside>
+    </section>
+
+
+    <section class="section dashboard-section" id="dashboard">
+      <div class="dashboard-shell">
+        <div class="dashboard-hero-card">
+          <div class="dashboard-greeting">
+            <p class="eyebrow">DAILY DASHBOARD</p>
+            <h2 id="dashboardGreeting">Good afternoon, Romain.</h2>
+            <p id="dashboardSubcopy">Today, the site will turn your priorities into a short, realistic session.</p>
+          </div>
+
+          <div class="dashboard-controls">
+            <label class="dashboard-budget">
+              <span>How much time do you have today?</span>
+              <select id="dashboardBudget">
+                <option value="10">10 minutes</option>
+                <option value="15" selected>15 minutes</option>
+                <option value="20">20 minutes</option>
+              </select>
+            </label>
+            <button class="primary-button" id="refreshRoutineBtn" type="button">Build today's routine</button>
+          </div>
+
+          <div class="dashboard-kpi-grid">
+            <article class="dashboard-kpi">
+              <span>Today</span>
+              <strong id="dashboardTodayProgress">0 / 0</strong>
+              <small id="dashboardTodaySub">Routine not built yet</small>
+            </article>
+            <article class="dashboard-kpi">
+              <span>This week</span>
+              <strong id="dashboardWeekProgress">0 days</strong>
+              <small id="dashboardWeekSub">No sessions logged yet</small>
+            </article>
+            <article class="dashboard-kpi">
+              <span>Current focus</span>
+              <strong id="dashboardPrioritySkill">Listening</strong>
+              <small id="dashboardPrioritySub">Based on your diagnostic</small>
+            </article>
+            <article class="dashboard-kpi">
+              <span>Review due</span>
+              <strong id="dashboardReviewDue">0</strong>
+              <small id="dashboardReviewSub">Phrasebook cards</small>
+            </article>
+          </div>
+        </div>
+
+        <div class="dashboard-main-grid">
+          <div class="routine-card">
+            <div class="dashboard-card-head">
+              <div>
+                <p class="small-label">TODAY'S ROUTINE</p>
+                <h3>Short. Focused. Designed for your weakest areas.</h3>
+              </div>
+              <span class="question-count" id="routineTotalMinutes">15 min</span>
+            </div>
+            <div class="dashboard-mission" id="dashboardMission">
+              <strong>Today's mission:</strong>
+              <span>Build your routine to get started.</span>
+            </div>
+            <div id="routineList" class="routine-list"></div>
+            <div class="routine-footer">
+              <button class="secondary-button" id="markRoutineDoneBtn" type="button">Mark the whole session complete</button>
+              <span class="microcopy">You can still jump directly to any section of the site from here.</span>
+            </div>
+          </div>
+
+          <aside class="dashboard-side-stack">
+            <div class="dashboard-card">
+              <div class="dashboard-card-head">
+                <div>
+                  <p class="small-label">RESUME WHERE YOU LEFT OFF</p>
+                  <h3>Your next useful step</h3>
+                </div>
+              </div>
+              <div id="dashboardNextStep" class="dashboard-next-step"></div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="dashboard-card-head">
+                <div>
+                  <p class="small-label">QUICK LAUNCH</p>
+                  <h3>Open the right tool quickly</h3>
+                </div>
+              </div>
+              <div id="dashboardQuickLinks" class="dashboard-quick-links"></div>
+            </div>
+
+            <div class="dashboard-card">
+              <div class="dashboard-card-head">
+                <div>
+                  <p class="small-label">TODAY'S FOCUS</p>
+                  <h3 id="dashboardFocusTitle">Why this routine?</h3>
+                </div>
+              </div>
+              <div id="dashboardFocusReasons" class="dashboard-focus-reasons"></div>
+            </div>
+          </aside>
+        </div>
+      </div>
     </section>
 
     <section class="section pale" id="how-it-works">

@@ -745,6 +745,294 @@ try{const saved=JSON.parse(localStorage.getItem('ebackontrack-v2'));if(saved?.re
 
 
 
+
+
+// V8 · Daily dashboard
+const dashboardStateKey="ebackontrack-v8-dashboard";
+
+function loadDashboardState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(dashboardStateKey))||{};
+    return {budget:Number(raw.budget||15), days:raw.days||{}};
+  }catch(e){return {budget:15,days:{}};}
+}
+function saveDashboardState(state){
+  localStorage.setItem(dashboardStateKey,JSON.stringify(state));
+}
+function todayKey(){
+  const d=new Date();
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,"0"),day=String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+function lastSevenKeys(){
+  const out=[], now=new Date();
+  for(let i=0;i<7;i++){
+    const d=new Date(now); d.setDate(now.getDate()-i);
+    out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`);
+  }
+  return out;
+}
+function greetingForNow(){
+  const h=new Date().getHours();
+  if(h<12) return "Good morning, Romain.";
+  if(h<18) return "Good afternoon, Romain.";
+  return "Good evening, Romain.";
+}
+function dashboardMessage(seed){
+  const lines=[
+    "Today, the site will turn your priorities into a short, realistic session.",
+    "Useful English beats perfect English. Let's work on what you actually need.",
+    "The point is not to do everything. The point is to do the right next things.",
+    "Short focused work today is worth more than vague intentions about 'practising English'.",
+    "You do not need a marathon session — you need a session you will actually do."
+  ];
+  return lines[seed % lines.length];
+}
+function weakestSkill(results){
+  if(!results) return {key:"diagnostic", label:"Diagnostic"};
+  const labels={grammar:"Grammar",cyber:"Cyber English",listening:"Listening",pronunciation:"Pronunciation",speaking:"Speaking",writing:"Writing"};
+  const sorted=Object.entries(results).sort((a,b)=>a[1]-b[1]);
+  return {key:sorted[0][0], label:labels[sorted[0][0]]};
+}
+function currentPlanKeysFromStorage(){
+  try{
+    const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));
+    if(saved?.results&&saved?.details) return chooseOperationalModules(saved.results,saved.details);
+  }catch(e){}
+  return [];
+}
+function nextIncompleteModuleData(){
+  const keys=currentPlanKeysFromStorage();
+  const state=planStorage();
+  for(const key of keys){
+    if(!state.completed.includes(key) && trainingModules[key]){
+      return {key, module:trainingModules[key], stages:moduleStageCount(state,key), attempts:state.attempts?.[key]||0};
+    }
+  }
+  if(keys.length && trainingModules[keys[0]]){
+    const key=keys[0];
+    return {key, module:trainingModules[key], stages:moduleStageCount(state,key), attempts:state.attempts?.[key]||0, completed:true};
+  }
+  return null;
+}
+function listeningLabCompletedCount(){
+  const state=getLabState();
+  const keys=["gist","decoding","dictation","notes","call"];
+  return keys.filter(k=>state.completed[k]).length;
+}
+function dashboardReasonCards(results,details){
+  const cards=[];
+  const weak=weakestSkill(results);
+  if(!results){
+    cards.push({title:"No diagnostic yet",text:"The first useful step is to run the initial diagnostic so the site can stop guessing."});
+  }else{
+    cards.push({title:`Main priority: ${weak.label}`,text:`Your diagnostic currently gives the lowest score to ${weak.label.toLowerCase()}, so today's routine gives it extra space.`});
+    if(results.listening<75) cards.push({title:"Listening needs structured work",text:"That usually means gist, decoding and note-taking rather than simply 'more English audio'."});
+    if(results.speaking<75) cards.push({title:"Speaking needs activation",text:"The goal is to move useful language from recognition to spontaneous use."});
+    if(results.grammar<75 || results.pronunciation<75) cards.push({title:"Accuracy still matters",text:"But it is built into cyber tasks, not treated as isolated textbook drilling."});
+    const detailsWeak = details?.cyber ? tagWeaknesses(details.cyber,1)[0]?.name : null;
+    if(detailsWeak) cards.push({title:"Cyber focus",text:`Your current plan is also shaped by ${detailsWeak.toLowerCase()}.`});
+  }
+  const due=phraseStats().due;
+  if(due>0) cards.push({title:"Review is due",text:`You have ${due} Phrasebook card${due===1?"":"s"} due, so the routine includes short spaced review.`});
+  return cards.slice(0,4);
+}
+function buildRoutineTasks(minutes){
+  let results=null, details=null;
+  try{
+    const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));
+    if(saved?.results){results=saved.results; details=saved.details;}
+  }catch(e){}
+  const due=phraseStats();
+  const nextModule=nextIncompleteModuleData();
+  const weak=weakestSkill(results);
+  const tasks=[];
+  const durationPresets = {
+    10:[3,2,3,2],
+    15:[4,3,5,3],
+    20:[5,4,7,4]
+  };
+  const durations = durationPresets[minutes] || durationPresets[15];
+  const add=(task)=>{ if(!tasks.find(x=>x.id===task.id)) tasks.push(task); };
+
+  if(!results){
+    add({id:"diagnostic",tag:"START",title:"Complete the initial diagnostic",desc:"Without it, the site cannot prioritise the right skills for you.",duration:durations[0],anchor:"#diagnostic",cta:"Open diagnostic"});
+    add({id:"listening-lab",tag:"LISTENING",title:"Try one Listening Lab task",desc:"Do one gist task and focus on the message, not every single word.",duration:durations[1],anchor:"#listening-lab",cta:"Open Listening Lab"});
+    add({id:"phrasebook-starter",tag:"PHRASEBOOK",title:"Add the starter Phrasebook pack",desc:"Save some cyber expressions now so spaced review can begin.",duration:durations[2],anchor:"#phrasebook",cta:"Open Phrasebook"});
+    add({id:"speaking-start",tag:"SPEAKING",title:"Do one quick speaking challenge",desc:"Give a 30-second answer without writing full sentences first.",duration:durations[3],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
+    return {results,details,tasks:tasks.slice(0,4)};
+  }
+
+  if(results.listening < 75 || listeningLabCompletedCount() < 3){
+    add({id:"listening",tag:"LISTENING",title:"Listening Lab",desc:`Do one ${results.listening < 65 ? "gist + decoding" : "note-taking or incident-call"} task. Your listening score is ${results.listening}%.`,duration:durations[0],anchor:"#listening-lab",cta:"Open Listening Lab"});
+  }
+  if(due.due > 0 || due.saved === 0){
+    add({id:"phrasebook",tag:"PHRASEBOOK",title:due.saved===0?"Start your Phrasebook":"Review due phrases",desc:due.saved===0?"Add useful chunks and begin spaced review.":"Review a few due cards and keep the useful chunks active.",duration:durations[1],anchor:"#phrasebook",cta:"Open Phrasebook"});
+  }
+  if(results.speaking < 75 || loadSpeakingState().attempts < 5){
+    add({id:"speaking",tag:"SPEAKING",title:"Speaking Lab",desc:`Do one ${results.speaking < 65 ? "quick response or explain-it-simply" : "incident update or client roleplay"} task.`,duration:durations[2],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
+  }
+  if(nextModule){
+    add({id:"module",tag:"PLAN",title:`Continue: ${nextModule.module.title}`,desc:`Resume your personalised plan. Current progress: ${nextModule.stages} / 5 stages in this module.`,duration:durations[3],anchor:"#my-plan",cta:"Open my plan"});
+  }
+  if(results.grammar < 75){
+    add({id:"grammar-repair",tag:"ACCURACY",title:"Repair one recurring grammar issue",desc:"Open your personalised plan and focus on the grammar point embedded in your current cyber module.",duration:durations[3],anchor:"#my-plan",cta:"Open my plan"});
+  }
+  if(results.pronunciation < 75 && tasks.length < 4){
+    add({id:"pron",tag:"PRONUNCIATION",title:"Say it clearly, not perfectly",desc:"Record a short answer and listen specifically for stress, endings and linked speech.",duration:durations[3],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
+  }
+  if(tasks.length < 4) add({id:"quick-review",tag:"REVIEW",title:"Use Emergency English before you stop",desc:"Open the quick survival phrases and rehearse two or three aloud.",duration:durations[Math.min(tasks.length, durations.length-1)],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
+
+  return {results,details,tasks:tasks.slice(0,4)};
+}
+function dashboardCompletionInfo(tasks){
+  const state=loadDashboardState(), day=state.days[todayKey()] || {completed:[]};
+  const completed = day.completed || [];
+  const totalMin = tasks.reduce((sum,t)=>sum+t.duration,0);
+  const doneCount = tasks.filter(t=>completed.includes(t.id)).length;
+  const doneMin = tasks.filter(t=>completed.includes(t.id)).reduce((sum,t)=>sum+t.duration,0);
+  return {doneCount,total:tasks.length,totalMin,doneMin};
+}
+function markDashboardTask(taskId, done){
+  const state=loadDashboardState(), key=todayKey();
+  state.days[key]=state.days[key] || {completed:[], sessionComplete:false};
+  const list=new Set(state.days[key].completed || []);
+  if(done) list.add(taskId);
+  else list.delete(taskId);
+  state.days[key].completed=[...list];
+  state.days[key].sessionComplete=false;
+  saveDashboardState(state);
+  renderDashboard();
+}
+function markRoutineSessionComplete(tasks){
+  const state=loadDashboardState(), key=todayKey();
+  state.days[key]=state.days[key] || {completed:[], sessionComplete:false};
+  state.days[key].completed = tasks.map(t=>t.id);
+  state.days[key].sessionComplete = true;
+  saveDashboardState(state);
+  renderDashboard();
+}
+function weekPracticeSummary(){
+  const state=loadDashboardState();
+  const keys=lastSevenKeys();
+  const activeDays = keys.filter(k => (state.days[k]?.completed || []).length > 0).length;
+  const completeDays = keys.filter(k => state.days[k]?.sessionComplete).length;
+  return {activeDays, completeDays};
+}
+function renderQuickLinks(){
+  const target=document.getElementById("dashboardQuickLinks"); if(!target) return;
+  const links=[
+    {anchor:"#my-plan", title:"My personalised plan", sub:"Resume the selected cyber modules"},
+    {anchor:"#listening-lab", title:"Listening Lab", sub:"Gist, decoding, dictation and note-taking"},
+    {anchor:"#speaking-lab", title:"Speaking Lab", sub:"Quick responses, client questions and roleplay"},
+    {anchor:"#phrasebook", title:"Phrasebook", sub:"Chunks, favourites and spaced review"}
+  ];
+  target.innerHTML = `<div class="dashboard-mini-list">${
+    links.map(link=>`<a class="dashboard-mini-link" href="${link.anchor}"><span>${link.title}<small>${link.sub}</small></span><span>→</span></a>`).join("")
+  }</div>`;
+}
+function renderDashboardNextStep(results){
+  const target=document.getElementById("dashboardNextStep"); if(!target) return;
+  const nextModule=nextIncompleteModuleData();
+  if(!results){
+    target.innerHTML=`<div class="next-step-box"><strong>Start with the diagnostic</strong><span>The dashboard can only personalise your work once the initial diagnostic is complete.</span><a class="primary-button" href="#diagnostic">Open diagnostic</a></div>`;
+    return;
+  }
+  if(nextModule && !nextModule.completed){
+    target.innerHTML=`<div class="next-step-box"><strong>${nextModule.module.title}</strong><span>${nextModule.module.short}</span><span>${nextModule.stages} / 5 stages completed · ${nextModule.attempts} checkpoint attempt${nextModule.attempts===1?"":"s"}</span><a class="primary-button" href="#my-plan">Resume module</a></div>`;
+    return;
+  }
+  const due=phraseStats();
+  if(due.due > 0){
+    target.innerHTML=`<div class="next-step-box"><strong>Phrasebook review is due</strong><span>You have ${due.due} card${due.due===1?"":"s"} ready for spaced review.</span><a class="primary-button" href="#phrasebook">Open Phrasebook</a></div>`;
+    return;
+  }
+  target.innerHTML=`<div class="next-step-box"><strong>Speaking activation</strong><span>Your next useful step is to do one Speaking Lab task and force a few chunks into active use.</span><a class="primary-button" href="#speaking-lab">Open Speaking Lab</a></div>`;
+}
+function renderDashboard(){
+  const state=loadDashboardState();
+  const budgetSelect=document.getElementById("dashboardBudget");
+  if(budgetSelect && Number(budgetSelect.value)!==state.budget) budgetSelect.value=String(state.budget);
+
+  const today = new Date();
+  document.getElementById("dashboardGreeting").textContent = greetingForNow();
+  document.getElementById("dashboardSubcopy").textContent = dashboardMessage(today.getDate());
+
+  const build = buildRoutineTasks(state.budget);
+  const {tasks, results, details} = build;
+  const completion = dashboardCompletionInfo(tasks);
+  const week = weekPracticeSummary();
+  const weak = weakestSkill(results);
+
+  document.getElementById("routineTotalMinutes").textContent = `${completion.totalMin} min`;
+  document.getElementById("dashboardTodayProgress").textContent = `${completion.doneCount} / ${completion.total}`;
+  document.getElementById("dashboardTodaySub").textContent = `${completion.doneMin} of ${completion.totalMin} minutes logged`;
+  document.getElementById("dashboardWeekProgress").textContent = `${week.activeDays} day${week.activeDays===1?"":"s"}`;
+  document.getElementById("dashboardWeekSub").textContent = `${week.completeDays} full routine${week.completeDays===1?"":"s"} completed in the last 7 days`;
+  document.getElementById("dashboardPrioritySkill").textContent = weak.label;
+  document.getElementById("dashboardPrioritySub").textContent = results ? `Lowest current score: ${results[weak.key]}%` : "Complete the diagnostic first";
+  document.getElementById("dashboardReviewDue").textContent = String(phraseStats().due);
+  document.getElementById("dashboardReviewSub").textContent = phraseStats().saved ? `${phraseStats().saved} saved in total` : "No phrases saved yet";
+
+  const firstTask = tasks[0];
+  document.getElementById("dashboardMission").innerHTML = firstTask
+    ? `<strong>Today's mission:</strong><span>${firstTask.title} first — then keep the rest short and realistic.</span>`
+    : `<strong>Today's mission:</strong><span>Build your routine to get started.</span>`;
+
+  const completedSet = new Set((loadDashboardState().days[todayKey()]?.completed)||[]);
+  const routineList=document.getElementById("routineList");
+  routineList.innerHTML = tasks.length ? tasks.map((task, i)=>`
+    <article class="routine-step ${completedSet.has(task.id) ? 'done' : ''}">
+      <div class="routine-step-top">
+        <div>
+          <span class="routine-step-tag">${task.tag} · ${task.duration} min</span>
+          <h4>${i+1}. ${task.title}</h4>
+          <p>${task.desc}</p>
+        </div>
+      </div>
+      <div class="routine-step-actions">
+        <a class="secondary-button" href="${task.anchor}">${task.cta}</a>
+        <button class="routine-check ${completedSet.has(task.id) ? 'is-done' : ''}" type="button" data-dashboard-task="${task.id}">
+          ${completedSet.has(task.id) ? '✓ Done' : 'Mark done'}
+        </button>
+      </div>
+    </article>`).join("") : `<div class="dashboard-empty">No routine could be generated yet.</div>`;
+
+  routineList.querySelectorAll("[data-dashboard-task]").forEach(btn=>btn.addEventListener("click",()=>{
+    const id=btn.dataset.dashboardTask, done=!completedSet.has(id);
+    markDashboardTask(id, done);
+  }));
+
+  renderDashboardNextStep(results);
+  renderQuickLinks();
+
+  const reasons=document.getElementById("dashboardFocusReasons");
+  reasons.innerHTML = dashboardReasonCards(results,details).map(card=>`
+    <article class="focus-reason">
+      <strong>${card.title}</strong>
+      <span>${card.text}</span>
+    </article>`).join("");
+
+  document.getElementById("markRoutineDoneBtn").onclick = ()=>markRoutineSessionComplete(tasks);
+}
+function initDashboard(){
+  if(!document.getElementById("dashboard")) return;
+  const state=loadDashboardState();
+  const budgetSelect=document.getElementById("dashboardBudget");
+  if(budgetSelect){
+    budgetSelect.value=String(state.budget);
+    budgetSelect.addEventListener("change",()=>{
+      const st=loadDashboardState();
+      st.budget=Number(budgetSelect.value||15);
+      saveDashboardState(st);
+      renderDashboard();
+    });
+  }
+  document.getElementById("refreshRoutineBtn")?.addEventListener("click",renderDashboard);
+  renderDashboard();
+}
+
+
 // V6 · Phrasebook, flashcards & spaced review
 const phrasebookItems = [
   {id:"soc-alert-triggered",category:"SOC & Alerts",phrase:"The alert was triggered by…",definition:"Use this to state the event or behaviour that caused a detection rule to fire.",fr:"L’alerte a été déclenchée par…",example:"The alert was triggered by repeated failed logins from an unfamiliar IP address."},
@@ -1688,3 +1976,4 @@ renderLab();
 
 initPhrasebook();
 initSpeakingLab();
+initDashboard();
