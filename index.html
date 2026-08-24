@@ -15,6 +15,7 @@
     <div class="top-actions">
       <a class="nav-pill" href="#dashboard">Dashboard</a>
       <a class="nav-pill" href="#progress-check">Progress</a>
+      <a class="nav-pill" href="#resources-hub">Authentic Resources</a>
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
       <a class="nav-pill" href="#speaking-lab">Speaking Lab</a>
       <a class="nav-pill" href="#pronunciation-lab">Pronunciation</a>
@@ -646,6 +647,164 @@
 
 
 
+
+
+    <section class="section resources-hub-section" id="resources-hub">
+      <div class="section-heading resources-hub-heading">
+        <div>
+          <p class="eyebrow">AUTHENTIC RESOURCES HUB</p>
+          <h2>Train with the English cybersecurity professionals actually use.</h2>
+          <p>Recent 2025–2026 resources from cybersecurity teams, public agencies and specialist media. Open the original source, complete a short task, then reuse the language in speaking or writing.</p>
+        </div>
+        <div class="resource-hub-stats">
+          <div><strong id="resourceDoneCount">0</strong><span>completed</span></div>
+          <div><strong id="resourceSavedCount">0</strong><span>saved for later</span></div>
+          <div><strong id="resourceTypesCount">0 / 4</strong><span>formats used</span></div>
+        </div>
+      </div>
+
+      <div class="resource-privacy-note">
+        <strong>External resources stay external.</strong>
+        <span>This site does not embed third-party trackers or copy full articles. Links open the original publisher in a new tab; only your local completion status is stored here.</span>
+      </div>
+
+      <div class="resource-of-day-card">
+        <div>
+          <p class="small-label">RESOURCE OF THE DAY</p>
+          <h3 id="resourceOfDayTitle">Loading today’s resource…</h3>
+          <p id="resourceOfDayMeta"></p>
+          <p id="resourceOfDayWhy"></p>
+        </div>
+        <div class="resource-of-day-actions">
+          <button class="secondary-button" id="resourceOfDayTaskBtn" type="button">Open task</button>
+          <a class="primary-button" id="resourceOfDaySourceBtn" href="#" target="_blank" rel="noopener noreferrer">Open source ↗</a>
+        </div>
+      </div>
+
+      <div class="resource-toolbar">
+        <label class="resource-search">
+          <span>Search</span>
+          <input type="search" id="resourceSearch" placeholder="e.g. ransomware, incident response, AI, threat intelligence">
+        </label>
+        <label>
+          <span>Format</span>
+          <select id="resourceFormatFilter">
+            <option value="all">All formats</option>
+            <option value="article">Article</option>
+            <option value="report">Report</option>
+            <option value="video">Video</option>
+            <option value="podcast">Podcast</option>
+          </select>
+        </label>
+        <label>
+          <span>Topic</span>
+          <select id="resourceTopicFilter">
+            <option value="all">All topics</option>
+            <option value="Incident response">Incident response</option>
+            <option value="Threat intelligence">Threat intelligence</option>
+            <option value="Ransomware">Ransomware</option>
+            <option value="AI & security">AI & security</option>
+            <option value="SOC operations">SOC operations</option>
+            <option value="Risk & resilience">Risk & resilience</option>
+            <option value="Phishing & identity">Phishing & identity</option>
+          </select>
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="resourceSavedOnly">
+          <span>Saved only</span>
+        </label>
+      </div>
+
+      <div class="resource-library-head">
+        <div>
+          <p class="small-label">CURATED LIBRARY</p>
+          <h3>Recent, credible and useful for professional English</h3>
+        </div>
+        <span class="question-count" id="resourceResultCount">0 resources</span>
+      </div>
+
+      <div id="resourceLibrary" class="resource-library"></div>
+
+      <div class="resource-task-workspace" id="resourceTaskWorkspace" hidden>
+        <div class="resource-task-top">
+          <button class="back-link" id="closeResourceTaskBtn" type="button">← Back to resources</button>
+          <span class="speaking-status-pill" id="resourceTaskStatus">Authentic input</span>
+        </div>
+
+        <div class="resource-task-hero">
+          <div>
+            <p class="small-label" id="resourceTaskSource">SOURCE</p>
+            <h2 id="resourceTaskTitle">Resource title</h2>
+            <p id="resourceTaskMeta"></p>
+            <div id="resourceTaskTags" class="module-tags"></div>
+          </div>
+          <div class="resource-task-source-box">
+            <span>Original source</span>
+            <strong id="resourceTaskPublisher">Publisher</strong>
+            <a id="resourceTaskExternalLink" href="#" target="_blank" rel="noopener noreferrer">Open original ↗</a>
+          </div>
+        </div>
+
+        <div class="resource-task-grid">
+          <article class="resource-task-stage">
+            <p class="small-label">1 · BEFORE</p>
+            <h3 id="resourceBeforeTitle">Predict the message</h3>
+            <p id="resourceBeforeTask"></p>
+            <textarea id="resourceBeforeInput" rows="3" placeholder="Keywords only — no need for full sentences."></textarea>
+          </article>
+
+          <article class="resource-task-stage">
+            <p class="small-label">2 · DURING</p>
+            <h3>Read or listen for the operational message</h3>
+            <p id="resourceDuringQuestion"></p>
+            <div id="resourceDuringOptions" class="activity-options resource-options"></div>
+            <button class="secondary-button" id="checkResourceDuringBtn" type="button">Check gist</button>
+            <div id="resourceDuringFeedback" class="activity-summary" aria-live="polite"></div>
+          </article>
+
+          <article class="resource-task-stage">
+            <p class="small-label">3 · NOTICE THE LANGUAGE</p>
+            <h3>Find language worth stealing</h3>
+            <p id="resourceLanguagePrompt"></p>
+            <div id="resourceLanguageBank" class="resource-language-bank"></div>
+          </article>
+
+          <article class="resource-task-stage">
+            <p class="small-label">4 · AFTER</p>
+            <h3 id="resourceAfterTitle">Turn input into output</h3>
+            <p id="resourceAfterTask"></p>
+            <div id="resourceAfterLinks" class="resource-after-links"></div>
+          </article>
+
+          <article class="resource-task-stage full">
+            <p class="small-label">5 · CHECKPOINT</p>
+            <h3>Did you actually use the resource?</h3>
+            <div class="resource-selfcheck">
+              <label><input type="checkbox" data-resource-check="gist"><span>I can explain the main message in one sentence.</span></label>
+              <label><input type="checkbox" data-resource-check="evidence"><span>I can name at least two concrete facts, examples or recommendations.</span></label>
+              <label><input type="checkbox" data-resource-check="language"><span>I noticed at least one useful English chunk.</span></label>
+              <label><input type="checkbox" data-resource-check="output"><span>I completed or rehearsed the follow-up task.</span></label>
+            </div>
+            <button class="primary-button" id="completeResourceTaskBtn" type="button">Mark resource complete</button>
+            <div id="resourceCompleteFeedback" class="activity-summary" aria-live="polite"></div>
+          </article>
+        </div>
+      </div>
+
+      <div class="resource-routine-card">
+        <div>
+          <p class="small-label">15-MINUTE AUTHENTIC INPUT ROUTINE</p>
+          <h3>Do not turn this into passive scrolling.</h3>
+        </div>
+        <ol>
+          <li><strong>1 min</strong> — predict from the title.</li>
+          <li><strong>6 min</strong> — read, watch or listen for the main message.</li>
+          <li><strong>3 min</strong> — capture facts and one useful phrase.</li>
+          <li><strong>3 min</strong> — explain the resource aloud in plain English.</li>
+          <li><strong>2 min</strong> — reuse one idea in a client-facing sentence.</li>
+        </ol>
+      </div>
+    </section>
 
     <section class="section pronunciation-lab-section" id="pronunciation-lab">
       <div class="section-heading pronunciation-lab-heading">

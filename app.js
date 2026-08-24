@@ -489,10 +489,11 @@ function checkpointReadiness(){
   const speaking=loadSpeakingState().attempts;
   const writing=loadWritingState().attempts.length;
   const pronunciation=loadPronunciationLabState().completed.length;
+  const resources=loadAuthenticResourceState().completed.length;
   const grammar=loadGrammarRepairState().completed.length;
   const listening=listeningLabCompletedCount();
-  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
-  return {completedModules,speaking,writing,pronunciation,grammar,listening,evidence};
+  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(1,Math.floor(resources/2))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
+  return {completedModules,speaking,writing,pronunciation,resources,grammar,listening,evidence};
 }
 function renderProgressSkillComparison(state){
   const target=document.getElementById("progressSkillComparison");if(!target)return;
@@ -571,6 +572,7 @@ function renderProgressCheck(){
     <div class="readiness-item"><span>Speaking Lab attempts</span><strong>${ready.speaking}</strong></div>
     <div class="readiness-item"><span>Writing Lab attempts</span><strong>${ready.writing}</strong></div>
     <div class="readiness-item"><span>Pronunciation units completed</span><strong>${ready.pronunciation}</strong></div>
+    <div class="readiness-item"><span>Authentic resources completed</span><strong>${ready.resources}</strong></div>
     <div class="readiness-item"><span>Grammar Repair units completed</span><strong>${ready.grammar}</strong></div>
     <div class="readiness-item"><span>Listening Lab tasks completed</span><strong>${ready.listening} / 5</strong></div>`;
 }
@@ -1306,6 +1308,7 @@ function dashboardReasonCards(results,details){
   }else{
     cards.push({title:`Main priority: ${weak.label}`,text:`Your diagnostic currently gives the lowest score to ${weak.label.toLowerCase()}, so today's routine gives it extra space.`});
     if(results.listening<75) cards.push({title:"Listening needs structured work",text:"That usually means gist, decoding and note-taking rather than simply 'more English audio'."});
+    if(loadAuthenticResourceState().completed.length<3) cards.push({title:"Authentic input is still limited",text:"The resource hub adds recent real-world cybersecurity English so training is not confined to synthetic exercises."});
     if(results.speaking<75) cards.push({title:"Speaking needs activation",text:"The goal is to move useful language from recognition to spontaneous use."});
     if(results.writing<75) cards.push({title:"Writing needs consolidation",text:"Short client-facing writing is now trained through incident updates, handovers, risk explanations and follow-ups."});
     if(results.grammar<75) cards.push({title:"Accuracy still matters",text:"But it is built into cyber tasks, not treated as isolated textbook drilling."});
@@ -1348,6 +1351,9 @@ function buildRoutineTasks(minutes){
   }
   if(due.due > 0 || due.saved === 0){
     add({id:"phrasebook",tag:"PHRASEBOOK",title:due.saved===0?"Start your Phrasebook":"Review due phrases",desc:due.saved===0?"Add useful chunks and begin spaced review.":"Review a few due cards and keep the useful chunks active.",duration:durations[1],anchor:"#phrasebook",cta:"Open Phrasebook"});
+  }
+  if(loadAuthenticResourceState().completed.length < 3){
+    add({id:"authentic-input",tag:"REAL ENGLISH",title:"Authentic resource",desc:"Use one recent cybersecurity article, report, video or podcast actively: gist → facts → language → output.",duration:durations[Math.min(tasks.length,durations.length-1)],anchor:"#resources-hub",cta:"Open Authentic Resources"});
   }
   if(results.speaking < 75 || loadSpeakingState().attempts < 5){
     add({id:"speaking",tag:"SPEAKING",title:"Speaking Lab",desc:`Do one ${results.speaking < 65 ? "quick response or explain-it-simply" : "incident update or client roleplay"} task.`,duration:durations[2],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
@@ -1409,6 +1415,7 @@ function renderQuickLinks(){
   const target=document.getElementById("dashboardQuickLinks"); if(!target) return;
   const links=[
     {anchor:"#my-plan", title:"My personalised plan", sub:"Resume the selected cyber modules"},
+    {anchor:"#resources-hub", title:"Authentic Resources", sub:"Recent real-world cyber English with short tasks"},
     {anchor:"#listening-lab", title:"Listening Lab", sub:"Gist, decoding, dictation and note-taking"},
     {anchor:"#speaking-lab", title:"Speaking Lab", sub:"Quick responses, client questions and roleplay"},
     {anchor:"#pronunciation-lab", title:"Pronunciation Lab", sub:"Stress, endings, connected speech, chunking and shadowing"},
@@ -1529,6 +1536,435 @@ function initDashboard(){
 
 
 
+
+
+
+
+// V14 · Authentic Resources Hub
+const authenticResourceStateKey="ebackontrack-v14-resources";
+
+const authenticResources=[
+  {
+    id:"orange-navigator-2026",
+    format:"report",year:2026,date:"04 Dec 2025",publisher:"Orange Cyberdefense",
+    title:"Security Navigator 2026 — key findings",
+    topic:"Threat intelligence",level:"B2+",time:"6–8 min",
+    url:"https://newsroom.orange.com/securitynavigator2026-413193/?lang=eng",
+    why:"Highly relevant operational threat intelligence: incident volume, cyber extortion, supply-chain exposure and the industrialisation of cybercrime.",
+    before:"From the title alone, predict three trends you expect a European cyberdefence provider to highlight.",
+    gist:{q:"Which idea best captures the report's overall message?",a:["Cybercrime is becoming less organised and less scalable.","Cybercrime is increasingly industrialised, interconnected and strategically significant.","Most modern cyber incidents are purely accidental.","Threat intelligence is becoming unnecessary because automation solves attribution."],c:1},
+    language:[
+      ["threat landscape","the overall environment of current and emerging threats"],
+      ["cyber extortion","using disruption or stolen data to pressure a victim into paying"],
+      ["supply chain","the network of suppliers and partners that can create indirect exposure"]
+    ],
+    languagePrompt:"Notice how professional reports describe trends without claiming that every organisation faces exactly the same risk.",
+    after:"Give a 60-second briefing to a manager: identify one trend, one piece of evidence and one practical implication.",
+    afterLinks:["speaking","phrasebook"]
+  },
+  {
+    id:"ncsc-recovery-2026",
+    format:"article",year:2026,date:"28 Jul 2026",publisher:"UK National Cyber Security Centre",
+    title:"When cyber attacks happen: helping organisations recover",
+    topic:"Incident response",level:"B2",time:"5–7 min",
+    url:"https://www.ncsc.gov.uk/blogs/when-cyber-attacks-happen-helping-organisations-recover",
+    why:"Clear professional English about incident preparation, realistic exercises, recovery and building response muscle memory.",
+    before:"What is the difference between having an incident-response plan and being genuinely ready to use it?",
+    gist:{q:"What does the NCSC argue organisations should do in addition to documenting plans?",a:["Avoid all simulations because they create unnecessary risk.","Practise realistic response and recovery procedures so teams build operational muscle memory.","Replace incident-response teams with automated tools.","Focus only on public communications."],c:1},
+    language:[
+      ["build muscle memory","practise a response until key actions become more automatic"],
+      ["rehearse procedures","practise procedures before a real incident"],
+      ["recover from disruption","restore operations after an incident"]
+    ],
+    languagePrompt:"Look for action verbs used to describe preparedness and recovery.",
+    after:"Explain to a client why tabletop documentation alone is not enough. Use one analogy and one concrete recommendation.",
+    afterLinks:["speaking","writing"]
+  },
+  {
+    id:"australia-zimbra-2026",
+    format:"article",year:2026,date:"24 Jul 2026",publisher:"Australian Signals Directorate / cyber.gov.au",
+    title:"Russian state-supported actors target Zimbra users",
+    topic:"Phishing & identity",level:"B2+",time:"6–8 min",
+    url:"https://www.cyber.gov.au/about-us/view-all-content/alerts-and-advisories/russian-state-supported-cyber-actors-conduct-phishing-campaign-targeting-users-of-zimbra-collaboration-suite",
+    why:"A current government advisory with concise threat description, tactics and concrete mitigation language.",
+    before:"Predict which controls an advisory about credential-stealing phishing is likely to recommend first.",
+    gist:{q:"What is the main purpose of the campaign described in the advisory?",a:["To improve email filtering.","To steal credentials and gain unauthorised access.","To deploy security patches automatically.","To measure user awareness without accessing systems."],c:1},
+    language:[
+      ["gain unauthorised access","enter an account or system without permission"],
+      ["mitigation measures","actions intended to reduce likelihood or impact"],
+      ["suspicious login requests","authentication prompts or attempts that may indicate malicious activity"]
+    ],
+    languagePrompt:"Notice how official advisories move from threat description to key actions.",
+    after:"Write a 70-word internal SOC note summarising the threat and the two most important mitigations.",
+    afterLinks:["writing","phrasebook"]
+  },
+  {
+    id:"reuters-ai-incidents-2026",
+    format:"article",year:2026,date:"28 Jul 2026",publisher:"Reuters",
+    title:"Responding to AI-native security incidents",
+    topic:"AI & security",level:"C1",time:"6–8 min",
+    url:"https://www.reuters.com/legal/legalindustry/new-day-has-dawned-responding-ai-native-security-incidents--pracin-2026-07-28/",
+    why:"Useful for discussing how incident response changes when AI systems are both attack tools and attack targets.",
+    before:"What would make an AI-native security incident harder to investigate than a conventional account compromise?",
+    gist:{q:"Why can AI-native incidents be difficult for traditional incident-response processes?",a:["They never involve data.","They can involve model manipulation, training data or AI assets that do not fit conventional breach patterns.","They always produce obvious malware alerts.","They remove the need for legal and forensic expertise."],c:1},
+    language:[
+      ["probabilistic behaviour","behaviour expressed in likelihoods rather than deterministic rules"],
+      ["forensic analysis","systematic investigation of evidence after an incident"],
+      ["notification obligations","legal or regulatory requirements to report an incident"]
+    ],
+    languagePrompt:"Notice the language used to distinguish established incident-response concepts from emerging uncertainty.",
+    after:"Give a 90-second explanation to a non-AI specialist: why might an AI incident require a different response plan?",
+    afterLinks:["speaking","grammar"]
+  },
+  {
+    id:"techradar-mtta-2026",
+    format:"article",year:2026,date:"Aug 2026",publisher:"TechRadar Pro",
+    title:"Cybersecurity needs a new KPI: Mean Time to Adapt",
+    topic:"Risk & resilience",level:"B2+",time:"5–6 min",
+    url:"https://www.techradar.com/pro/cybersecurity-needs-a-new-kpi-its-time-to-measure-our-ability-to-adapt",
+    why:"Strong business-facing English for explaining SOC metrics, resilience and the limits of traditional MTTD/MTTR measures.",
+    before:"What can a metric such as MTTD measure well — and what might it fail to capture?",
+    gist:{q:"What additional capability does the proposed MTTA metric aim to measure?",a:["How many alerts an analyst closes per hour.","How quickly an organisation recognises change and adapts its security response.","How long employees spend in security training.","How much a SOC costs each month."],c:1},
+    language:[
+      ["response latency","delay between detection and effective action"],
+      ["adapt to the threat landscape","change controls or behaviour as threats evolve"],
+      ["cyber resilience","ability to withstand, respond to and recover from cyber disruption"]
+    ],
+    languagePrompt:"Notice the business vocabulary used to turn technical performance into organisational risk.",
+    after:"Explain MTTA in plain English to a client and give one example of what 'adaptation' could mean after a new threat emerges.",
+    afterLinks:["speaking","writing"]
+  },
+  {
+    id:"unit42-frontier-ai-2026",
+    format:"article",year:2026,date:"Apr 2026",publisher:"Unit 42 / Palo Alto Networks",
+    title:"Fracturing Software Security With Frontier AI Models",
+    topic:"AI & security",level:"C1",time:"7–9 min",
+    url:"https://unit42.paloaltonetworks.com/ai-software-security-risks/",
+    why:"Current threat-research language on AI-enabled attack speed, software exposure and the need for defenders to adapt.",
+    before:"How could frontier AI change both the speed and scale of vulnerability discovery?",
+    gist:{q:"What transition does the article describe?",a:["AI permanently guarantees attackers will dominate defenders.","Attackers may gain speed and scale while defenders adapt their own AI-enabled capabilities.","Software vulnerabilities will disappear because AI can write code.","Threat intelligence becomes irrelevant when AI models are used."],c:1},
+    language:[
+      ["attack at scale","carry out malicious activity across many targets efficiently"],
+      ["previously undetected exposure","a weakness that had not been identified before"],
+      ["adapt their defences","change protective controls in response to new capability"]
+    ],
+    languagePrompt:"Look for cautious predictive language: likely, may, transition, future, need to adapt.",
+    after:"Use modals of probability to give a 60-second assessment of how AI may change incident-response pressure.",
+    afterLinks:["grammar","speaking"]
+  },
+  {
+    id:"unit42-ir-2025",
+    format:"report",year:2025,date:"2025",publisher:"Unit 42 / Palo Alto Networks",
+    title:"2025 Global Incident Response Report",
+    topic:"Incident response",level:"B2+",time:"8 min excerpt",
+    url:"https://www.paloaltonetworks.com/resources/research/unit-42-incident-response-report-2025",
+    why:"Data-driven incident-response English covering business disruption, cloud attacks and the speed of exfiltration.",
+    before:"Which matters more in a fast intrusion: perfect attribution or rapid containment? Give one reason.",
+    gist:{q:"Which trend is highlighted in the report?",a:["Threat actors are generally moving more slowly than before.","Data exfiltration can happen extremely quickly, leaving defenders little response time.","Business disruption is now rare in incident response.","Cloud attacks are decreasing in sophistication."],c:1},
+    language:[
+      ["business disruption","interruption or degradation of normal organisational operations"],
+      ["data exfiltration","unauthorised transfer of data out of an environment"],
+      ["minimal time to detect and respond","a very short window for defenders to act"]
+    ],
+    languagePrompt:"Notice how numerical evidence is translated into operational urgency.",
+    after:"Give an incident-response briefing using one statistic from the report and explain what the statistic should change operationally.",
+    afterLinks:["speaking","writing"]
+  },
+  {
+    id:"microsoft-defense-2025",
+    format:"report",year:2025,date:"2025",publisher:"Microsoft Threat Intelligence",
+    title:"Microsoft Digital Defense Report 2025",
+    topic:"SOC operations",level:"C1",time:"8 min selected pages",
+    url:"https://cdn-dynmedia-1.microsoft.com/is/content/microsoftcorp/microsoft/msc/documents/presentations/CSR/Microsoft-Digital-Defense-Report-2025.pdf",
+    why:"Large-scale threat data with useful language around dwell time, detection, SOC capability and incident-response readiness.",
+    before:"What does 'dwell time' tell a security team about an intrusion?",
+    gist:{q:"Why does the report emphasise incident-response preparation?",a:["Because attackers always remain undetected for years.","Because faster attack chains mean organisations need clear roles, communication and response capability before an incident occurs.","Because prevention makes response unnecessary.","Because SOC teams should avoid threat hunting."],c:1},
+    language:[
+      ["dwell time","time an attacker remains in an environment before detection"],
+      ["reactive engagement","response work initiated after an incident has been detected"],
+      ["incident-response posture","the organisation's level of preparedness to handle an incident"]
+    ],
+    languagePrompt:"Focus on the vocabulary used to describe speed, preparedness and organisational capability.",
+    after:"Explain dwell time to a non-technical manager and give two reasons why shorter attacker timelines create pressure on a SOC.",
+    afterLinks:["speaking","phrasebook"]
+  },
+  {
+    id:"ncsc-retail-2025",
+    format:"article",year:2025,date:"04 May 2025",publisher:"UK National Cyber Security Centre",
+    title:"Incidents impacting retailers — recommendations from the NCSC",
+    topic:"SOC operations",level:"B2",time:"6–8 min",
+    url:"https://www.ncsc.gov.uk/blog-post/incidents-impacting-retailers",
+    why:"Practical defensive recommendations on MFA, risky logins, privileged accounts, helpdesk resets and SOC enrichment.",
+    before:"Imagine an attacker is abusing legitimate credentials. Which SOC signals become especially important?",
+    gist:{q:"Which recommendation is specifically relevant to SOC monitoring?",a:["Ignore logins from VPN ranges.","Identify atypical login sources and enrich source information.","Disable all employee accounts permanently.","Stop using threat intelligence."],c:1},
+    language:[
+      ["risky login","a sign-in flagged as potentially compromised or unusual"],
+      ["privileged account","an account with elevated rights"],
+      ["source enrichment","adding contextual information to an IP, domain or other signal"]
+    ],
+    languagePrompt:"Notice how the article uses strong recommendation language without turning every point into an absolute rule.",
+    after:"Give a 60-second SOC recommendation to a retailer: choose three controls and explain why each matters.",
+    afterLinks:["speaking","grammar"]
+  },
+  {
+    id:"google-ti-overview-2025",
+    format:"video",year:2025,date:"04 Aug 2025",publisher:"Mandiant & Google Cloud Security",
+    title:"Google Threat Intelligence Platform Overview",
+    topic:"Threat intelligence",level:"B2+",time:"short video",
+    url:"https://www.youtube.com/watch?v=RsEg-D9EMdg",
+    why:"Authentic product-demo English around IoCs, threat profiles, vulnerability intelligence and investigation workflows.",
+    before:"What information would you expect an analyst to want when investigating an unfamiliar IoC?",
+    gist:{q:"Which capability is part of the platform overview?",a:["Private IoC investigation and threat intelligence analysis","Physical building access control","Payroll administration","Video-conference scheduling"],c:0},
+    language:[
+      ["investigate an IoC","analyse an indicator of compromise for context and relevance"],
+      ["threat profile","a structured view of threats relevant to an organisation"],
+      ["attack surface","systems and exposures that could potentially be targeted"]
+    ],
+    languagePrompt:"Listen for verbs used to explain an analyst workflow: investigate, navigate, manage, integrate, surface.",
+    after:"Recreate the demo in words: explain in 45 seconds how an analyst could move from an IoC to a useful threat-intelligence decision.",
+    afterLinks:["speaking","pronunciation"]
+  },
+  {
+    id:"google-ti-demo-2025",
+    format:"video",year:2025,date:"02 Apr 2025",publisher:"Google Cloud",
+    title:"How Google Threat Intelligence provides visibility into threats",
+    topic:"Threat intelligence",level:"B2+",time:"short demo",
+    url:"https://www.youtube.com/watch?v=tsapiYreajk",
+    why:"Useful listening for threat-intelligence explanations, risk relevance and summarising complex reports for security teams.",
+    before:"Why is 'more threat intelligence' not automatically useful to every organisation?",
+    gist:{q:"What is one role described for Gemini in Threat Intelligence?",a:["Replacing all analysts without review","Surfacing threats relevant to a risk profile and summarising complex reports","Disabling all external traffic automatically","Creating employee passwords"],c:1},
+    language:[
+      ["relevant to your risk profile","important in relation to a specific organisation's exposure"],
+      ["surface a threat","bring important threat information to an analyst's attention"],
+      ["summarise complex reporting","turn a long technical report into a shorter usable overview"]
+    ],
+    languagePrompt:"Listen for how the speaker connects product capability to analyst benefit rather than listing features only.",
+    after:"Explain the difference between raw threat data and actionable threat intelligence in 60 seconds.",
+    afterLinks:["speaking","writing"]
+  },
+  {
+    id:"cyber-today-2026",
+    format:"podcast",year:2026,date:"02 Feb 2026",publisher:"Cybersecurity Today",
+    title:"Google proxy takedown, AI-agent hijack and SSO attacks",
+    topic:"Threat intelligence",level:"C1",time:"11 min · use 00:52–04:46",
+    url:"https://music.youtube.com/podcast/WtryeeXjTOU",
+    why:"Fast authentic news-style listening with several short cyber stories and compressed spoken English.",
+    before:"For this excerpt, listen for only two things: what was disrupted, and what weakness or abuse made the story possible.",
+    gist:{q:"What kind of listening strategy is most useful for this multi-story news format?",a:["Transcribe every word before deciding what the story is about.","Identify the story topic, actor/action and consequence before worrying about details.","Pause after every individual word.","Ignore transitions between stories."],c:1},
+    language:[
+      ["disrupt a network","take action that prevents malicious infrastructure from operating normally"],
+      ["abuse single sign-on","misuse SSO systems or trust relationships for malicious access"],
+      ["security flaw","a weakness that can create exploitable risk"]
+    ],
+    languagePrompt:"Listen for headline language and transitions that tell you when one story ends and the next begins.",
+    after:"Give a 45-second newsroom-style summary of one story from the excerpt: event → significance → one defensive implication.",
+    afterLinks:["listening","speaking"]
+  }
+];
+
+function loadAuthenticResourceState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(authenticResourceStateKey))||{};
+    return {
+      completed:Array.isArray(raw.completed)?raw.completed:[],
+      saved:Array.isArray(raw.saved)?raw.saved:[],
+      formats:raw.formats||{}
+    };
+  }catch(e){return {completed:[],saved:[],formats:{}};}
+}
+function saveAuthenticResourceState(state){
+  localStorage.setItem(authenticResourceStateKey,JSON.stringify(state));
+}
+function resourceById(id){return authenticResources.find(r=>r.id===id);}
+function resourceFormatLabel(format){
+  return ({article:"Article",report:"Report",video:"Video",podcast:"Podcast"})[format]||format;
+}
+function resourceStateStats(){
+  const s=loadAuthenticResourceState();
+  return {done:s.completed.length,saved:s.saved.length,types:Object.keys(s.formats).filter(k=>s.formats[k]>0).length};
+}
+function renderResourceStats(){
+  const s=resourceStateStats();
+  document.getElementById("resourceDoneCount").textContent=s.done;
+  document.getElementById("resourceSavedCount").textContent=s.saved;
+  document.getElementById("resourceTypesCount").textContent=`${s.types} / 4`;
+}
+function toggleResourceSaved(id){
+  const s=loadAuthenticResourceState(),set=new Set(s.saved);
+  set.has(id)?set.delete(id):set.add(id);
+  s.saved=[...set];saveAuthenticResourceState(s);renderResourceHub();
+}
+function resourceOfDay(){
+  const d=new Date();
+  const index=(d.getFullYear()*31+d.getMonth()*7+d.getDate())%authenticResources.length;
+  return authenticResources[index];
+}
+function renderResourceOfDay(){
+  const r=resourceOfDay();
+  document.getElementById("resourceOfDayTitle").textContent=r.title;
+  document.getElementById("resourceOfDayMeta").textContent=`${r.publisher} · ${resourceFormatLabel(r.format)} · ${r.date} · ${r.time}`;
+  document.getElementById("resourceOfDayWhy").textContent=r.why;
+  document.getElementById("resourceOfDaySourceBtn").href=r.url;
+  document.getElementById("resourceOfDayTaskBtn").onclick=()=>openResourceTask(r.id);
+}
+function renderResourceHub(){
+  if(!document.getElementById("resources-hub"))return;
+  const state=loadAuthenticResourceState();
+  const search=(document.getElementById("resourceSearch")?.value||"").toLowerCase().trim();
+  const format=document.getElementById("resourceFormatFilter")?.value||"all";
+  const topic=document.getElementById("resourceTopicFilter")?.value||"all";
+  const savedOnly=!!document.getElementById("resourceSavedOnly")?.checked;
+  const filtered=authenticResources.filter(r=>{
+    const hay=[r.title,r.publisher,r.topic,r.why,r.format,...r.language.flat()].join(" ").toLowerCase();
+    return (!search||hay.includes(search)) &&
+      (format==="all"||r.format===format) &&
+      (topic==="all"||r.topic===topic) &&
+      (!savedOnly||state.saved.includes(r.id));
+  });
+  document.getElementById("resourceResultCount").textContent=`${filtered.length} resource${filtered.length===1?"":"s"}`;
+  document.getElementById("resourceLibrary").innerHTML=filtered.length?filtered.map(r=>{
+    const done=state.completed.includes(r.id),saved=state.saved.includes(r.id);
+    return `<article class="resource-card ${done?"completed":""}">
+      <div class="resource-card-top">
+        <span class="resource-format">${resourceFormatLabel(r.format)}</span>
+        <span class="resource-year">${r.year}</span>
+      </div>
+      <h4>${r.title}</h4>
+      <div class="resource-publisher">${r.publisher}</div>
+      <p>${r.why}</p>
+      <div class="resource-tags"><span>${r.topic}</span><span>${r.level}</span></div>
+      <div class="resource-card-footer">
+        <div class="resource-meta-line">${r.date} · ${r.time}${done?" · ✓ completed":""}</div>
+        <div class="resource-card-actions">
+          <button class="secondary-button" type="button" data-resource-task="${r.id}">Open task</button>
+          <a class="text-link" href="${r.url}" target="_blank" rel="noopener noreferrer">Source ↗</a>
+          <button class="secondary-button resource-save-btn ${saved?"saved":""}" type="button" data-resource-save="${r.id}">${saved?"★ Saved":"☆ Save"}</button>
+        </div>
+      </div>
+    </article>`;
+  }).join(""):`<div class="dashboard-empty">No resource matches these filters.</div>`;
+  document.querySelectorAll("[data-resource-task]").forEach(btn=>btn.addEventListener("click",()=>openResourceTask(btn.dataset.resourceTask)));
+  document.querySelectorAll("[data-resource-save]").forEach(btn=>btn.addEventListener("click",()=>toggleResourceSaved(btn.dataset.resourceSave)));
+  renderResourceStats();renderResourceOfDay();
+}
+let currentAuthenticResourceId=null;
+let currentResourceGistPassed=false;
+
+function resourceAfterButtons(r){
+  const map={
+    speaking:['#speaking-lab',"Open Speaking Lab"],
+    writing:['#writing-lab',"Open Writing Lab"],
+    phrasebook:['#phrasebook',"Open Phrasebook"],
+    grammar:['#grammar-lab',"Open Grammar Repair"],
+    pronunciation:['#pronunciation-lab',"Open Pronunciation Lab"],
+    listening:['#listening-lab',"Open Listening Lab"]
+  };
+  return r.afterLinks.map(k=>{
+    const item=map[k];return item?`<a class="secondary-button" href="${item[0]}">${item[1]} →</a>`:"";
+  }).join("");
+}
+function renderResourceLanguage(r){
+  const target=document.getElementById("resourceLanguageBank");
+  target.innerHTML=r.language.map(([phrase,meaning],i)=>{
+    const found=findPhraseByText(phrase);
+    const saved=found&&loadPhraseState().items[found.id];
+    return `<div class="resource-language-item">
+      <div><strong>${phrase}</strong><small>${meaning}</small></div>
+      ${found?`<button type="button" data-resource-phrase="${found.id}">${saved?"✓ Saved":"+ Phrasebook"}</button>`:`<button type="button" data-resource-hear="${i}">🔊</button>`}
+    </div>`;
+  }).join("");
+  target.querySelectorAll("[data-resource-phrase]").forEach(btn=>btn.addEventListener("click",()=>{
+    addPhrase(btn.dataset.resourcePhrase);renderResourceLanguage(r);
+  }));
+  target.querySelectorAll("[data-resource-hear]").forEach(btn=>btn.addEventListener("click",()=>{
+    phraseSpeak(r.language[Number(btn.dataset.resourceHear)][0]);
+  }));
+}
+function openResourceTask(id){
+  const r=resourceById(id);if(!r)return;
+  currentAuthenticResourceId=id;currentResourceGistPassed=false;
+  document.getElementById("resourceTaskSource").textContent=`${resourceFormatLabel(r.format)} · ${r.publisher}`;
+  document.getElementById("resourceTaskTitle").textContent=r.title;
+  document.getElementById("resourceTaskMeta").textContent=`${r.date} · ${r.time} · ${r.level}`;
+  document.getElementById("resourceTaskTags").innerHTML=`<span class="module-tag">${r.topic}</span><span class="module-tag">${r.year}</span>`;
+  document.getElementById("resourceTaskPublisher").textContent=r.publisher;
+  document.getElementById("resourceTaskExternalLink").href=r.url;
+  document.getElementById("resourceBeforeTask").textContent=r.before;
+  document.getElementById("resourceBeforeInput").value="";
+  document.getElementById("resourceDuringQuestion").textContent=r.gist.q;
+  document.getElementById("resourceDuringOptions").innerHTML=r.gist.a.map((opt,i)=>`
+    <label><input type="radio" name="resource-gist-${r.id}" value="${i}"><span>${opt}</span></label>`).join("");
+  document.getElementById("resourceDuringFeedback").textContent="";
+  document.getElementById("resourceDuringFeedback").className="activity-summary";
+  document.getElementById("resourceLanguagePrompt").textContent=r.languagePrompt;
+  renderResourceLanguage(r);
+  document.getElementById("resourceAfterTask").textContent=r.after;
+  document.getElementById("resourceAfterLinks").innerHTML=resourceAfterButtons(r);
+  document.querySelectorAll("[data-resource-check]").forEach(x=>x.checked=false);
+  document.getElementById("resourceCompleteFeedback").textContent="";
+  document.getElementById("resourceCompleteFeedback").className="activity-summary";
+  document.getElementById("resourceTaskStatus").textContent="Authentic input";
+  document.getElementById("resourceTaskWorkspace").hidden=false;
+  document.getElementById("resourceLibrary").hidden=true;
+  document.querySelector(".resource-toolbar").hidden=true;
+  document.querySelector(".resource-library-head").hidden=true;
+  document.querySelector(".resource-of-day-card").hidden=true;
+  document.querySelector(".resource-routine-card").hidden=true;
+  document.getElementById("resourceTaskWorkspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeResourceTask(){
+  document.getElementById("resourceTaskWorkspace").hidden=true;
+  document.getElementById("resourceLibrary").hidden=false;
+  document.querySelector(".resource-toolbar").hidden=false;
+  document.querySelector(".resource-library-head").hidden=false;
+  document.querySelector(".resource-of-day-card").hidden=false;
+  document.querySelector(".resource-routine-card").hidden=false;
+  currentAuthenticResourceId=null;renderResourceHub();
+  document.getElementById("resources-hub").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function checkResourceGist(){
+  const r=resourceById(currentAuthenticResourceId);if(!r)return;
+  const picked=document.querySelector(`input[name="resource-gist-${r.id}"]:checked`);
+  const fb=document.getElementById("resourceDuringFeedback");
+  if(!picked){fb.className="activity-summary neutral";fb.textContent="Choose an answer first.";return;}
+  const ok=Number(picked.value)===r.gist.c;
+  currentResourceGistPassed=ok;
+  fb.className=`activity-summary ${ok?"correct":"wrong"}`;
+  fb.textContent=ok?"Correct ✓ You have the operational gist.":`Not quite. Best answer: ${r.gist.a[r.gist.c]}`;
+}
+function completeAuthenticResource(){
+  const r=resourceById(currentAuthenticResourceId);if(!r)return;
+  const checks=[...document.querySelectorAll("[data-resource-check]")];
+  const n=checks.filter(x=>x.checked).length;
+  const fb=document.getElementById("resourceCompleteFeedback");
+  if(!currentResourceGistPassed){
+    fb.className="activity-summary neutral";fb.textContent="Get the gist question right first.";return;
+  }
+  if(n<3){
+    fb.className="activity-summary neutral";fb.textContent="Confirm at least three of the four resource-use checks first.";return;
+  }
+  const s=loadAuthenticResourceState();
+  if(!s.completed.includes(r.id))s.completed.push(r.id);
+  s.formats[r.format]=(s.formats[r.format]||0)+1;
+  saveAuthenticResourceState(s);
+  document.getElementById("resourceTaskStatus").textContent="Completed ✓";
+  fb.className="activity-summary correct";
+  fb.textContent="Resource completed ✓ The source status is saved locally; no article, video or written response has been copied into storage.";
+  renderResourceStats();
+  if(typeof renderDashboard==="function")renderDashboard();
+  if(typeof renderProgressCheck==="function")renderProgressCheck();
+}
+function initAuthenticResourcesHub(){
+  if(!document.getElementById("resources-hub"))return;
+  ["resourceSearch","resourceFormatFilter","resourceTopicFilter","resourceSavedOnly"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el)el.addEventListener(id==="resourceSearch"?"input":"change",renderResourceHub);
+  });
+  document.getElementById("closeResourceTaskBtn")?.addEventListener("click",closeResourceTask);
+  document.getElementById("checkResourceDuringBtn")?.addEventListener("click",checkResourceGist);
+  document.getElementById("completeResourceTaskBtn")?.addEventListener("click",completeAuthenticResource);
+  renderResourceHub();
+}
 
 
 // V13 · Pronunciation & Intelligibility Lab
@@ -3739,6 +4175,7 @@ renderLab();
 
 initPhrasebook();
 initSpeakingLab();
+initAuthenticResourcesHub();
 initPronunciationLab();
 initWritingLab();
 initDashboard();
