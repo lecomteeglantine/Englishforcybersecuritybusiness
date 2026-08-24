@@ -14,6 +14,7 @@
     </a>
     <div class="top-actions">
       <a class="nav-pill" href="#dashboard">Dashboard</a>
+      <a class="nav-pill" href="#progress-check">Progress</a>
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
       <a class="nav-pill" href="#speaking-lab">Speaking Lab</a>
       <a class="nav-pill" href="#grammar-lab">Grammar Repair</a>
@@ -149,6 +150,167 @@
             </div>
           </aside>
         </div>
+      </div>
+    </section>
+
+
+    <section class="section progress-check-section" id="progress-check">
+      <div class="section-heading progress-check-heading">
+        <div>
+          <p class="eyebrow">PROGRESS CHECKPOINTS</p>
+          <h2>Make the programme evolve with you.</h2>
+          <p>The initial diagnostic is a starting point, not a permanent label. Quick checkpoints use fresh questions to see what has improved, what still needs work and what should move down the priority list.</p>
+        </div>
+        <div class="progress-check-stats">
+          <div><strong id="progressCheckCount">0</strong><span>checkpoints</span></div>
+          <div><strong id="progressImprovedSkills">0</strong><span>skills improved</span></div>
+          <div><strong id="progressCurrentPriority">—</strong><span>current priority</span></div>
+        </div>
+      </div>
+
+      <div id="progressNoBaseline" class="progress-baseline-callout" hidden>
+        <div>
+          <p class="small-label">FIRST STEP</p>
+          <h3>Complete the initial diagnostic first.</h3>
+          <p>That creates the baseline the site needs in order to measure real progress later.</p>
+        </div>
+        <a class="primary-button" href="#diagnostic">Open diagnostic →</a>
+      </div>
+
+      <div id="progressUnlocked">
+        <div class="progress-overview-grid">
+          <article class="progress-overview-card">
+            <div class="dashboard-card-head">
+              <div>
+                <p class="small-label">BASELINE → NOW</p>
+                <h3>Your profile is allowed to change</h3>
+              </div>
+              <span class="question-count" id="progressLastCheckLabel">No checkpoint yet</span>
+            </div>
+            <div id="progressSkillComparison" class="progress-skill-comparison"></div>
+          </article>
+
+          <aside class="progress-overview-card">
+            <div class="dashboard-card-head">
+              <div>
+                <p class="small-label">CHECKPOINT READINESS</p>
+                <h3 id="checkpointReadinessTitle">You can check whenever you want</h3>
+              </div>
+            </div>
+            <div id="checkpointReadinessBody" class="checkpoint-readiness-body"></div>
+            <button class="primary-button" id="startQuickCheckpointBtn" type="button">Start quick checkpoint →</button>
+            <button class="secondary-button" id="startFullRediagnosticBtn" type="button">Take a full re-diagnostic</button>
+          </aside>
+        </div>
+
+        <div class="progress-history-card">
+          <div class="dashboard-card-head">
+            <div>
+              <p class="small-label">PROGRESS HISTORY</p>
+              <h3>Snapshots, not streaks</h3>
+            </div>
+            <span class="microcopy">Stored locally on this device</span>
+          </div>
+          <div id="progressHistory" class="progress-history"></div>
+        </div>
+      </div>
+
+      <div class="checkpoint-workspace" id="checkpointWorkspace" hidden>
+        <div class="checkpoint-workspace-top">
+          <button class="back-link" id="closeCheckpointBtn" type="button">← Back to progress overview</button>
+          <span class="speaking-status-pill">Quick checkpoint · about 12 minutes</span>
+        </div>
+
+        <div class="checkpoint-hero">
+          <div>
+            <p class="small-label">FRESH QUESTIONS</p>
+            <h2>Quick Progress Check</h2>
+            <p>20 closed items target the areas that currently need attention. Speaking and writing are updated through a short self-rating, not a fake automated score.</p>
+          </div>
+          <div class="checkpoint-hero-meta">
+            <div><span>Grammar</span><strong>6</strong></div>
+            <div><span>Cyber English</span><strong>6</strong></div>
+            <div><span>Listening</span><strong>4</strong></div>
+            <div><span>Pronunciation</span><strong>4</strong></div>
+          </div>
+        </div>
+
+        <div class="checkpoint-section-block">
+          <div class="checkpoint-section-head">
+            <div><p class="small-label">1 · GRAMMAR & ACCURACY</p><h3>Fresh cyber-context questions</h3></div>
+            <span class="question-count">6 questions</span>
+          </div>
+          <div id="checkpointGrammarQuestions"></div>
+        </div>
+
+        <div class="checkpoint-section-block">
+          <div class="checkpoint-section-head">
+            <div><p class="small-label">2 · CYBERSECURITY ENGLISH</p><h3>Operational vocabulary and communication</h3></div>
+            <span class="question-count">6 questions</span>
+          </div>
+          <div id="checkpointCyberQuestions"></div>
+        </div>
+
+        <div class="checkpoint-section-block">
+          <div class="checkpoint-section-head">
+            <div><p class="small-label">3 · LISTENING</p><h3>Short incident and client exchanges</h3></div>
+            <span class="question-count">4 audio items</span>
+          </div>
+          <p class="section-note">Each item can be played twice. Listen for the operational message, not every word.</p>
+          <div id="checkpointListeningQuestions"></div>
+        </div>
+
+        <div class="checkpoint-section-block">
+          <div class="checkpoint-section-head">
+            <div><p class="small-label">4 · PRONUNCIATION AWARENESS</p><h3>Stress, endings and connected speech</h3></div>
+            <span class="question-count">4 questions</span>
+          </div>
+          <div id="checkpointPronunciationQuestions"></div>
+        </div>
+
+        <div class="checkpoint-section-block checkpoint-self-rating">
+          <div class="checkpoint-section-head">
+            <div><p class="small-label">5 · REAL-WORLD CONFIDENCE</p><h3>Has using English started to feel easier?</h3></div>
+          </div>
+          <div class="rating-row">
+            <label>Spoken fluency now
+              <select id="checkpointSpeakingRating">
+                <option value="">Keep previous estimate</option>
+                <option value="1">1 — Very difficult</option>
+                <option value="2">2 — Difficult</option>
+                <option value="3">3 — Manageable</option>
+                <option value="4">4 — Fairly comfortable</option>
+                <option value="5">5 — Comfortable</option>
+              </select>
+            </label>
+            <label>Writing confidence now
+              <select id="checkpointWritingRating">
+                <option value="">Keep previous estimate</option>
+                <option value="1">1 — Very difficult</option>
+                <option value="2">2 — Difficult</option>
+                <option value="3">3 — Manageable</option>
+                <option value="4">4 — Fairly comfortable</option>
+                <option value="5">5 — Comfortable</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <button class="primary-button checkpoint-submit" id="submitQuickCheckpointBtn" type="button">Update my current profile →</button>
+        <div id="checkpointSubmitFeedback" class="activity-summary" aria-live="polite"></div>
+      </div>
+
+      <div class="checkpoint-results" id="checkpointResults" hidden>
+        <div class="checkpoint-results-head">
+          <div>
+            <p class="small-label">NEW SNAPSHOT</p>
+            <h2>Your priorities have been recalculated.</h2>
+            <p>The site has kept your original baseline, stored this checkpoint in your history and updated the current profile used by the Dashboard, training plan and Grammar Repair Lab.</p>
+          </div>
+          <button class="secondary-button" id="closeCheckpointResultsBtn" type="button">Back to progress overview</button>
+        </div>
+        <div id="checkpointResultCards" class="checkpoint-result-cards"></div>
+        <div class="checkpoint-change-summary" id="checkpointChangeSummary"></div>
       </div>
     </section>
 

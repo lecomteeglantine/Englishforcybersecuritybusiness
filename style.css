@@ -557,3 +557,92 @@ footer{display:flex;justify-content:space-between;gap:20px;padding:28px clamp(22
   .grammar-stage{grid-template-columns:1fr}
   .grammar-lab-stats div{padding:12px 7px}
 }
+
+
+/* V10 · Progress checkpoints & re-diagnostic */
+.progress-check-section{background:#f7f9f9}
+.progress-check-heading{display:flex;justify-content:space-between;gap:34px;align-items:flex-end;max-width:none}
+.progress-check-heading>div:first-child{max-width:880px}
+.progress-check-stats{display:grid;grid-template-columns:repeat(3,1fr);min-width:390px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+.progress-check-stats div{padding:18px;text-align:center;border-right:1px solid var(--line)}
+.progress-check-stats div:last-child{border-right:0}
+.progress-check-stats strong,.progress-check-stats span{display:block}
+.progress-check-stats strong{font-size:1.5rem}
+.progress-check-stats span{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:850}
+.progress-baseline-callout{display:flex;justify-content:space-between;gap:20px;align-items:center;border:1px solid #efd08b;background:#fff8e8;border-radius:20px;padding:20px}
+.progress-baseline-callout h3{margin:4px 0 7px}
+.progress-baseline-callout p:last-child{margin:0;color:#6c5a2e}
+.progress-overview-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;align-items:start}
+.progress-overview-card,.progress-history-card{border:1px solid var(--line);background:#fff;border-radius:24px;padding:22px;box-shadow:0 10px 30px rgba(19,34,56,.04)}
+.progress-skill-comparison{display:grid;gap:10px}
+.progress-skill-row{display:grid;grid-template-columns:160px 1fr 90px;gap:12px;align-items:center;border-top:1px solid var(--line);padding:12px 0}
+.progress-skill-row:first-child{border-top:0}
+.progress-skill-name strong,.progress-skill-name span{display:block}
+.progress-skill-name span{font-size:.78rem;color:var(--muted)}
+.progress-bars{display:grid;gap:5px}
+.progress-mini-bar{height:8px;border-radius:999px;background:#edf1f4;overflow:hidden;position:relative}
+.progress-mini-bar span{display:block;height:100%;border-radius:999px}
+.progress-mini-bar.baseline span{background:#a8b3bd}
+.progress-mini-bar.current span{background:var(--accent)}
+.progress-delta{text-align:right;font-size:.9rem;font-weight:900}
+.progress-delta.up{color:#14715d}
+.progress-delta.down{color:#a13f3f}
+.progress-delta.flat{color:var(--muted)}
+.checkpoint-readiness-body{display:grid;gap:10px;margin:14px 0 18px}
+.readiness-item{display:flex;justify-content:space-between;gap:12px;border:1px solid var(--line);border-radius:13px;padding:10px 12px}
+.readiness-item span{color:var(--muted);font-size:.88rem}
+.readiness-item strong{white-space:nowrap}
+.progress-overview-card .primary-button,.progress-overview-card .secondary-button{display:block;width:100%;text-align:center;margin-top:9px}
+.progress-history-card{margin-top:18px}
+.progress-history{display:grid;gap:10px}
+.progress-history-entry{display:grid;grid-template-columns:110px 1fr auto;gap:14px;align-items:center;border-top:1px solid var(--line);padding:13px 0}
+.progress-history-entry:first-child{border-top:0}
+.progress-history-date{font-size:.82rem;color:var(--muted);font-weight:800}
+.progress-history-entry strong,.progress-history-entry span{display:block}
+.progress-history-entry span{margin-top:3px;color:var(--muted);font-size:.87rem}
+.history-priority{border-radius:999px;background:#eef4f3;padding:7px 10px;font-size:.75rem;font-weight:900;color:var(--accent-dark)}
+.progress-empty{border:1px dashed var(--line);border-radius:16px;padding:20px;text-align:center;color:var(--muted)}
+.checkpoint-workspace,.checkpoint-results{margin-top:22px;border:1px solid var(--line);border-radius:28px;background:#fff;padding:24px;box-shadow:var(--shadow)}
+.checkpoint-workspace-top{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:17px}
+.checkpoint-hero{display:grid;grid-template-columns:1.25fr .75fr;gap:20px;background:var(--ink);color:#fff;border-radius:22px;padding:25px}
+.checkpoint-hero .small-label{color:#91d1c5}
+.checkpoint-hero h2{font-size:2rem;margin:4px 0 8px}
+.checkpoint-hero p{color:#d8e2e9}
+.checkpoint-hero-meta{display:grid;grid-template-columns:repeat(2,1fr);gap:9px}
+.checkpoint-hero-meta div{border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:13px;text-align:center}
+.checkpoint-hero-meta span,.checkpoint-hero-meta strong{display:block}
+.checkpoint-hero-meta span{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#aec0cd;font-weight:850}
+.checkpoint-hero-meta strong{font-size:1.45rem;margin-top:4px}
+.checkpoint-section-block{border:1px solid var(--line);border-radius:20px;padding:20px;margin-top:14px}
+.checkpoint-section-head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:13px}
+.checkpoint-section-head h3{margin:4px 0 0;font-size:1.25rem}
+.checkpoint-audio-card{border:1px solid var(--line);border-radius:17px;padding:16px;margin-top:10px}
+.checkpoint-audio-head{display:flex;justify-content:space-between;gap:14px;align-items:center}
+.checkpoint-audio-head h4{margin:4px 0 0}
+.checkpoint-submit{margin-top:18px}
+.checkpoint-results-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
+.checkpoint-results-head h2{font-size:2rem;margin:4px 0 8px}
+.checkpoint-results-head p{color:var(--muted);max-width:830px}
+.checkpoint-result-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.checkpoint-result-card{border:1px solid var(--line);border-radius:18px;padding:17px}
+.checkpoint-result-card span,.checkpoint-result-card strong,.checkpoint-result-card small{display:block}
+.checkpoint-result-card span{font-size:.73rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:850}
+.checkpoint-result-card strong{font-size:1.7rem;margin:7px 0}
+.checkpoint-result-card small{color:var(--muted)}
+.checkpoint-change-summary{margin-top:15px;border-radius:18px;background:#f0f6f4;padding:17px}
+.checkpoint-change-summary h3{margin:0 0 8px}
+.checkpoint-change-summary ul{margin:0;padding-left:20px}
+.checkpoint-change-summary li{padding:3px 0}
+@media(max-width:980px){
+  .progress-check-heading{display:block}
+  .progress-check-stats{margin-top:20px;min-width:0;max-width:460px}
+  .progress-overview-grid,.checkpoint-hero{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .progress-skill-row{grid-template-columns:1fr}
+  .progress-delta{text-align:left}
+  .progress-history-entry{grid-template-columns:1fr}
+  .checkpoint-result-cards{grid-template-columns:1fr}
+  .checkpoint-results-head,.checkpoint-section-head{display:block}
+  .checkpoint-results-head .secondary-button{margin-top:12px}
+}

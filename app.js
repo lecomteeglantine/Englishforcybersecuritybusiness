@@ -163,12 +163,431 @@ document.getElementById("calculateBtn").addEventListener("click",()=>{
   const writingWords=document.getElementById("writingTask").value.trim().split(/\s+/).filter(Boolean).length;
   const speakingPct=speakingRating?speakingRating*20:50;let writingPct=writingRating?writingRating*20:50;if(writingWords>=90&&writingWords<=140)writingPct=Math.min(100,writingPct+5);if(writingWords>0&&writingWords<60)writingPct=Math.max(20,writingPct-10);
   const results={grammar:grammar.pct,cyber:cyber.pct,listening:listening.pct,pronunciation:pronunciation.pct,speaking:speakingPct,writing:writingPct};
-  const details={grammar,cyber,listening,pronunciation}; localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details})); renderProfile(results,details); renderTrainingPlan(results,details); showSection("results");
+  const details={grammar,cyber,listening,pronunciation}; localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details})); recordFullDiagnosticSnapshot(results,details); renderProfile(results,details); renderTrainingPlan(results,details); if(typeof renderGrammarRepair==="function")renderGrammarRepair(); if(typeof renderDashboard==="function")renderDashboard(); showSection("results");
 });
 
-document.getElementById("resetBtn").addEventListener("click",()=>{if(!confirm("Reset all answers and local diagnostic results?"))return;localStorage.removeItem("ebackontrack-v2");localStorage.removeItem("ebackontrack-v3-progress");document.querySelectorAll("#diagnostic input[type=radio]").forEach(i=>i.checked=false);document.querySelectorAll("#diagnostic textarea").forEach(t=>t.value="");document.querySelectorAll("#diagnostic select").forEach(s=>s.value="");document.getElementById("wordCount").textContent="0";document.getElementById("resultsEmpty").hidden=false;document.getElementById("resultsContent").hidden=true;document.getElementById("planUnlocked").hidden=true;document.getElementById("planLocked").hidden=false;showSection("grammar");});
+document.getElementById("resetBtn").addEventListener("click",()=>{if(!confirm("Reset all answers and local diagnostic results?"))return;localStorage.removeItem("ebackontrack-v2");localStorage.removeItem("ebackontrack-v3-progress");localStorage.removeItem("ebackontrack-v10-progress");document.querySelectorAll("#diagnostic input[type=radio]").forEach(i=>i.checked=false);document.querySelectorAll("#diagnostic textarea").forEach(t=>t.value="");document.querySelectorAll("#diagnostic select").forEach(s=>s.value="");document.getElementById("wordCount").textContent="0";document.getElementById("resultsEmpty").hidden=false;document.getElementById("resultsContent").hidden=true;document.getElementById("planUnlocked").hidden=true;document.getElementById("planLocked").hidden=false;showSection("grammar");});
 
 try{const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));if(saved?.results&&saved?.details)renderProfile(saved.results,saved.details);}catch(e){}
+
+
+
+
+// V10 · Progress checkpoints & re-diagnostic
+const progressCheckStateKey="ebackontrack-v10-progress";
+
+const checkpointGrammarPool=[
+  {q:"The analyst ___ the suspicious process at 09:12, and we ___ the host since then.",a:["stopped / monitored","stopped / have been monitoring","has stopped / monitored","has stopped / are monitored"],c:1,tag:"Present & perfect forms"},
+  {q:"We ___ no further authentication attempts since the account was disabled.",a:["saw","haven't seen","don't saw","hadn't saw"],c:1,tag:"Past vs present perfect"},
+  {q:"If the user ___ the login, we'll close the alert as benign.",a:["confirms","will confirm","confirmed","would confirm"],c:0,tag:"Conditionals"},
+  {q:"If the token had been revoked earlier, the session ___ active for so long.",a:["wouldn't remain","wouldn't have remained","won't remain","didn't remained"],c:1,tag:"Advanced conditionals"},
+  {q:"The activity ___ be legitimate, but the location makes it unusual.",a:["could","must to","can't to","has"],c:0,tag:"Modals & uncertainty"},
+  {q:"The attacker ___ the password before MFA was reset.",a:["may have obtained","may obtained","might obtaining","could to obtain"],c:0,tag:"Past modals"},
+  {q:"The affected mailbox ___ while we investigate the forwarding rule.",a:["should monitor","should be monitored","should monitoring","should been monitor"],c:1,tag:"Passive voice"},
+  {q:"The client's security team asked us ___ the IOC list.",a:["update","to update","updating to","updated"],c:1,tag:"Verb patterns"},
+  {q:"Could you tell me why the service account ___ from that IP address?",a:["did authenticate","authenticated","does authenticated","authenticate did"],c:1,tag:"Question structure"},
+  {q:"We still don't know ___ the PowerShell command was authorised.",a:["whether","that if","which","what if"],c:0,tag:"Clause structure"},
+  {q:"The new control generated ___ false positives than the previous rule.",a:["less","fewer","few","little"],c:1,tag:"Quantifiers"},
+  {q:"This exposure is considerably ___ than the initial report suggested.",a:["lower","more low","lowest than","less lower"],c:0,tag:"Comparison"},
+  {q:"The analyst ___ reviewed the case is joining the call now.",a:["which","who","whose","where"],c:1,tag:"Relative clauses"},
+  {q:"We recommend that the client ___ all active sessions.",a:["revokes","revoke","revoked","will revoke"],c:1,tag:"Formal structures"},
+  {q:"I'll update the ticket as soon as the client ___ the activity.",a:["will confirm","confirms","would confirm","confirmed will"],c:1,tag:"Future time clauses"},
+  {q:"The incident bridge starts ___ 14:30 UTC.",a:["on","at","in","to"],c:1,tag:"Prepositions"},
+  {q:"Neither the proxy logs nor the endpoint data ___ evidence of download activity.",a:["shows","show","showing","has shows"],c:1,tag:"Agreement"},
+  {q:"By the time the IR team arrived, the SOC ___ the affected credentials.",a:["had already revoked","has already revoked","already revokes","was already revoke"],c:0,tag:"Past forms"}
+];
+
+const checkpointCyberPool=[
+  {q:"A detection fires because an approved vulnerability scanner runs as scheduled. The best classification is…",a:["confirmed compromise","false positive or benign positive","data exfiltration","privilege escalation"],c:1,tag:"SOC terminology"},
+  {q:"What is the strongest reason to escalate a case?",a:["The alert name sounds serious.","Evidence suggests privileged access and the potential impact is high.","The ticket has been open for ten minutes.","The client asked a general question."],c:1,tag:"Escalation"},
+  {q:"Which handover note is most useful?",a:["Still investigating.","Three endpoints affected; two isolated; persistence not confirmed; next step: review scheduled tasks.","Looks bad, please check.","Ticket 2451."],c:1,tag:"SOC workflow"},
+  {q:"Which sentence separates evidence from hypothesis best?",a:["The attacker definitely used PowerShell.","The command could be malicious, but we still need to confirm whether it was authorised.","PowerShell means compromise.","This must maybe be malicious."],c:1,tag:"Client communication"},
+  {q:"Which action is containment rather than remediation?",a:["Isolating an endpoint to stop spread","Patching the root vulnerability permanently","Writing the final report","Attributing the threat actor"],c:0,tag:"Incident response"},
+  {q:"Which is the clearest plain-English explanation of lateral movement?",a:["MITRE TA0008 happened.","The attacker may be trying to move from one internal system to another.","The east-west vector executed.","The network is laterally compromised."],c:1,tag:"Plain English"},
+  {q:"A file hash, domain and IP address linked to malicious activity are examples of…",a:["SLA metrics","IOCs","RTO values","RBAC roles"],c:1,tag:"Threat intelligence"},
+  {q:"Why should one matching IP address not be treated as confirmed attribution?",a:["IPs never matter.","Infrastructure can be reused, shared or misleading; more evidence is needed.","Attribution is always impossible.","Only malware names can identify actors."],c:1,tag:"Threat intelligence"},
+  {q:"Which sentence gives a proportionate remediation recommendation?",a:["Rebuild everything immediately.","Prioritise patching the exposed service and restrict access until the change is complete.","Do nothing because exploitation is unconfirmed.","Delete all logs after patching."],c:1,tag:"Recommendations"},
+  {q:"Which phrase is best when the client asks for certainty you do not have?",a:["I can guarantee there was no access.","Our current assessment is that the activity was contained, but the review is still ongoing.","Probably safe, don't worry.","No idea."],c:1,tag:"Client communication"},
+  {q:"Privilege escalation refers to…",a:["an attacker obtaining higher access rights","a ticket being raised to P1","adding more SOC analysts","increasing a CVSS score"],c:0,tag:"Attack lifecycle"},
+  {q:"Which factor most directly lowers likelihood while leaving technical severity unchanged?",a:["The vulnerable service is not internet-facing and access is restricted.","The CVE has a high score.","The report is short.","The analyst is experienced."],c:0,tag:"Risk language"},
+  {q:"Which is a useful opening for a cautious root-cause statement?",a:["The cause obviously was…","Our current assessment is that initial access was most likely achieved through…","We know for certain maybe…","The cause is guaranteed."],c:1,tag:"Reporting"},
+  {q:"You did not hear the account name on a call. Best response?",a:["Repeat.","Sorry, could you say the account name again, please?","I don't listen.","Send better audio."],c:1,tag:"Meetings"},
+  {q:"What should happen first in alert triage?",a:["Assume compromise and rebuild.","Validate the alert, gather context and assess severity.","Close every low-severity alert.","Contact law enforcement."],c:1,tag:"SOC terminology"},
+  {q:"Which statement about vulnerability and compromise is accurate?",a:["A vulnerability proves compromise.","A vulnerability is a weakness; compromise requires evidence that it was successfully abused.","Critical vulnerabilities are always exploited.","Only low-severity vulnerabilities need investigation."],c:1,tag:"Risk language"},
+  {q:"Which sequence is most logical in incident response?",a:["Contain → investigate → remediate → learn","Attribute → delete logs → close → detect","Remediate → detect → ignore → contain","Report → patch → detect → triage"],c:0,tag:"Incident response"},
+  {q:"Which sentence challenges an assumption diplomatically?",a:["You're wrong.","I'm not sure the evidence supports that conclusion yet.","That's nonsense.","Absolutely not."],c:1,tag:"Meetings"}
+];
+
+const checkpointPronunciationPool=[
+  {q:"The -ed ending in 'isolated' is pronounced…",a:["/t/","/d/","/ɪd/","silent"],c:2,tag:"-ed endings"},
+  {q:"The final -s in 'alerts' is pronounced…",a:["/s/","/z/","/ɪz/","silent"],c:0,tag:"-s endings"},
+  {q:"The final -s in 'rules' is pronounced…",a:["/s/","/z/","/ɪz/","silent"],c:1,tag:"-s endings"},
+  {q:"Where is the main stress in 'investigation'?",a:["IN-ves-ti-ga-tion","in-VES-ti-ga-tion","in-ves-ti-GA-tion","in-ves-ti-ga-TION"],c:2,tag:"Word stress"},
+  {q:"Where is the main stress in 'remediation'?",a:["RE-me-di-a-tion","re-ME-di-a-tion","re-me-di-A-tion","re-me-di-a-TION"],c:2,tag:"Word stress"},
+  {q:"In natural speech, 'did you' often sounds closest to…",a:["did / you","didja","dee-you","did-yoo-uh"],c:1,tag:"Connected speech"},
+  {q:"In 'We still need MORE EVIDENCE', which words should carry the main stress?",a:["we / still","need / the","more / evidence","every word equally"],c:2,tag:"Sentence stress"},
+  {q:"Which delivery is easiest to follow in a client update?",a:["Every word equally stressed.","Meaningful chunks with key content words stressed.","Maximum speed with no pauses.","One long flat sentence."],c:1,tag:"Intelligibility"}
+];
+
+const checkpointListeningPool=[
+  {text:"We've confirmed that the suspicious session used valid credentials, but the source IP belongs to a corporate VPN provider. We're checking whether the user connected through that service before we classify the alert.",q:"Why has the alert not been classified yet?",a:["The logs are missing.","The team needs to verify whether the VPN use was legitimate.","The account has already been compromised.","The client wants to close the ticket."],c:1,tag:"Alert qualification"},
+  {text:"The endpoint has been isolated and the malicious process is no longer running. That reduces the immediate risk, but we still need to determine how the file reached the device and whether the same attachment was sent elsewhere.",q:"What is still outstanding?",a:["Isolating the endpoint","Stopping the process","Finding the delivery path and wider scope","Confirming the endpoint exists"],c:2,tag:"Incident update"},
+  {text:"I wouldn't attribute this to the campaign yet. The domain is similar, but the malware behaviour is different and we don't have enough overlap in the techniques. I'd describe the link as low confidence for now.",q:"How confident is the speaker in the attribution?",a:["Very confident","Moderately confident","Low confidence","Completely certain"],c:2,tag:"Threat intelligence"},
+  {text:"Can I just clarify one point? If we block the entire address range, we may affect legitimate traffic from several partner organisations. Could we start with the confirmed malicious addresses and widen the block only if we see further activity?",q:"What is the speaker recommending?",a:["Block everything immediately.","Take a narrower first action and expand only if needed.","Ignore the malicious addresses.","Disconnect all partner organisations."],c:1,tag:"Meeting comprehension"},
+  {text:"The patch is available, but production cannot be restarted until tonight's maintenance window. In the meantime, access has been restricted to the administrative subnet and additional monitoring is in place.",q:"What temporary mitigation is being used?",a:["The service has been permanently removed.","Access is restricted and monitoring increased.","The patch has already been deployed.","All users have administrator access."],c:1,tag:"Risk explanation"},
+  {text:"Quick handover: the user confirmed the first login was theirs, but they did not recognise the second one from twenty minutes later. We revoked the sessions, reset the password and opened a wider identity review.",q:"What triggered the wider review?",a:["Both logins were legitimate.","The user did not recognise the second login.","The password reset failed.","The manager requested a new device."],c:1,tag:"Handover"}
+];
+
+function cloneProgressSnapshot(snapshot){
+  return snapshot ? JSON.parse(JSON.stringify(snapshot)) : null;
+}
+function weakestProgressSkill(results){
+  if(!results)return null;
+  return Object.entries(results).sort((a,b)=>a[1]-b[1])[0]?.[0]||null;
+}
+function progressSkillLabel(key){
+  const labels={grammar:"Grammar",cyber:"Cyber English",listening:"Listening",pronunciation:"Pronunciation",speaking:"Speaking",writing:"Writing"};
+  return labels[key]||key;
+}
+function loadProgressCheckState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(progressCheckStateKey))||{};
+    return {baseline:raw.baseline||null,current:raw.current||null,history:Array.isArray(raw.history)?raw.history:[]};
+  }catch(e){return {baseline:null,current:null,history:[]};}
+}
+function saveProgressCheckState(state){
+  localStorage.setItem(progressCheckStateKey,JSON.stringify(state));
+}
+function ensureProgressBaseline(){
+  const state=loadProgressCheckState();
+  if(state.baseline&&state.current)return state;
+  try{
+    const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));
+    if(saved?.results&&saved?.details){
+      const snap={date:Date.now(),type:"initial",results:cloneProgressSnapshot(saved.results),details:cloneProgressSnapshot(saved.details)};
+      state.baseline=state.baseline||snap;
+      state.current=state.current||cloneProgressSnapshot(snap);
+      saveProgressCheckState(state);
+    }
+  }catch(e){}
+  return state;
+}
+function recordFullDiagnosticSnapshot(results,details){
+  const state=loadProgressCheckState();
+  const snap={date:Date.now(),type:state.baseline?"full":"initial",results:cloneProgressSnapshot(results),details:cloneProgressSnapshot(details)};
+  if(!state.baseline){
+    state.baseline=cloneProgressSnapshot(snap);
+    state.current=cloneProgressSnapshot(snap);
+  }else{
+    state.history.push(cloneProgressSnapshot(snap));
+    state.current=cloneProgressSnapshot(snap);
+  }
+  saveProgressCheckState(state);
+  if(typeof renderProgressCheck==="function")renderProgressCheck();
+}
+function mergeSectionTags(previousSection,newSection){
+  const merged=cloneProgressSnapshot(previousSection)||{score:0,answered:0,total:0,pct:0,tags:{}};
+  merged.tags=merged.tags||{};
+  Object.entries(newSection.tags||{}).forEach(([tag,v])=>{
+    merged.tags[tag]=merged.tags[tag]||{score:0,total:0};
+    merged.tags[tag].score+=v.score;
+    merged.tags[tag].total+=v.total;
+  });
+  return merged;
+}
+function checkpointSelect(pool,area,count,attemptIndex){
+  const state=ensureProgressBaseline();
+  const current=state.current;
+  const details=current?.details?.[area];
+  const weakTags=details?.tags
+    ? Object.entries(details.tags).map(([name,v])=>({name,pct:Math.round(v.score/v.total*100)})).sort((a,b)=>a.pct-b.pct).map(x=>x.name)
+    : [];
+  const selected=[];
+  const shifted=[...pool.slice(attemptIndex%pool.length),...pool.slice(0,attemptIndex%pool.length)];
+  weakTags.forEach(tag=>{
+    if(selected.length>=count)return;
+    const item=shifted.find(x=>x.tag===tag&&!selected.includes(x));
+    if(item)selected.push(item);
+  });
+  shifted.forEach(item=>{if(selected.length<count&&!selected.includes(item))selected.push(item);});
+  return selected.slice(0,count);
+}
+
+let activeCheckpoint={
+  grammar:[],cyber:[],pronunciation:[],listening:[],plays:[]
+};
+
+function renderCheckpointClosed(targetId,prefix,items){
+  const target=document.getElementById(targetId);
+  target.innerHTML=items.map((item,i)=>`<fieldset class="question-card">
+    <legend>${i+1}. ${item.q}</legend>
+    <div class="option-grid">${item.a.map((opt,j)=>`<label class="option"><input type="radio" name="${prefix}-${i}" value="${j}"><span>${opt}</span></label>`).join("")}</div>
+  </fieldset>`).join("");
+}
+function renderCheckpointListening(){
+  const target=document.getElementById("checkpointListeningQuestions");
+  activeCheckpoint.plays=Array(activeCheckpoint.listening.length).fill(0);
+  target.innerHTML=activeCheckpoint.listening.map((item,i)=>`<article class="checkpoint-audio-card">
+    <div class="checkpoint-audio-head">
+      <div><p class="small-label">AUDIO ${i+1}</p><h4>Listen, then answer.</h4></div>
+      <div><button class="listen-button" type="button" data-checkpoint-listen="${i}">▶ Play</button><span class="play-count" id="checkpointPlayCount-${i}">0 / 2</span></div>
+    </div>
+    <fieldset class="question-card">
+      <legend>${item.q}</legend>
+      <div class="option-grid">${item.a.map((opt,j)=>`<label class="option"><input type="radio" name="checkpoint-listening-${i}" value="${j}"><span>${opt}</span></label>`).join("")}</div>
+    </fieldset>
+  </article>`).join("");
+  target.querySelectorAll("[data-checkpoint-listen]").forEach(btn=>btn.addEventListener("click",()=>{
+    const i=Number(btn.dataset.checkpointListen);
+    if(activeCheckpoint.plays[i]>=2)return;
+    const item=activeCheckpoint.listening[i];
+    if(!("speechSynthesis" in window))return;
+    const u=new SpeechSynthesisUtterance(item.text);
+    u.lang=i%2===0?"en-GB":"en-US";
+    u.rate=1.04+(i*.015);
+    speechSynthesis.cancel();speechSynthesis.speak(u);
+    activeCheckpoint.plays[i]++;
+    document.getElementById(`checkpointPlayCount-${i}`).textContent=`${activeCheckpoint.plays[i]} / 2`;
+    if(activeCheckpoint.plays[i]>=2)btn.disabled=true;
+  }));
+}
+function scoreCheckpointItems(prefix,items){
+  let score=0,answered=0;const tags={};
+  items.forEach((item,i)=>{
+    tags[item.tag]=tags[item.tag]||{score:0,total:0};tags[item.tag].total++;
+    const picked=document.querySelector(`input[name="${prefix}-${i}"]:checked`);
+    if(picked){
+      answered++;
+      if(Number(picked.value)===item.c){score++;tags[item.tag].score++;}
+    }
+  });
+  return {score,answered,total:items.length,pct:Math.round(score/items.length*100),tags};
+}
+function startQuickCheckpoint(){
+  const state=ensureProgressBaseline();
+  if(!state.baseline){
+    document.getElementById("progressNoBaseline").hidden=false;
+    document.getElementById("diagnostic").scrollIntoView({behavior:"smooth"});
+    return;
+  }
+  const attemptIndex=state.history.filter(x=>x.type==="quick").length;
+  activeCheckpoint.grammar=checkpointSelect(checkpointGrammarPool,"grammar",6,attemptIndex*2);
+  activeCheckpoint.cyber=checkpointSelect(checkpointCyberPool,"cyber",6,attemptIndex*3);
+  activeCheckpoint.pronunciation=checkpointSelect(checkpointPronunciationPool,"pronunciation",4,attemptIndex);
+  const listenStart=(attemptIndex*2)%checkpointListeningPool.length;
+  const shifted=[...checkpointListeningPool.slice(listenStart),...checkpointListeningPool.slice(0,listenStart)];
+  activeCheckpoint.listening=shifted.slice(0,4);
+
+  renderCheckpointClosed("checkpointGrammarQuestions","checkpoint-grammar",activeCheckpoint.grammar);
+  renderCheckpointClosed("checkpointCyberQuestions","checkpoint-cyber",activeCheckpoint.cyber);
+  renderCheckpointClosed("checkpointPronunciationQuestions","checkpoint-pronunciation",activeCheckpoint.pronunciation);
+  renderCheckpointListening();
+  document.getElementById("checkpointSpeakingRating").value="";
+  document.getElementById("checkpointWritingRating").value="";
+  document.getElementById("checkpointSubmitFeedback").textContent="";
+  document.getElementById("checkpointSubmitFeedback").className="activity-summary";
+  document.getElementById("checkpointWorkspace").hidden=false;
+  document.getElementById("checkpointResults").hidden=true;
+  document.querySelector(".progress-overview-grid").hidden=true;
+  document.querySelector(".progress-history-card").hidden=true;
+  document.getElementById("checkpointWorkspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeQuickCheckpoint(){
+  document.getElementById("checkpointWorkspace").hidden=true;
+  document.getElementById("checkpointResults").hidden=true;
+  document.querySelector(".progress-overview-grid").hidden=false;
+  document.querySelector(".progress-history-card").hidden=false;
+  renderProgressCheck();
+  document.getElementById("progress-check").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function currentCheckpointDetails(oldDetails,grammar,cyber,listening,pronunciation){
+  return {
+    grammar:mergeSectionTags(oldDetails.grammar,grammar),
+    cyber:mergeSectionTags(oldDetails.cyber,cyber),
+    listening:mergeSectionTags(oldDetails.listening,listening),
+    pronunciation:mergeSectionTags(oldDetails.pronunciation,pronunciation)
+  };
+}
+function submitQuickCheckpoint(){
+  const state=ensureProgressBaseline();
+  if(!state.current)return;
+  const grammar=scoreCheckpointItems("checkpoint-grammar",activeCheckpoint.grammar);
+  const cyber=scoreCheckpointItems("checkpoint-cyber",activeCheckpoint.cyber);
+  const listening=scoreCheckpointItems("checkpoint-listening",activeCheckpoint.listening);
+  const pronunciation=scoreCheckpointItems("checkpoint-pronunciation",activeCheckpoint.pronunciation);
+  const all=[grammar,cyber,listening,pronunciation];
+  const unanswered=all.reduce((sum,x)=>sum+(x.total-x.answered),0);
+  const fb=document.getElementById("checkpointSubmitFeedback");
+  if(unanswered){
+    fb.className="activity-summary neutral";
+    fb.textContent=`Answer all 20 closed items first. ${unanswered} answer${unanswered===1?" is":"s are"} still missing.`;
+    return;
+  }
+
+  const previous=state.current.results;
+  const checkpointScores={grammar:grammar.pct,cyber:cyber.pct,listening:listening.pct,pronunciation:pronunciation.pct};
+  const results={...previous};
+  Object.entries(checkpointScores).forEach(([key,pct])=>{
+    results[key]=Math.round(previous[key]*0.4+pct*0.6);
+  });
+  const speakingRating=Number(document.getElementById("checkpointSpeakingRating").value||0);
+  const writingRating=Number(document.getElementById("checkpointWritingRating").value||0);
+  if(speakingRating)results.speaking=speakingRating*20;
+  if(writingRating)results.writing=writingRating*20;
+
+  const details=currentCheckpointDetails(state.current.details,grammar,cyber,listening,pronunciation);
+  const snap={
+    date:Date.now(),type:"quick",
+    results:cloneProgressSnapshot(results),
+    details:cloneProgressSnapshot(details),
+    rawScores:checkpointScores
+  };
+  state.history.push(cloneProgressSnapshot(snap));
+  state.current=cloneProgressSnapshot(snap);
+  saveProgressCheckState(state);
+
+  // Existing site components continue to read this key, so update the current profile there too.
+  localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details}));
+
+  renderProfile(results,details);
+  renderTrainingPlan(results,details);
+  renderGrammarRepair();
+  renderDashboard();
+  renderProgressCheck();
+
+  const baseline=state.baseline.results;
+  const labels=["grammar","cyber","listening","pronunciation","speaking","writing"];
+  document.getElementById("checkpointResultCards").innerHTML=labels.map(key=>{
+    const delta=results[key]-baseline[key];
+    const sign=delta>0?"+":"";
+    return `<article class="checkpoint-result-card">
+      <span>${progressSkillLabel(key)}</span>
+      <strong>${results[key]}%</strong>
+      <small>Baseline ${baseline[key]}% · ${sign}${delta} points</small>
+    </article>`;
+  }).join("");
+
+  const sorted=labels.map(key=>({key,delta:results[key]-baseline[key]})).sort((a,b)=>b.delta-a.delta);
+  const improved=sorted.filter(x=>x.delta>=5);
+  const weaker=sorted.filter(x=>x.delta<=-5);
+  const priority=weakestProgressSkill(results);
+  const summary=[];
+  if(improved.length)summary.push(`<li><strong>Improved:</strong> ${improved.map(x=>`${progressSkillLabel(x.key)} ${x.delta>0?"+":""}${x.delta}`).join(", ")}.</li>`);
+  if(weaker.length)summary.push(`<li><strong>Needs attention:</strong> ${weaker.map(x=>`${progressSkillLabel(x.key)} ${x.delta}`).join(", ")}.</li>`);
+  summary.push(`<li><strong>New top priority:</strong> ${progressSkillLabel(priority)}.</li>`);
+  summary.push(`<li>The Dashboard, starter plan and Grammar Repair queue now use this updated profile.</li>`);
+  document.getElementById("checkpointChangeSummary").innerHTML=`<h3>What changed?</h3><ul>${summary.join("")}</ul>`;
+
+  document.getElementById("checkpointWorkspace").hidden=true;
+  document.getElementById("checkpointResults").hidden=false;
+  document.getElementById("checkpointResults").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function checkpointReadiness(){
+  const plan=planStorage();
+  const completedModules=plan.completed.length;
+  const speaking=loadSpeakingState().attempts;
+  const grammar=loadGrammarRepairState().completed.length;
+  const listening=listeningLabCompletedCount();
+  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
+  return {completedModules,speaking,grammar,listening,evidence};
+}
+function renderProgressSkillComparison(state){
+  const target=document.getElementById("progressSkillComparison");if(!target)return;
+  if(!state.baseline||!state.current){target.innerHTML=`<div class="progress-empty">No baseline yet.</div>`;return;}
+  const keys=["grammar","cyber","listening","pronunciation","speaking","writing"];
+  const base=state.baseline.results,current=state.current.results;
+  target.innerHTML=keys.map(key=>{
+    const delta=current[key]-base[key],cls=delta>2?"up":delta<-2?"down":"flat",sign=delta>0?"+":"";
+    return `<div class="progress-skill-row">
+      <div class="progress-skill-name"><strong>${progressSkillLabel(key)}</strong><span>${base[key]}% baseline → ${current[key]}% now</span></div>
+      <div class="progress-bars">
+        <div class="progress-mini-bar baseline"><span style="width:${base[key]}%"></span></div>
+        <div class="progress-mini-bar current"><span style="width:${current[key]}%"></span></div>
+      </div>
+      <div class="progress-delta ${cls}">${sign}${delta} pts</div>
+    </div>`;
+  }).join("");
+}
+function progressHistoryEntries(state){
+  const baseline=state.baseline;
+  const snapshots=[baseline,...state.history].filter(Boolean).sort((a,b)=>b.date-a.date);
+  return snapshots;
+}
+function renderProgressHistory(state){
+  const target=document.getElementById("progressHistory");if(!target)return;
+  const entries=progressHistoryEntries(state);
+  if(!entries.length){target.innerHTML=`<div class="progress-empty">Your first diagnostic will appear here.</div>`;return;}
+  target.innerHTML=entries.map(entry=>{
+    const d=new Date(entry.date);
+    const date=d.toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"});
+    const type=entry.type==="initial"?"Initial diagnostic":entry.type==="full"?"Full re-diagnostic":"Quick checkpoint";
+    const priority=progressSkillLabel(weakestProgressSkill(entry.results));
+    const scores=["grammar","cyber","listening","pronunciation"].map(k=>entry.results[k]).reduce((a,b)=>a+b,0)/4;
+    return `<article class="progress-history-entry">
+      <div class="progress-history-date">${date}</div>
+      <div><strong>${type}</strong><span>Core profile average: ${Math.round(scores)}%</span></div>
+      <span class="history-priority">${priority}</span>
+    </article>`;
+  }).join("");
+}
+function renderProgressCheck(){
+  if(!document.getElementById("progress-check"))return;
+  const state=ensureProgressBaseline();
+  const noBaseline=!state.baseline;
+  document.getElementById("progressNoBaseline").hidden=!noBaseline;
+  document.getElementById("progressUnlocked").hidden=noBaseline;
+  if(noBaseline){
+    document.getElementById("progressCheckCount").textContent="0";
+    document.getElementById("progressImprovedSkills").textContent="0";
+    document.getElementById("progressCurrentPriority").textContent="—";
+    return;
+  }
+  renderProgressSkillComparison(state);
+  renderProgressHistory(state);
+
+  const checks=state.history.filter(x=>x.type==="quick"||x.type==="full");
+  const base=state.baseline.results,current=state.current.results;
+  const improved=Object.keys(base).filter(k=>current[k]-base[k]>=5).length;
+  const priority=weakestProgressSkill(current);
+  document.getElementById("progressCheckCount").textContent=checks.length;
+  document.getElementById("progressImprovedSkills").textContent=improved;
+  document.getElementById("progressCurrentPriority").textContent=progressSkillLabel(priority);
+
+  const last=checks.length?checks[checks.length-1]:null;
+  document.getElementById("progressLastCheckLabel").textContent=last
+    ? `Last check ${new Date(last.date).toLocaleDateString(undefined,{day:"2-digit",month:"short"})}`
+    :"Baseline only";
+
+  const ready=checkpointReadiness();
+  const title=document.getElementById("checkpointReadinessTitle");
+  if(ready.evidence>=4)title.textContent="A checkpoint would be useful now.";
+  else if(checks.length)title.textContent="Check again after a little more practice.";
+  else title.textContent="You can check whenever you want.";
+  document.getElementById("checkpointReadinessBody").innerHTML=`
+    <div class="readiness-item"><span>Personalised modules completed</span><strong>${ready.completedModules}</strong></div>
+    <div class="readiness-item"><span>Speaking Lab attempts</span><strong>${ready.speaking}</strong></div>
+    <div class="readiness-item"><span>Grammar Repair units completed</span><strong>${ready.grammar}</strong></div>
+    <div class="readiness-item"><span>Listening Lab tasks completed</span><strong>${ready.listening} / 5</strong></div>`;
+}
+function startFullRediagnostic(){
+  const state=ensureProgressBaseline();
+  if(!state.baseline){
+    document.getElementById("diagnostic").scrollIntoView({behavior:"smooth"});
+    return;
+  }
+  document.getElementById("diagnostic").scrollIntoView({behavior:"smooth",block:"start"});
+  showSection("grammar");
+}
+function initProgressChecks(){
+  if(!document.getElementById("progress-check"))return;
+  ensureProgressBaseline();
+  document.getElementById("startQuickCheckpointBtn")?.addEventListener("click",startQuickCheckpoint);
+  document.getElementById("closeCheckpointBtn")?.addEventListener("click",closeQuickCheckpoint);
+  document.getElementById("submitQuickCheckpointBtn")?.addEventListener("click",submitQuickCheckpoint);
+  document.getElementById("closeCheckpointResultsBtn")?.addEventListener("click",closeQuickCheckpoint);
+  document.getElementById("startFullRediagnosticBtn")?.addEventListener("click",startFullRediagnostic);
+  renderProgressCheck();
+}
 
 
 // ---------- V3: personalised training plan ----------
@@ -881,6 +1300,9 @@ function buildRoutineTasks(minutes){
   if(results.pronunciation < 75 && tasks.length < 4){
     add({id:"pron",tag:"PRONUNCIATION",title:"Say it clearly, not perfectly",desc:"Record a short answer and listen specifically for stress, endings and linked speech.",duration:durations[3],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
   }
+  if(tasks.length < 4 && typeof checkpointReadiness==="function" && checkpointReadiness().evidence>=4){
+    add({id:"progress-check",tag:"CHECKPOINT",title:"Take a quick progress check",desc:"You have done enough targeted practice for a fresh snapshot to be useful.",duration:durations[Math.min(tasks.length, durations.length-1)],anchor:"#progress-check",cta:"Open Progress Check"});
+  }
   if(tasks.length < 4) add({id:"quick-review",tag:"REVIEW",title:"Use Emergency English before you stop",desc:"Open the quick survival phrases and rehearse two or three aloud.",duration:durations[Math.min(tasks.length, durations.length-1)],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
 
   return {results,details,tasks:tasks.slice(0,4)};
@@ -926,6 +1348,7 @@ function renderQuickLinks(){
     {anchor:"#listening-lab", title:"Listening Lab", sub:"Gist, decoding, dictation and note-taking"},
     {anchor:"#speaking-lab", title:"Speaking Lab", sub:"Quick responses, client questions and roleplay"},
     {anchor:"#grammar-lab", title:"Grammar Repair", sub:"Adaptive repair based on diagnostic weak points"},
+    {anchor:"#progress-check", title:"Progress Check", sub:"Fresh checkpoint and baseline comparison"},
     {anchor:"#phrasebook", title:"Phrasebook", sub:"Chunks, favourites and spaced review"}
   ];
   target.innerHTML = `<div class="dashboard-mini-list">${
@@ -2382,3 +2805,4 @@ initPhrasebook();
 initSpeakingLab();
 initDashboard();
 initGrammarRepairLab();
+initProgressChecks();
