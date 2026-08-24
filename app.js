@@ -174,6 +174,343 @@ try{const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));if(saved?.re
 
 
 
+
+
+// V17 · My Data & Progress Vault
+const vaultMetaKey="ebackontrack-v17-vault-meta";
+const vaultSchemaVersion=1;
+
+const vaultGroups=[
+  {
+    id:"diagnostic",icon:"◎",title:"Diagnostic & current profile",
+    description:"Initial diagnostic answers/results, current profile and personalised module progress.",
+    keys:["ebackontrack-v2","ebackontrack-v3-progress","ebackontrack-v10-progress"]
+  },
+  {
+    id:"daily",icon:"▦",title:"Daily Dashboard",
+    description:"Chosen session length, completed daily routine steps and recent practice days.",
+    keys:["ebackontrack-v8-dashboard"]
+  },
+  {
+    id:"phrasebook",icon:"A",title:"Phrasebook",
+    description:"Saved cyber chunks, favourites, spaced-review levels and due dates.",
+    keys:["ebackontrack-v6-phrasebook"]
+  },
+  {
+    id:"listening",icon:"◖",title:"Listening Lab",
+    description:"Completed listening tasks and local play counters.",
+    keys:["ebackontrack-v5-listening"]
+  },
+  {
+    id:"speaking",icon:"●",title:"Speaking Lab",
+    description:"Attempt counts, speaking minutes and challenge types. Audio is never stored here.",
+    keys:["ebackontrack-v7-speaking"]
+  },
+  {
+    id:"writing",icon:"✎",title:"Writing Lab",
+    description:"Task type, date, word count and self-check metadata. Draft text is not stored.",
+    keys:["ebackontrack-v12-writing"]
+  },
+  {
+    id:"grammar",icon:"G",title:"Grammar Repair",
+    description:"Completed repair units, attempts and closed-task accuracy.",
+    keys:["ebackontrack-v9-grammar"]
+  },
+  {
+    id:"pronunciation",icon:"◉",title:"Pronunciation Lab",
+    description:"Completed units, shadowing counts and closed-task accuracy. Audio is not stored.",
+    keys:["ebackontrack-v13-pronunciation"]
+  },
+  {
+    id:"resources",icon:"↗",title:"Authentic Resources",
+    description:"Saved/completed resource status and formats used.",
+    keys:["ebackontrack-v14-resources"]
+  },
+  {
+    id:"simulator",icon:"C",title:"Client Simulator",
+    description:"Completed scenarios and mission metadata. Handover/email text and audio are not stored.",
+    keys:["ebackontrack-v15-client-simulator"]
+  },
+  {
+    id:"accessibility",icon:"Aa",title:"Accessibility preferences",
+    description:"Text size, contrast, spacing, font, links and motion preferences for this device.",
+    keys:["ebackontrack-v16-accessibility"]
+  }
+];
+
+let pendingVaultImport=null;
+
+function loadVaultMeta(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(vaultMetaKey))||{};
+    return {lastBackup:raw.lastBackup||null,lastImport:raw.lastImport||null};
+  }catch(e){return {lastBackup:null,lastImport:null};}
+}
+function saveVaultMeta(meta){localStorage.setItem(vaultMetaKey,JSON.stringify(meta));}
+function vaultKnownKeys(){
+  return [...new Set(vaultGroups.flatMap(g=>g.keys))];
+}
+function vaultActiveGroup(group){
+  return group.keys.some(key=>localStorage.getItem(key)!==null);
+}
+function vaultGroupBytes(group){
+  return group.keys.reduce((sum,key)=>{
+    const value=localStorage.getItem(key);
+    return sum+(value?new Blob([key,value]).size:0);
+  },0);
+}
+function humanBytes(bytes){
+  if(bytes<1024)return `${bytes} B`;
+  if(bytes<1024*1024)return `${(bytes/1024).toFixed(bytes<10240?1:0)} KB`;
+  return `${(bytes/(1024*1024)).toFixed(1)} MB`;
+}
+function formatVaultDate(ts,short=false){
+  if(!ts)return "Never";
+  const d=new Date(ts);
+  return d.toLocaleDateString(undefined,short
+    ?{day:"2-digit",month:"short"}
+    :{day:"2-digit",month:"short",year:"numeric"});
+}
+function vaultGroupDetail(group){
+  const active=group.keys.filter(k=>localStorage.getItem(k)!==null);
+  if(!active.length)return "No local data";
+  return `${active.length} local record${active.length===1?"":"s"} · ${humanBytes(vaultGroupBytes(group))}`;
+}
+function renderVaultStats(){
+  const active=vaultGroups.filter(vaultActiveGroup);
+  const bytes=vaultGroups.reduce((sum,g)=>sum+vaultGroupBytes(g),0);
+  const meta=loadVaultMeta();
+  document.getElementById("vaultDataGroups").textContent=active.length;
+  document.getElementById("vaultLastBackup").textContent=meta.lastBackup?formatVaultDate(meta.lastBackup,true):"Never";
+  document.getElementById("vaultStorageEstimate").textContent=humanBytes(bytes);
+  document.getElementById("vaultInventoryCount").textContent=`${active.length} active group${active.length===1?"":"s"}`;
+
+  const title=document.getElementById("vaultBackupTitle");
+  const message=document.getElementById("vaultBackupMessage");
+  const badge=document.getElementById("vaultBackupBadge");
+  if(!meta.lastBackup){
+    title.textContent="No backup recorded on this device yet";
+    message.textContent="Your training data is still local and usable. A backup simply gives you a portable recovery copy.";
+    badge.textContent="Not backed up";badge.classList.remove("fresh");
+  }else{
+    const days=Math.floor((Date.now()-meta.lastBackup)/(1000*60*60*24));
+    title.textContent=`Last backup: ${formatVaultDate(meta.lastBackup)}`;
+    if(days<=14){
+      message.textContent="You have a recent portable copy of the progress currently stored on this device.";
+      badge.textContent="Recent backup";badge.classList.add("fresh");
+    }else{
+      message.textContent=`That backup is ${days} days old. Export a new copy if you have done significant work since then.`;
+      badge.textContent=`${days} days ago`;badge.classList.remove("fresh");
+    }
+  }
+}
+function renderVaultInventory(){
+  const target=document.getElementById("vaultInventory");if(!target)return;
+  target.innerHTML=vaultGroups.map(group=>{
+    const active=vaultActiveGroup(group);
+    return `<article class="vault-inventory-card ${active?"":"empty"}">
+      <div class="vault-inventory-card-top">
+        <span class="vault-inventory-icon">${group.icon}</span>
+        <span class="vault-inventory-state ${active?"active":""}">${active?"Stored":"Empty"}</span>
+      </div>
+      <h4>${group.title}</h4>
+      <p>${group.description}</p>
+      <div class="vault-inventory-detail">${vaultGroupDetail(group)}</div>
+      ${active?`<button type="button" data-vault-clear="${group.id}">Erase this category</button>`:""}
+    </article>`;
+  }).join("");
+  target.querySelectorAll("[data-vault-clear]").forEach(btn=>btn.addEventListener("click",()=>clearVaultGroup(btn.dataset.vaultClear)));
+}
+function collectVaultData(){
+  const data={};
+  vaultKnownKeys().forEach(key=>{
+    const value=localStorage.getItem(key);
+    if(value!==null)data[key]=value;
+  });
+  return data;
+}
+function triggerVaultDownload(filename,text,type){
+  const blob=new Blob([text],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function exportVaultBackup(){
+  const payload={
+    app:"English, Back on Track",
+    appVersion:"17",
+    schemaVersion:vaultSchemaVersion,
+    createdAt:new Date().toISOString(),
+    data:collectVaultData()
+  };
+  const stamp=new Date().toISOString().slice(0,10);
+  triggerVaultDownload(`english-back-on-track-backup-${stamp}.json`,JSON.stringify(payload,null,2),"application/json");
+  const meta=loadVaultMeta();meta.lastBackup=Date.now();saveVaultMeta(meta);
+  renderProgressVault();
+  if(typeof showAppToast==="function")showAppToast("Private progress backup downloaded.");
+}
+function safeJSON(key){
+  try{return JSON.parse(localStorage.getItem(key)||"null");}catch(e){return null;}
+}
+function buildVaultSummary(){
+  const diag=safeJSON("ebackontrack-v2");
+  const plan=safeJSON("ebackontrack-v3-progress")||{};
+  const dashboard=safeJSON("ebackontrack-v8-dashboard")||{};
+  const phrase=typeof phraseStats==="function"?phraseStats():{saved:0,due:0,active:0};
+  const listen=typeof listeningLabCompletedCount==="function"?listeningLabCompletedCount():0;
+  const speak=typeof loadSpeakingState==="function"?loadSpeakingState():{attempts:0,seconds:0,modes:[]};
+  const writing=typeof loadWritingState==="function"?loadWritingState():{attempts:[]};
+  const grammar=typeof loadGrammarRepairState==="function"?loadGrammarRepairState():{completed:[],attempts:0};
+  const pron=typeof loadPronunciationLabState==="function"?loadPronunciationLabState():{completed:[],shadowAttempts:0};
+  const resources=typeof loadAuthenticResourceState==="function"?loadAuthenticResourceState():{completed:[],saved:[]};
+  const sim=typeof loadClientSimState==="function"?loadClientSimState():{attempts:[],completed:[]};
+  const progress=typeof loadProgressCheckState==="function"?ensureProgressBaseline():{history:[],current:null};
+  const lines=[];
+  lines.push("ENGLISH, BACK ON TRACK — PROGRESS SNAPSHOT");
+  lines.push(`Generated: ${new Date().toLocaleString()}`);
+  lines.push("");
+  if(diag?.results){
+    lines.push("CURRENT PROFILE");
+    ["grammar","cyber","listening","pronunciation","speaking","writing"].forEach(k=>{
+      if(diag.results[k]!==undefined)lines.push(`- ${progressSkillLabel(k)}: ${diag.results[k]}%`);
+    });
+    lines.push("");
+  }else{
+    lines.push("CURRENT PROFILE");
+    lines.push("- Initial diagnostic not completed.");
+    lines.push("");
+  }
+  lines.push("TRAINING ACTIVITY");
+  lines.push(`- Personalised modules completed: ${(plan.completed||[]).length}`);
+  lines.push(`- Listening Lab: ${listen}/5 tasks completed`);
+  lines.push(`- Speaking Lab: ${speak.attempts||0} attempts`);
+  lines.push(`- Writing Lab: ${(writing.attempts||[]).length} attempts`);
+  lines.push(`- Grammar Repair: ${(grammar.completed||[]).length} units completed`);
+  lines.push(`- Pronunciation Lab: ${(pron.completed||[]).length} units completed`);
+  lines.push(`- Phrasebook: ${phrase.saved||0} saved · ${phrase.due||0} due · ${phrase.active||0} active`);
+  lines.push(`- Authentic resources completed: ${(resources.completed||[]).length}`);
+  lines.push(`- Client simulations completed: ${(sim.completed||[]).length}`);
+  lines.push(`- Progress checkpoints/re-diagnostics: ${(progress.history||[]).length}`);
+  lines.push("");
+  lines.push("PRIVACY");
+  lines.push("- This summary contains progress metadata only.");
+  lines.push("- Audio recordings and writing drafts are not stored by the app and are not included.");
+  return lines.join("\n");
+}
+function exportVaultSummary(){
+  const stamp=new Date().toISOString().slice(0,10);
+  triggerVaultDownload(`english-back-on-track-progress-${stamp}.txt`,buildVaultSummary(),"text/plain;charset=utf-8");
+  if(typeof showAppToast==="function")showAppToast("Readable progress summary downloaded.");
+}
+async function copyVaultSummary(){
+  const text=buildVaultSummary();
+  try{
+    await navigator.clipboard.writeText(text);
+    if(typeof showAppToast==="function")showAppToast("Progress summary copied to clipboard.");
+  }catch(e){
+    const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();
+    document.execCommand("copy");ta.remove();
+    if(typeof showAppToast==="function")showAppToast("Progress summary copied to clipboard.");
+  }
+}
+function validateVaultPayload(payload){
+  if(!payload || typeof payload!=="object")return {ok:false,error:"This file is not a valid backup object."};
+  if(payload.app!=="English, Back on Track")return {ok:false,error:"This file was not created by English, Back on Track."};
+  if(!payload.data || typeof payload.data!=="object")return {ok:false,error:"The backup contains no readable data section."};
+  const allowed=new Set(vaultKnownKeys());
+  const accepted=Object.keys(payload.data).filter(key=>allowed.has(key)&&typeof payload.data[key]==="string");
+  if(!accepted.length)return {ok:false,error:"No compatible progress categories were found in this backup."};
+  return {ok:true,accepted};
+}
+function vaultGroupsInBackup(keys){
+  const set=new Set(keys);
+  return vaultGroups.filter(g=>g.keys.some(k=>set.has(k)));
+}
+function openVaultImportPreview(payload,accepted){
+  pendingVaultImport={payload,accepted};
+  const groups=vaultGroupsInBackup(accepted);
+  const date=payload.createdAt?new Date(payload.createdAt):null;
+  document.getElementById("vaultImportPreview").innerHTML=`
+    <div class="vault-import-meta">
+      <div><span>Backup version</span><strong>V${payload.appVersion||"unknown"}</strong></div>
+      <div><span>Created</span><strong>${date&&!isNaN(date)?date.toLocaleDateString():"Unknown"}</strong></div>
+      <div><span>Compatible records</span><strong>${accepted.length}</strong></div>
+    </div>
+    <div>
+      <p class="small-label">CATEGORIES TO RESTORE</p>
+      <div class="vault-import-groups">${groups.map(g=>`<span>${g.title}</span>`).join("")}</div>
+    </div>`;
+  const dialog=document.getElementById("vaultImportDialog");
+  dialog.hidden=false;document.body.style.overflow="hidden";
+  document.getElementById("confirmVaultImportBtn")?.focus();
+}
+function closeVaultImportDialog(){
+  document.getElementById("vaultImportDialog").hidden=true;
+  document.body.style.overflow="";
+  document.getElementById("importVaultFile").value="";
+  pendingVaultImport=null;
+}
+async function handleVaultFile(file){
+  if(!file)return;
+  try{
+    if(file.size>2*1024*1024)throw new Error("This backup is unexpectedly large.");
+    const text=await file.text();
+    const payload=JSON.parse(text);
+    const validation=validateVaultPayload(payload);
+    if(!validation.ok)throw new Error(validation.error);
+    openVaultImportPreview(payload,validation.accepted);
+  }catch(e){
+    document.getElementById("importVaultFile").value="";
+    if(typeof showAppToast==="function")showAppToast(`Backup not imported: ${e.message}`,5000);
+  }
+}
+function confirmVaultImport(){
+  if(!pendingVaultImport)return;
+  const {payload,accepted}=pendingVaultImport;
+  accepted.forEach(key=>localStorage.setItem(key,payload.data[key]));
+  const meta=loadVaultMeta();meta.lastImport=Date.now();saveVaultMeta(meta);
+  closeVaultImportDialog();
+  if(typeof showAppToast==="function")showAppToast("Backup restored. Reloading the app…",2200);
+  setTimeout(()=>location.reload(),900);
+}
+function clearVaultGroup(id){
+  const group=vaultGroups.find(g=>g.id===id);if(!group)return;
+  const message=`Erase ${group.title} data from this browser?\n\nThis cannot be undone unless you have exported a backup.`;
+  if(!confirm(message))return;
+  group.keys.forEach(key=>localStorage.removeItem(key));
+  renderProgressVault();
+  if(typeof renderDashboard==="function")renderDashboard();
+  if(typeof showAppToast==="function")showAppToast(`${group.title} data erased from this browser.`);
+}
+function eraseAllVaultData(){
+  if(!confirm("Erase ALL English, Back on Track training data from this browser?\n\nThis includes diagnostic results, labs, Phrasebook, progress history, simulator history and accessibility settings. Export a backup first if you may want to restore it."))return;
+  if(!confirm("Final confirmation: permanently erase all local app data on this device?"))return;
+  [...vaultKnownKeys(),vaultMetaKey].forEach(key=>localStorage.removeItem(key));
+  if(typeof showAppToast==="function")showAppToast("All local training data erased. Reloading…",2200);
+  setTimeout(()=>location.reload(),900);
+}
+function renderProgressVault(){
+  if(!document.getElementById("progress-vault"))return;
+  renderVaultStats();renderVaultInventory();
+}
+function initProgressVault(){
+  if(!document.getElementById("progress-vault"))return;
+  document.getElementById("exportVaultBtn")?.addEventListener("click",exportVaultBackup);
+  document.getElementById("exportSummaryBtn")?.addEventListener("click",exportVaultSummary);
+  document.getElementById("copySummaryBtn")?.addEventListener("click",copyVaultSummary);
+  document.getElementById("importVaultFile")?.addEventListener("change",e=>handleVaultFile(e.target.files?.[0]));
+  document.getElementById("confirmVaultImportBtn")?.addEventListener("click",confirmVaultImport);
+  document.querySelectorAll("[data-vault-dialog-close]").forEach(el=>el.addEventListener("click",closeVaultImportDialog));
+  document.getElementById("eraseAllVaultBtn")?.addEventListener("click",eraseAllVaultData);
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape"&&!document.getElementById("vaultImportDialog")?.hidden)closeVaultImportDialog();
+  });
+  renderProgressVault();
+}
+
+
 // V10 · Progress checkpoints & re-diagnostic
 const progressCheckStateKey="ebackontrack-v10-progress";
 
@@ -1322,6 +1659,10 @@ function dashboardReasonCards(results,details){
   }
   const due=phraseStats().due;
   if(due>0) cards.push({title:"Review is due",text:`You have ${due} Phrasebook card${due===1?"":"s"} due, so the routine includes short spaced review.`});
+  const vaultMeta=loadVaultMeta();
+  const vaultHasData=vaultGroups.some(vaultActiveGroup);
+  const vaultAge=vaultMeta.lastBackup?Math.floor((Date.now()-vaultMeta.lastBackup)/(1000*60*60*24)):null;
+  if(vaultHasData && (!vaultMeta.lastBackup || vaultAge>30)) cards.push({title:"Your progress is only on this device",text:"My Data can export a private backup before you change browser, clear site data or move to another device."});
   return cards.slice(0,4);
 }
 function buildRoutineTasks(minutes){
@@ -1430,6 +1771,7 @@ function renderQuickLinks(){
     {anchor:"#writing-lab", title:"Writing Lab", sub:"Client emails, handovers, risk and remediation"},
     {anchor:"#grammar-lab", title:"Grammar Repair", sub:"Adaptive repair based on diagnostic weak points"},
     {anchor:"#progress-check", title:"Progress Check", sub:"Fresh checkpoint and baseline comparison"},
+    {anchor:"#progress-vault", title:"My Data & Backup", sub:"Export, restore or inspect local progress"},
     {anchor:"#phrasebook", title:"Phrasebook", sub:"Chunks, favourites and spaced review"}
   ];
   target.innerHTML = `<div class="dashboard-mini-list">${
@@ -5099,5 +5441,6 @@ initPronunciationLab();
 initWritingLab();
 initDashboard();
 initGrammarRepairLab();
+initProgressVault();
 initProgressChecks();
 updateSmartHomeMode();

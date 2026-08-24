@@ -1,7 +1,7 @@
 {
   "name": "English, Back on Track",
   "short_name": "Back on Track",
-  "description": "Personalised professional English training for cybersecurity and SOC communication.",
+  "description": "Personalised professional English training with offline access and private local progress backup.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -47,6 +47,11 @@
       "name": "Speaking Lab",
       "short_name": "Speaking",
       "url": "./#speaking-lab"
+    },
+    {
+      "name": "My Data & Backup",
+      "short_name": "My Data",
+      "url": "./#progress-vault"
     }
   ]
 }

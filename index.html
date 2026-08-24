@@ -28,6 +28,7 @@
     <div class="top-actions" id="topActions">
       <a class="nav-pill" href="#dashboard">Dashboard</a>
       <a class="nav-pill" href="#progress-check">Progress</a>
+      <a class="nav-pill" href="#progress-vault">My Data</a>
       <a class="nav-pill" href="#client-simulator">Client Simulator</a>
       <a class="nav-pill" href="#resources-hub">Authentic Resources</a>
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
@@ -195,6 +196,126 @@
       </div>
     </section>
 
+
+
+    <section class="section progress-vault-section" id="progress-vault">
+      <div class="section-heading progress-vault-heading">
+        <div>
+          <p class="eyebrow">MY DATA & PROGRESS VAULT</p>
+          <h2>Your progress belongs to you — and should not be trapped on one device.</h2>
+          <p>Export a private backup, move your training history to another browser or device, review what is stored locally and erase only the categories you choose. No account, cloud sync or server upload is used.</p>
+        </div>
+        <div class="vault-stats">
+          <div><strong id="vaultDataGroups">0</strong><span>data groups</span></div>
+          <div><strong id="vaultLastBackup">Never</strong><span>last backup</span></div>
+          <div><strong id="vaultStorageEstimate">—</strong><span>local storage</span></div>
+        </div>
+      </div>
+
+      <div class="vault-privacy-banner">
+        <div class="vault-privacy-icon" aria-hidden="true">◉</div>
+        <div>
+          <strong>No cloud sync by design.</strong>
+          <span>Backups are created inside your browser and downloaded directly to your device. Importing a backup reads that file locally. Nothing is sent to this website, GitHub, OpenAI or a third-party service.</span>
+        </div>
+      </div>
+
+      <div class="vault-action-grid">
+        <article class="vault-action-card primary-vault-action">
+          <div>
+            <p class="small-label">BACK UP EVERYTHING</p>
+            <h3>Export my progress</h3>
+            <p>Create one portable <strong>.json</strong> backup containing the training data stored by this app. Written drafts and audio are not included because the site does not store them.</p>
+          </div>
+          <button class="primary-button" id="exportVaultBtn" type="button">Download private backup</button>
+          <span class="microcopy" id="vaultExportHint">Useful before changing browser, clearing site data or moving to another device.</span>
+        </article>
+
+        <article class="vault-action-card">
+          <div>
+            <p class="small-label">MOVE TO ANOTHER DEVICE</p>
+            <h3>Restore a backup</h3>
+            <p>Select a backup created by this app. You will see a preview before anything is restored.</p>
+          </div>
+          <label class="vault-file-picker">
+            <input type="file" id="importVaultFile" accept=".json,application/json">
+            <span>Choose backup file</span>
+          </label>
+          <span class="microcopy">Import never happens automatically after selecting the file.</span>
+        </article>
+
+        <article class="vault-action-card">
+          <div>
+            <p class="small-label">READABLE SNAPSHOT</p>
+            <h3>Export progress summary</h3>
+            <p>Download a plain-text snapshot of current priorities, lab activity and completed missions. It contains no diagnostic answers or written drafts.</p>
+          </div>
+          <button class="secondary-button" id="exportSummaryBtn" type="button">Download progress summary</button>
+          <button class="text-link vault-copy-link" id="copySummaryBtn" type="button">Copy summary to clipboard</button>
+        </article>
+      </div>
+
+      <div class="vault-backup-status" id="vaultBackupStatus">
+        <div>
+          <p class="small-label">BACKUP STATUS</p>
+          <h3 id="vaultBackupTitle">No backup recorded on this device yet</h3>
+          <p id="vaultBackupMessage">Your training data is still local and usable. A backup simply gives you a portable recovery copy.</p>
+        </div>
+        <span class="vault-status-badge" id="vaultBackupBadge">Not backed up</span>
+      </div>
+
+      <div class="vault-inventory-head">
+        <div>
+          <p class="small-label">WHAT IS STORED LOCALLY?</p>
+          <h3>Data inventory</h3>
+        </div>
+        <span class="question-count" id="vaultInventoryCount">0 active groups</span>
+      </div>
+      <div id="vaultInventory" class="vault-inventory"></div>
+
+      <div class="vault-transfer-guide">
+        <div>
+          <p class="small-label">TRANSFER TO ANOTHER DEVICE</p>
+          <h3>Three steps. No account.</h3>
+        </div>
+        <div class="vault-transfer-steps">
+          <article><span>1</span><strong>Export</strong><p>Download the backup on the current device.</p></article>
+          <article><span>2</span><strong>Move the file</strong><p>Use your normal private file-transfer method.</p></article>
+          <article><span>3</span><strong>Import</strong><p>Open this app on the new device and restore the file here.</p></article>
+        </div>
+      </div>
+
+      <div class="vault-danger-zone">
+        <div>
+          <p class="small-label">LOCAL DATA CONTROLS</p>
+          <h3>Erase data deliberately</h3>
+          <p>Use the inventory cards to clear one category only, or erase all training data from this browser. Export a backup first if you may want it later.</p>
+        </div>
+        <button class="danger-button" id="eraseAllVaultBtn" type="button">Erase all local training data</button>
+      </div>
+    </section>
+
+    <div class="app-dialog-shell" id="vaultImportDialog" hidden>
+      <div class="app-dialog-backdrop" data-vault-dialog-close></div>
+      <section class="app-dialog vault-import-dialog" role="dialog" aria-modal="true" aria-labelledby="vaultImportTitle">
+        <div class="app-dialog-head">
+          <div>
+            <p class="small-label">RESTORE PREVIEW</p>
+            <h2 id="vaultImportTitle">Check this backup before restoring it</h2>
+          </div>
+          <button class="app-dialog-close" type="button" data-vault-dialog-close aria-label="Close restore dialog">×</button>
+        </div>
+        <div id="vaultImportPreview" class="vault-import-preview"></div>
+        <div class="vault-import-warning">
+          <strong>Restoring replaces matching local progress categories.</strong>
+          <span>Data not present in the backup is left unchanged. Unknown keys are ignored.</span>
+        </div>
+        <div class="vault-import-actions">
+          <button class="secondary-button" type="button" data-vault-dialog-close>Cancel</button>
+          <button class="primary-button" id="confirmVaultImportBtn" type="button">Restore this backup</button>
+        </div>
+      </section>
+    </div>
 
     <section class="section progress-check-section" id="progress-check">
       <div class="section-heading progress-check-heading">
