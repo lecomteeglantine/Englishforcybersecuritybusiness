@@ -929,3 +929,123 @@ body.returning-user .dashboard-section{padding-top:34px}
   .resource-privacy-note{display:block}
   .resource-privacy-note strong{display:block;margin-bottom:4px}
 }
+
+
+/* V15 · Full Client Call Simulator */
+.client-simulator-section{background:#fff}
+.client-simulator-heading{display:flex;justify-content:space-between;gap:34px;align-items:flex-end;max-width:none}
+.client-simulator-heading>div:first-child{max-width:900px}
+.client-sim-stats{display:grid;grid-template-columns:repeat(3,1fr);min-width:400px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+.client-sim-stats div{padding:18px;text-align:center;border-right:1px solid var(--line)}
+.client-sim-stats div:last-child{border-right:0}
+.client-sim-stats strong,.client-sim-stats span{display:block}
+.client-sim-stats strong{font-size:1.5rem}
+.client-sim-stats span{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:850}
+.client-sim-rules{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:27px 0 36px}
+.client-sim-rules article{border:1px solid var(--line);border-radius:18px;padding:17px;background:#f9fbfb}
+.client-sim-rules article>span{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#e8f4f1;color:var(--accent-dark);font-weight:900;margin-bottom:10px}
+.client-sim-rules strong{display:block;margin-bottom:4px}
+.client-sim-rules p{margin:0;color:var(--muted);font-size:.88rem}
+.client-sim-selector-head{display:flex;justify-content:space-between;gap:18px;align-items:end;margin-bottom:14px}
+.client-sim-selector-head h3{font-size:1.45rem;margin:4px 0 0}
+.client-sim-scenario-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}
+.client-sim-scenario-card{appearance:none;text-align:left;border:1px solid var(--line);border-radius:20px;background:#fff;padding:18px;color:var(--ink);min-height:255px;display:flex;flex-direction:column}
+.client-sim-scenario-card:hover{border-color:#9bcfc4;box-shadow:0 12px 30px rgba(19,34,56,.07);transform:translateY(-2px)}
+.client-sim-scenario-card.completed{border-color:#8fc7bb;background:#fbfffd}
+.client-sim-scenario-card .case-code{display:inline-block;align-self:flex-start;border-radius:999px;background:var(--ink);color:#fff;padding:6px 9px;font-size:.72rem;font-weight:900}
+.client-sim-scenario-card h4{font-size:1.12rem;line-height:1.35;margin:16px 0 7px}
+.client-sim-scenario-card p{margin:0;color:var(--muted);font-size:.9rem}
+.client-sim-scenario-card .scenario-tags{display:flex;flex-wrap:wrap;gap:6px;margin:13px 0}
+.client-sim-scenario-card .scenario-tags span{border-radius:999px;background:var(--pale);padding:5px 8px;font-size:.7rem;font-weight:800;color:var(--muted)}
+.client-sim-scenario-card .scenario-action{margin-top:auto;color:var(--accent);font-weight:900;padding-top:12px}
+.client-sim-workspace{margin-top:28px;border:1px solid var(--line);border-radius:28px;background:#f8faf9;padding:24px;box-shadow:var(--shadow)}
+.client-sim-workspace-top{display:flex;justify-content:space-between;gap:18px;align-items:center;margin-bottom:17px}
+.client-sim-coverage{min-width:220px}
+.client-sim-coverage>span{font-size:.68rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:900}
+.client-sim-coverage>strong{display:block;margin:3px 0}
+.client-sim-coverage-bar{height:7px;border-radius:999px;background:#e6ebed;overflow:hidden}
+.client-sim-coverage-bar span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s ease}
+.client-sim-hero{display:grid;grid-template-columns:1.3fr .7fr;gap:20px;background:var(--ink);color:#fff;border-radius:22px;padding:25px}
+.client-sim-hero .small-label{color:#91d1c5}
+.client-sim-hero h2{font-size:2rem;margin:4px 0 8px}
+.client-sim-hero p{color:#d7e2e9}
+.client-sim-case-meta{align-self:start;border:1px solid rgba(255,255,255,.15);border-radius:17px;padding:18px}
+.client-sim-case-meta span,.client-sim-case-meta strong,.client-sim-case-meta small{display:block}
+.client-sim-case-meta span{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#afc0cc;font-weight:850}
+.client-sim-case-meta strong{margin:7px 0}
+.client-sim-case-meta small{color:#d7e1e8}
+.client-sim-flow{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin:14px 0}
+.client-sim-flow span{border:1px solid var(--line);border-radius:999px;background:#fff;padding:7px 8px;text-align:center;font-size:.72rem;font-weight:850;color:var(--muted)}
+.client-sim-flow span.done{background:#e8f4f1;border-color:#8fc7bb;color:var(--accent-dark)}
+.client-sim-stage-list{display:grid;gap:14px}
+.client-sim-stage{display:grid;grid-template-columns:48px minmax(0,1fr);gap:14px;border:1px solid var(--line);border-radius:20px;background:#fff;padding:20px}
+.client-sim-stage.completed{border-color:#8fc7bb;background:#fbfffd}
+.client-sim-stage-number{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:#e8f4f1;color:var(--accent-dark);font-weight:950}
+.client-sim-stage h3{font-size:1.2rem;margin:4px 0 12px}
+.client-sim-facts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+.client-sim-fact{border:1px solid var(--line);border-radius:13px;background:#fafcfc;padding:11px 12px}
+.client-sim-fact span,.client-sim-fact strong{display:block}
+.client-sim-fact span{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:850;margin-bottom:3px}
+.client-sim-prep{max-width:900px}
+.client-sim-prep label>span{display:block;font-size:.78rem;color:var(--muted);font-weight:800;margin-bottom:6px}
+.client-sim-prep input{width:100%;border:1px solid var(--line);border-radius:13px;padding:12px 13px}
+.client-sim-phrase-bank{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0 15px}
+.client-sim-phrase{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:10px 11px;background:#fafcfc}
+.client-sim-phrase strong,.client-sim-phrase small{display:block}
+.client-sim-phrase small{color:var(--muted);margin-top:3px}
+.client-sim-phrase button{border:0;background:#fff;border-radius:999px;padding:7px 9px;color:var(--accent-dark);font-weight:850}
+.client-sim-oral-box{display:grid;grid-template-columns:auto auto 1fr;gap:12px;align-items:center;border-radius:16px;background:#f3f7f6;padding:15px;margin:13px 0}
+.client-sim-oral-box>div:first-child span,.client-sim-oral-box>div:first-child strong{display:block}
+.client-sim-oral-box>div:first-child span{font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:850}
+.client-sim-timer{font-size:1.8rem;font-variant-numeric:tabular-nums;font-weight:950;color:var(--accent-dark)}
+.client-sim-record-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}
+.client-sim-oral-box audio{grid-column:1/-1;width:100%}
+.client-sim-oral-box .microcopy{grid-column:1/-1}
+.client-sim-complete-turn{border:1px solid #96cabf;background:#eef8f5;color:var(--accent-dark);border-radius:999px;padding:10px 13px;font-weight:900}
+.client-sim-complete-turn.done{background:var(--accent);color:#fff}
+.client-sim-client-question{display:grid;grid-template-columns:42px 1fr;gap:12px;border:1px solid #efd08b;background:#fff8e8;border-radius:16px;padding:14px;max-width:900px}
+.client-sim-client-question>div:last-child>span{font-size:.7rem;letter-spacing:.09em;font-weight:900;color:#806725}
+.client-sim-client-question p{font-size:1.06rem;font-weight:850;margin:4px 0 8px}
+.client-sim-guidance{color:var(--muted);max-width:900px}
+.client-sim-intel-cards{display:grid;gap:8px;margin:10px 0}
+.client-sim-intel-card{border-left:4px solid var(--accent);background:#f4f8f7;border-radius:0 14px 14px 0;padding:13px 14px}
+.client-sim-intel-card span{display:block;font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:850;margin-bottom:4px}
+.client-sim-intel-card.hidden-intel{filter:blur(6px);user-select:none;opacity:.45}
+.client-sim-intel-check{margin-top:13px}
+.client-sim-intel-check h4{font-size:1.05rem;margin:0 0 10px}
+.client-sim-writing-meta{display:flex;gap:12px;align-items:center;color:var(--muted);font-size:.82rem;margin:7px 0}
+.client-sim-stage textarea{width:100%;border:1px solid var(--line);border-radius:14px;padding:13px;resize:vertical}
+.client-sim-checks{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0}
+.client-sim-checks label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px 11px;font-weight:750}
+.client-sim-checks input{margin-top:4px}
+.client-sim-followup-actions{display:flex;gap:8px;flex-wrap:wrap}
+.client-sim-model{margin-top:12px;border-left:4px solid var(--accent);background:#f4f8f7;border-radius:0 14px 14px 0;padding:15px;white-space:pre-line}
+.client-sim-final-panel{display:flex;justify-content:space-between;gap:20px;align-items:center;border-radius:17px;background:var(--ink);color:#fff;padding:17px;margin-top:15px}
+.client-sim-final-panel .small-label{color:#91d1c5}
+.client-sim-final-panel h3{margin:4px 0}
+.client-sim-final-panel p{color:#d3dee6;margin:0}
+.client-sim-privacy{display:flex;gap:8px;align-items:flex-start;background:var(--pale);border-radius:16px;padding:14px 16px;margin-top:18px;color:var(--muted)}
+.client-sim-privacy strong{color:var(--ink);white-space:nowrap}
+@media(max-width:1100px){
+  .client-sim-scenario-grid,.client-sim-rules{grid-template-columns:repeat(2,1fr)}
+  .client-sim-flow{grid-template-columns:repeat(4,1fr)}
+}
+@media(max-width:900px){
+  .client-simulator-heading{display:block}
+  .client-sim-stats{min-width:0;max-width:470px;margin-top:20px}
+  .client-sim-hero{grid-template-columns:1fr}
+  .client-sim-oral-box{grid-template-columns:1fr}
+  .client-sim-record-actions{justify-content:flex-start}
+  .client-sim-oral-box audio,.client-sim-oral-box .microcopy{grid-column:auto}
+}
+@media(max-width:650px){
+  .client-sim-scenario-grid,.client-sim-rules,.client-sim-facts,.client-sim-phrase-bank,.client-sim-checks{grid-template-columns:1fr}
+  .client-sim-selector-head,.client-sim-final-panel{display:block}
+  .client-sim-selector-head .secondary-button,.client-sim-final-panel .primary-button{margin-top:12px}
+  .client-sim-stage{grid-template-columns:1fr}
+  .client-sim-flow{grid-template-columns:repeat(2,1fr)}
+  .client-sim-workspace-top{display:block}
+  .client-sim-coverage{margin-top:12px}
+  .client-sim-privacy{display:block}
+  .client-sim-privacy strong{display:block;margin-bottom:4px}
+}

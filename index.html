@@ -15,6 +15,7 @@
     <div class="top-actions">
       <a class="nav-pill" href="#dashboard">Dashboard</a>
       <a class="nav-pill" href="#progress-check">Progress</a>
+      <a class="nav-pill" href="#client-simulator">Client Simulator</a>
       <a class="nav-pill" href="#resources-hub">Authentic Resources</a>
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
       <a class="nav-pill" href="#speaking-lab">Speaking Lab</a>
@@ -648,6 +649,240 @@
 
 
 
+
+
+    <section class="section client-simulator-section" id="client-simulator">
+      <div class="section-heading client-simulator-heading">
+        <div>
+          <p class="eyebrow">FULL CLIENT CALL SIMULATOR</p>
+          <h2>Handle the incident from first alert to follow-up email.</h2>
+          <p>This is the integration task: listen, think, speak, react to new evidence, recommend action, hand over the case and write the client follow-up. No automated “fluency score” — the mission tracks whether the operational communication was actually completed.</p>
+        </div>
+        <div class="client-sim-stats">
+          <div><strong id="clientSimAttempts">0</strong><span>missions attempted</span></div>
+          <div><strong id="clientSimCompleted">0</strong><span>missions complete</span></div>
+          <div><strong id="clientSimBest">—</strong><span>best coverage</span></div>
+        </div>
+      </div>
+
+      <div class="client-sim-rules">
+        <article><span>01</span><strong>No script</strong><p>For oral turns, keywords are allowed. Full written answers defeat the point.</p></article>
+        <article><span>02</span><strong>Evidence first</strong><p>Do not turn a suspicion into a confirmed incident because the client sounds worried.</p></article>
+        <article><span>03</span><strong>Keep moving</strong><p>If you hesitate, recover, clarify and continue. That is a professional speaking skill.</p></article>
+        <article><span>04</span><strong>Close the loop</strong><p>A useful incident call ends with owners, next actions and a communication point.</p></article>
+      </div>
+
+      <div class="client-sim-selector-head">
+        <div>
+          <p class="small-label">CHOOSE A MISSION</p>
+          <h3>Four realistic SOC / client situations</h3>
+        </div>
+        <button class="secondary-button" id="surpriseClientSimBtn" type="button">🎲 Surprise mission</button>
+      </div>
+
+      <div id="clientSimScenarioGrid" class="client-sim-scenario-grid"></div>
+
+      <div id="clientSimWorkspace" class="client-sim-workspace" hidden>
+        <div class="client-sim-workspace-top">
+          <button class="back-link" id="closeClientSimBtn" type="button">← Choose another mission</button>
+          <div class="client-sim-coverage">
+            <span>MISSION COVERAGE</span>
+            <strong id="clientSimCoverageText">0 / 7</strong>
+            <div class="client-sim-coverage-bar"><span id="clientSimCoverageBar"></span></div>
+          </div>
+        </div>
+
+        <div class="client-sim-hero">
+          <div>
+            <p class="small-label" id="clientSimCaseLabel">CASE</p>
+            <h2 id="clientSimCaseTitle">Incident simulation</h2>
+            <p id="clientSimCaseSubtitle"></p>
+          </div>
+          <div class="client-sim-case-meta">
+            <span>Target</span>
+            <strong>Operational clarity</strong>
+            <small>Facts · uncertainty · action · next update</small>
+          </div>
+        </div>
+
+        <nav class="client-sim-flow" aria-label="Simulation stages">
+          <span data-sim-stage-indicator="opening">1 Brief</span>
+          <span data-sim-stage-indicator="client">2 Client</span>
+          <span data-sim-stage-indicator="intel">3 New intel</span>
+          <span data-sim-stage-indicator="decision">4 Decide</span>
+          <span data-sim-stage-indicator="handover">5 Handover</span>
+          <span data-sim-stage-indicator="followup">6 Follow-up</span>
+          <span data-sim-stage-indicator="debrief">7 Debrief</span>
+        </nav>
+
+        <div class="client-sim-stage-list">
+          <article class="client-sim-stage" id="simStage-opening">
+            <div class="client-sim-stage-number">1</div>
+            <div class="client-sim-stage-body">
+              <p class="small-label">INITIAL BRIEFING</p>
+              <h3>Give the client a first 60–75 second update</h3>
+              <div id="clientSimInitialFacts" class="client-sim-facts"></div>
+              <div class="client-sim-prep">
+                <label>
+                  <span>30-second keyword plan · max 120 characters</span>
+                  <input id="clientSimOpeningNotes" type="text" maxlength="120" placeholder="e.g. 09:18 / privileged account / session revoked / no exfil / reviewing logs">
+                </label>
+                <div class="keyword-counter"><span id="clientSimOpeningNoteCount">0</span> / 120</div>
+              </div>
+              <div>
+                <p class="small-label">USEFUL CHUNKS</p>
+                <div id="clientSimPhraseBank" class="client-sim-phrase-bank"></div>
+              </div>
+              <div class="client-sim-oral-box">
+                <div><span>Target</span><strong>01:15</strong></div>
+                <div class="client-sim-timer" id="simTimer-opening">01:15</div>
+                <div class="client-sim-record-actions">
+                  <button class="secondary-button" type="button" data-sim-timer-start="opening" data-duration="75">Start timer</button>
+                  <button class="primary-button" type="button" data-sim-record="opening" data-duration="75">● Record update</button>
+                  <button class="secondary-button" type="button" data-sim-stop="opening" disabled>■ Stop</button>
+                </div>
+                <audio id="simAudio-opening" controls hidden></audio>
+                <p class="microcopy" id="simRecordStatus-opening">Recording is optional and stays on this device.</p>
+              </div>
+              <button class="client-sim-complete-turn" type="button" data-sim-complete="opening">✓ I delivered the opening update aloud</button>
+            </div>
+          </article>
+
+          <article class="client-sim-stage" id="simStage-client">
+            <div class="client-sim-stage-number">2</div>
+            <div class="client-sim-stage-body">
+              <p class="small-label">CLIENT INTERRUPTS</p>
+              <h3>Answer without inventing certainty</h3>
+              <div class="client-sim-client-question">
+                <div class="client-avatar">C</div>
+                <div>
+                  <span>CLIENT</span>
+                  <p id="clientSimClientQuestion"></p>
+                  <button class="tiny-speak-button" id="clientSimHearQuestionBtn" type="button">🔊 Hear the question</button>
+                </div>
+              </div>
+              <p class="client-sim-guidance">Answer in 30–45 seconds. If necessary: clarify the question → state what is known → state what is not known → give the next action.</p>
+              <div class="client-sim-oral-box">
+                <div><span>Target</span><strong>00:45</strong></div>
+                <div class="client-sim-timer" id="simTimer-client">00:45</div>
+                <div class="client-sim-record-actions">
+                  <button class="secondary-button" type="button" data-sim-timer-start="client" data-duration="45">Start timer</button>
+                  <button class="primary-button" type="button" data-sim-record="client" data-duration="45">● Record response</button>
+                  <button class="secondary-button" type="button" data-sim-stop="client" disabled>■ Stop</button>
+                </div>
+                <audio id="simAudio-client" controls hidden></audio>
+                <p class="microcopy" id="simRecordStatus-client">Try not to write the answer first.</p>
+              </div>
+              <button class="client-sim-complete-turn" type="button" data-sim-complete="client">✓ I answered the client aloud</button>
+            </div>
+          </article>
+
+          <article class="client-sim-stage" id="simStage-intel">
+            <div class="client-sim-stage-number">3</div>
+            <div class="client-sim-stage-body">
+              <p class="small-label">NEW INFORMATION ARRIVES DURING THE CALL</p>
+              <h3>Your assessment has to move with the evidence</h3>
+              <div id="clientSimIntelCards" class="client-sim-intel-cards"></div>
+              <button class="secondary-button" id="revealClientSimIntelBtn" type="button">Reveal first update →</button>
+              <div id="clientSimIntelCheck" class="client-sim-intel-check" hidden>
+                <h4 id="clientSimIntelQuestion"></h4>
+                <div id="clientSimIntelOptions" class="activity-options"></div>
+                <button class="secondary-button" id="checkClientSimIntelBtn" type="button">Check assessment</button>
+                <div id="clientSimIntelFeedback" class="activity-summary"></div>
+              </div>
+              <div id="clientSimRevisedUpdate" hidden>
+                <p class="client-sim-guidance">Now give a revised 45–60 second update. Start by signalling what changed.</p>
+                <div class="client-sim-oral-box">
+                  <div><span>Target</span><strong>01:00</strong></div>
+                  <div class="client-sim-timer" id="simTimer-intel">01:00</div>
+                  <div class="client-sim-record-actions">
+                    <button class="secondary-button" type="button" data-sim-timer-start="intel" data-duration="60">Start timer</button>
+                    <button class="primary-button" type="button" data-sim-record="intel" data-duration="60">● Record revised update</button>
+                    <button class="secondary-button" type="button" data-sim-stop="intel" disabled>■ Stop</button>
+                  </div>
+                  <audio id="simAudio-intel" controls hidden></audio>
+                  <p class="microcopy" id="simRecordStatus-intel">Use “We’ve now confirmed…”, “This changes our assessment because…” or another clear transition.</p>
+                </div>
+                <button class="client-sim-complete-turn" type="button" data-sim-complete="intel">✓ I delivered the revised update aloud</button>
+              </div>
+            </div>
+          </article>
+
+          <article class="client-sim-stage" id="simStage-decision">
+            <div class="client-sim-stage-number">4</div>
+            <div class="client-sim-stage-body">
+              <p class="small-label">MAKE A RECOMMENDATION</p>
+              <h3 id="clientSimDecisionQuestion"></h3>
+              <div id="clientSimDecisionOptions" class="activity-options"></div>
+              <button class="secondary-button" id="checkClientSimDecisionBtn" type="button">Check recommendation</button>
+              <div id="clientSimDecisionFeedback" class="activity-summary"></div>
+            </div>
+          </article>
+
+          <article class="client-sim-stage" id="simStage-handover">
+            <div class="client-sim-stage-number">5</div>
+            <div class="client-sim-stage-body">
+              <p class="small-label">SOC HANDOVER</p>
+              <h3 id="clientSimHandoverPrompt"></h3>
+              <textarea id="clientSimHandoverText" rows="6" placeholder="Write a concise handover: trigger → evidence → actions → outstanding point → next analyst action."></textarea>
+              <div class="client-sim-writing-meta"><span><strong id="clientSimHandoverWords">0</strong> words</span><span>Target: 45–100</span></div>
+              <div id="clientSimHandoverChecks" class="client-sim-checks"></div>
+              <button class="secondary-button" id="completeClientSimHandoverBtn" type="button">Validate handover</button>
+              <div id="clientSimHandoverFeedback" class="activity-summary"></div>
+            </div>
+          </article>
+
+          <article class="client-sim-stage" id="simStage-followup">
+            <div class="client-sim-stage-number">6</div>
+            <div class="client-sim-stage-body">
+              <p class="small-label">CLIENT FOLLOW-UP EMAIL</p>
+              <h3 id="clientSimFollowupPrompt"></h3>
+              <textarea id="clientSimFollowupText" rows="8" placeholder="Write the client follow-up. Lead with the status, then action, uncertainty and next communication point."></textarea>
+              <div class="client-sim-writing-meta"><span><strong id="clientSimFollowupWords">0</strong> words</span><span>Target: 70–130</span></div>
+              <div id="clientSimFollowupChecks" class="client-sim-checks"></div>
+              <div class="client-sim-followup-actions">
+                <button class="secondary-button" id="revealClientSimModelBtn" type="button">Reveal model after drafting</button>
+                <button class="secondary-button" id="completeClientSimFollowupBtn" type="button">Validate follow-up</button>
+              </div>
+              <div id="clientSimFollowupModel" class="client-sim-model" hidden></div>
+              <div id="clientSimFollowupFeedback" class="activity-summary"></div>
+            </div>
+          </article>
+
+          <article class="client-sim-stage" id="simStage-debrief">
+            <div class="client-sim-stage-number">7</div>
+            <div class="client-sim-stage-body">
+              <p class="small-label">DEBRIEF</p>
+              <h3>Was your communication operational?</h3>
+              <div id="clientSimDebriefChecks" class="client-sim-checks client-sim-debrief-checks">
+                <label><input type="checkbox" data-sim-debrief="facts"><span>I separated confirmed facts from hypotheses.</span></label>
+                <label><input type="checkbox" data-sim-debrief="plain"><span>I explained technical meaning rather than hiding behind jargon.</span></label>
+                <label><input type="checkbox" data-sim-debrief="structure"><span>My oral updates had a clear structure.</span></label>
+                <label><input type="checkbox" data-sim-debrief="recovery"><span>I recovered from hesitation or unexpected questions without giving up.</span></label>
+                <label><input type="checkbox" data-sim-debrief="close"><span>I ended with clear next actions and a communication point.</span></label>
+              </div>
+              <button class="secondary-button" id="validateClientSimDebriefBtn" type="button">Validate debrief</button>
+              <div id="clientSimDebriefFeedback" class="activity-summary"></div>
+
+              <div class="client-sim-final-panel">
+                <div>
+                  <p class="small-label">MISSION STATUS</p>
+                  <h3 id="clientSimFinalTitle">Complete the seven stages</h3>
+                  <p id="clientSimFinalText">Your result measures mission coverage, not language proficiency.</p>
+                </div>
+                <button class="primary-button" id="logClientSimMissionBtn" type="button" disabled>Log completed mission</button>
+              </div>
+              <div id="clientSimLogFeedback" class="activity-summary"></div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="client-sim-privacy">
+        <strong>Simulation data stays minimal.</strong>
+        <span>The site stores the scenario, date and completed-stage count. Audio disappears on reload, and the handover/email text is not stored.</span>
+      </div>
+    </section>
 
     <section class="section resources-hub-section" id="resources-hub">
       <div class="section-heading resources-hub-heading">

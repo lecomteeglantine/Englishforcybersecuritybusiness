@@ -490,10 +490,11 @@ function checkpointReadiness(){
   const writing=loadWritingState().attempts.length;
   const pronunciation=loadPronunciationLabState().completed.length;
   const resources=loadAuthenticResourceState().completed.length;
+  const simulations=loadClientSimState().completed.length;
   const grammar=loadGrammarRepairState().completed.length;
   const listening=listeningLabCompletedCount();
-  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(1,Math.floor(resources/2))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
-  return {completedModules,speaking,writing,pronunciation,resources,grammar,listening,evidence};
+  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(1,Math.floor(resources/2))+Math.min(2,simulations)+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
+  return {completedModules,speaking,writing,pronunciation,resources,simulations,grammar,listening,evidence};
 }
 function renderProgressSkillComparison(state){
   const target=document.getElementById("progressSkillComparison");if(!target)return;
@@ -573,6 +574,7 @@ function renderProgressCheck(){
     <div class="readiness-item"><span>Writing Lab attempts</span><strong>${ready.writing}</strong></div>
     <div class="readiness-item"><span>Pronunciation units completed</span><strong>${ready.pronunciation}</strong></div>
     <div class="readiness-item"><span>Authentic resources completed</span><strong>${ready.resources}</strong></div>
+    <div class="readiness-item"><span>Client simulations completed</span><strong>${ready.simulations}</strong></div>
     <div class="readiness-item"><span>Grammar Repair units completed</span><strong>${ready.grammar}</strong></div>
     <div class="readiness-item"><span>Listening Lab tasks completed</span><strong>${ready.listening} / 5</strong></div>`;
 }
@@ -1309,6 +1311,7 @@ function dashboardReasonCards(results,details){
     cards.push({title:`Main priority: ${weak.label}`,text:`Your diagnostic currently gives the lowest score to ${weak.label.toLowerCase()}, so today's routine gives it extra space.`});
     if(results.listening<75) cards.push({title:"Listening needs structured work",text:"That usually means gist, decoding and note-taking rather than simply 'more English audio'."});
     if(loadAuthenticResourceState().completed.length<3) cards.push({title:"Authentic input is still limited",text:"The resource hub adds recent real-world cybersecurity English so training is not confined to synthetic exercises."});
+    if(loadClientSimState().completed.length===0 && loadSpeakingState().attempts>=2 && loadWritingState().attempts.length>=1) cards.push({title:"Integration is the next step",text:"The Client Call Simulator now combines oral briefing, unexpected questions, new evidence, recommendation, handover and follow-up writing."});
     if(results.speaking<75) cards.push({title:"Speaking needs activation",text:"The goal is to move useful language from recognition to spontaneous use."});
     if(results.writing<75) cards.push({title:"Writing needs consolidation",text:"Short client-facing writing is now trained through incident updates, handovers, risk explanations and follow-ups."});
     if(results.grammar<75) cards.push({title:"Accuracy still matters",text:"But it is built into cyber tasks, not treated as isolated textbook drilling."});
@@ -1370,6 +1373,9 @@ function buildRoutineTasks(minutes){
   if(results.pronunciation < 75 && tasks.length < 4){
     add({id:"pron",tag:"PRONUNCIATION",title:"Pronunciation & Intelligibility Lab",desc:"Train the pronunciation feature your diagnostic currently flags: stress, endings, connected speech or chunking.",duration:durations[3],anchor:"#pronunciation-lab",cta:"Open Pronunciation Lab"});
   }
+  if(tasks.length < 4 && loadClientSimState().completed.length===0 && loadSpeakingState().attempts>=2 && loadWritingState().attempts.length>=1 && listeningLabCompletedCount()>=2){
+    add({id:"client-sim",tag:"SIMULATION",title:"Run a full client call",desc:"Combine listening, speaking, uncertainty, decision-making, handover and follow-up in one end-to-end incident mission.",duration:durations[Math.min(tasks.length,durations.length-1)],anchor:"#client-simulator",cta:"Open Client Simulator"});
+  }
   if(tasks.length < 4 && typeof checkpointReadiness==="function" && checkpointReadiness().evidence>=4){
     add({id:"progress-check",tag:"CHECKPOINT",title:"Take a quick progress check",desc:"You have done enough targeted practice for a fresh snapshot to be useful.",duration:durations[Math.min(tasks.length, durations.length-1)],anchor:"#progress-check",cta:"Open Progress Check"});
   }
@@ -1415,6 +1421,7 @@ function renderQuickLinks(){
   const target=document.getElementById("dashboardQuickLinks"); if(!target) return;
   const links=[
     {anchor:"#my-plan", title:"My personalised plan", sub:"Resume the selected cyber modules"},
+    {anchor:"#client-simulator", title:"Client Call Simulator", sub:"Full incident mission from briefing to follow-up"},
     {anchor:"#resources-hub", title:"Authentic Resources", sub:"Recent real-world cyber English with short tasks"},
     {anchor:"#listening-lab", title:"Listening Lab", sub:"Gist, decoding, dictation and note-taking"},
     {anchor:"#speaking-lab", title:"Speaking Lab", sub:"Quick responses, client questions and roleplay"},
@@ -1443,6 +1450,10 @@ function renderDashboardNextStep(results){
   const due=phraseStats();
   if(due.due > 0){
     target.innerHTML=`<div class="next-step-box"><strong>Phrasebook review is due</strong><span>You have ${due.due} card${due.due===1?"":"s"} ready for spaced review.</span><a class="primary-button" href="#phrasebook">Open Phrasebook</a></div>`;
+    return;
+  }
+  if(loadClientSimState().completed.length===0 && loadSpeakingState().attempts>=2 && loadWritingState().attempts.length>=1){
+    target.innerHTML=`<div class="next-step-box"><strong>Put everything together</strong><span>You have enough component practice to try a full client-call simulation from initial alert to written follow-up.</span><a class="primary-button" href="#client-simulator">Open Client Simulator</a></div>`;
     return;
   }
   target.innerHTML=`<div class="next-step-box"><strong>Speaking activation</strong><span>Your next useful step is to do one Speaking Lab task and force a few chunks into active use.</span><a class="primary-button" href="#speaking-lab">Open Speaking Lab</a></div>`;
@@ -1538,6 +1549,671 @@ function initDashboard(){
 
 
 
+
+
+
+
+// V15 · Full Client Call Simulator
+const clientSimStateKey="ebackontrack-v15-client-simulator";
+
+const clientSimScenarios={
+  privileged:{
+    code:"CASE 01",
+    title:"Privileged-account anomaly",
+    subtitle:"An unfamiliar sign-in has triggered a high-severity identity alert.",
+    tags:["Identity","Client update","Uncertainty"],
+    facts:[
+      ["09:18 UTC","Successful sign-in on a privileged account from an unfamiliar location."],
+      ["Current action","Active session revoked and password reset initiated."],
+      ["Evidence","No confirmed data exfiltration or lateral movement at this stage."],
+      ["Open question","Was the sign-in legitimate, and was the account used elsewhere?"]
+    ],
+    phraseIds:["client-current-assessment","inc-so-far","inc-next-update","soc-rule-out"],
+    clientQuestions:[
+      "So are you saying the account has definitely been compromised?",
+      "Can you guarantee that no data was accessed?",
+      "Why did the SOC not block the login before it succeeded?"
+    ],
+    intel:[
+      "The user confirms that they did not make the unfamiliar sign-in.",
+      "Identity logs show that the same session accessed one administrative portal, but no additional successful logins have been identified."
+    ],
+    intelCheck:{
+      q:"How should your assessment change after these updates?",
+      a:[
+        "The incident is now confirmed to involve unauthorised account use, but wider compromise still needs investigation.",
+        "Data exfiltration is now confirmed.",
+        "The alert can be closed as a false positive.",
+        "The evidence proves which threat actor is responsible."
+      ],c:0,
+      explain:"The user's confirmation strengthens the compromise assessment, but it does not prove data theft, lateral movement or attribution."
+    },
+    decision:{
+      q:"What is the best immediate recommendation now?",
+      a:[
+        "Re-enable the account because the password has been reset.",
+        "Continue identity scoping, review privileged activity and keep the affected access contained until the account-use timeline is understood.",
+        "Rebuild every endpoint in the organisation.",
+        "Tell the client the incident is resolved."
+      ],c:1,
+      explain:"The response should stay proportionate: contain the account, scope privileged activity and keep investigating before declaring resolution."
+    },
+    handover:"Write a 45–100 word handover for the next analyst. Include the alert trigger, what the user confirmed, actions already taken, the administrative-portal access and the next identity-scoping step.",
+    handoverChecks:[
+      "I included the trigger and useful time reference.",
+      "I separated confirmed account compromise from unconfirmed wider impact.",
+      "I listed the containment actions already taken.",
+      "I gave the next analyst a precise outstanding task."
+    ],
+    followup:"Write a 70–130 word client follow-up after the call. Explain the current status, what has been contained, what is still being reviewed and when the client will receive the next update.",
+    followupChecks:[
+      "The first sentence gives the current status clearly.",
+      "I did not claim that data theft or wider compromise is confirmed.",
+      "I stated what has already been done.",
+      "I gave a clear next investigation step and communication point."
+    ],
+    model:`Subject: Update on privileged-account incident
+
+We have now confirmed unauthorised use of the affected privileged account. The active session has been revoked and the password reset process has been initiated.
+
+Identity logs show access to one administrative portal. At this stage, we have found no evidence of additional successful logins, lateral movement or data exfiltration.
+
+We are continuing to review privileged-account activity and related identity telemetry to determine the full scope. We will provide the next update once that review is complete, or earlier if significant new findings are identified.`
+  },
+
+  powershell:{
+    code:"CASE 02",
+    title:"Suspicious PowerShell on an endpoint",
+    subtitle:"An EDR alert shows script execution from a downloaded archive.",
+    tags:["Endpoint","Investigation","Handover"],
+    facts:[
+      ["08:42 UTC","High-severity PowerShell detection on one finance workstation."],
+      ["Current action","Endpoint isolated from the network."],
+      ["Evidence","Execution confirmed; persistence and lateral movement not confirmed."],
+      ["Open question","How did the archive reach the device, and did other users receive it?"]
+    ],
+    phraseIds:["soc-at-this-stage","inc-isolated","inc-currently-reviewing","handover-next-analyst"],
+    clientQuestions:[
+      "If the endpoint is isolated, does that mean the incident is finished?",
+      "Could this just be legitimate administration?",
+      "How many other devices do you think are affected?"
+    ],
+    intel:[
+      "Email telemetry identifies a message with the same archive sent to four additional employees.",
+      "Two recipients opened the message, but no matching PowerShell execution has been detected on their endpoints so far."
+    ],
+    intelCheck:{
+      q:"What is the most accurate revised assessment?",
+      a:[
+        "The scope may extend beyond one workstation because the delivery email reached additional users, but execution is currently confirmed on only one endpoint.",
+        "Five endpoints are definitely compromised.",
+        "The original endpoint can be reconnected immediately.",
+        "The email evidence proves data exfiltration."
+      ],c:0,
+      explain:"Delivery scope has widened, but endpoint compromise must still be evidenced separately."
+    },
+    decision:{
+      q:"What should be prioritised next?",
+      a:[
+        "Reconnect the isolated workstation to see what happens.",
+        "Search the tenant for the message and indicators, review the two recipients who opened it, and keep the confirmed endpoint contained.",
+        "Delete all email telemetry.",
+        "Wait for another EDR alert before doing anything."
+      ],c:1,
+      explain:"The new evidence justifies wider email and endpoint scoping while maintaining containment of the confirmed host."
+    },
+    handover:"Write a handover covering the EDR trigger, isolation, email-delivery finding, current endpoint scope and the precise checks the next analyst should perform.",
+    handoverChecks:[
+      "I distinguished email delivery from confirmed endpoint execution.",
+      "I included containment already performed.",
+      "I named the two recipients requiring further review.",
+      "I gave a specific next search or telemetry task."
+    ],
+    followup:"Write a client email explaining that the investigation scope has widened from one endpoint to the phishing delivery chain, without claiming that all recipients are compromised.",
+    followupChecks:[
+      "I explained why the scope widened.",
+      "I distinguished delivered/opened messages from confirmed malicious execution.",
+      "I stated what remains contained.",
+      "I gave the next investigation step and next update expectation."
+    ],
+    model:`Subject: Update on suspicious PowerShell investigation
+
+The investigation has identified the likely delivery route for the suspicious archive. The same email was sent to four additional employees, and two recipients opened the message.
+
+Malicious PowerShell execution is currently confirmed on one workstation only, which remains isolated. We have not identified matching execution on the other endpoints so far.
+
+We are widening the investigation to review the additional recipients, related email activity and endpoint telemetry. We will update you again once this scoping work is complete or if further execution is confirmed.`
+  },
+
+  vulnerability:{
+    code:"CASE 03",
+    title:"Critical vulnerability before the maintenance window",
+    subtitle:"A severe vulnerability affects a client service that cannot be patched immediately.",
+    tags:["Risk","Remediation","Plain English"],
+    facts:[
+      ["Vulnerability","Critical remote-code-execution flaw with public technical details."],
+      ["Exposure","Service is externally reachable but protected by restricted administrative access."],
+      ["Current evidence","No exploitation indicators observed in available telemetry."],
+      ["Constraint","Patch is available, but production deployment is scheduled for tonight."]
+    ],
+    phraseIds:["risk-no-exploitation","risk-likelihood-depends","rem-immediate","rem-fallback"],
+    clientQuestions:[
+      "If the vulnerability is critical, doesn't that mean we've already been hacked?",
+      "Can you guarantee we're safe until tonight?",
+      "Why can't we just ignore it if you haven't seen exploitation?"
+    ],
+    intel:[
+      "Threat intelligence reports active exploitation of the vulnerability against internet-facing targets.",
+      "A WAF rule can temporarily restrict the vulnerable endpoint without taking the entire service offline."
+    ],
+    intelCheck:{
+      q:"What changes most after the new intelligence?",
+      a:[
+        "The technical severity is unchanged, but the likelihood is now higher because active exploitation is occurring in the wild.",
+        "Compromise is now confirmed in the client's environment.",
+        "The vulnerability is no longer relevant because a WAF exists.",
+        "The patch is unnecessary."
+      ],c:0,
+      explain:"External exploitation changes likelihood, not the evidence of compromise inside this specific environment."
+    },
+    decision:{
+      q:"What is the best recommendation until tonight's patch?",
+      a:[
+        "Do nothing because exploitation is unconfirmed locally.",
+        "Apply the temporary WAF restriction, increase monitoring for exploitation indicators and deploy the patch in the maintenance window.",
+        "Delete the service immediately with no business discussion.",
+        "Guarantee that the WAF completely removes the risk."
+      ],c:1,
+      explain:"A temporary compensating control plus enhanced monitoring is proportionate until the definitive remediation can be deployed."
+    },
+    handover:"Write a SOC/risk handover summarising the vulnerability, current exposure, lack of confirmed exploitation, new threat intelligence, temporary mitigation and monitoring priorities.",
+    handoverChecks:[
+      "I separated technical severity from evidence of local exploitation.",
+      "I recorded that active exploitation is occurring externally.",
+      "I documented the temporary control and patch plan.",
+      "I gave the next analyst concrete monitoring priorities."
+    ],
+    followup:"Write a client follow-up explaining why the risk assessment changed, what temporary mitigation is being applied and what remains planned for the maintenance window.",
+    followupChecks:[
+      "I explained severity versus likelihood in plain English.",
+      "I did not say active exploitation elsewhere proves local compromise.",
+      "I explained the temporary mitigation.",
+      "I confirmed the definitive remediation and monitoring plan."
+    ],
+    model:`Subject: Updated risk assessment and temporary mitigation
+
+Our assessment has changed following new threat intelligence showing active exploitation of the vulnerability against internet-facing targets. This increases the likelihood of attempted exploitation, although we still have no evidence that the client's service has been compromised.
+
+As an immediate mitigation, we recommend applying the available WAF restriction and increasing monitoring for relevant exploitation indicators. The definitive remediation remains deployment of the vendor patch during tonight's maintenance window.
+
+We will continue monitoring and will report immediately if any evidence of exploitation is identified.`
+  },
+
+  phishing:{
+    code:"CASE 04",
+    title:"Credential phishing and mailbox access",
+    subtitle:"A user entered credentials into a phishing page and a suspicious mailbox rule has been found.",
+    tags:["Phishing","Identity","Client communication"],
+    facts:[
+      ["Initial report","User confirms entering credentials into a suspicious website."],
+      ["Current action","Password reset and active sessions revoked."],
+      ["Mailbox","One suspicious forwarding rule has been removed."],
+      ["Open question","Was the mailbox accessed before containment, and was the phishing campaign broader?"]
+    ],
+    phraseIds:["client-what-we-know","client-not-confirmed","inc-outstanding","rem-going-forward"],
+    clientQuestions:[
+      "Does the forwarding rule prove that emails were stolen?",
+      "How can you be sure the attacker no longer has access?",
+      "Should we tell every employee that their mailbox is compromised?"
+    ],
+    intel:[
+      "Mailbox audit logs confirm that the forwarding rule was created during the suspicious session.",
+      "A tenant-wide search identifies the same phishing URL in messages delivered to eleven additional users; no other credential submission is confirmed yet."
+    ],
+    intelCheck:{
+      q:"What is now confirmed?",
+      a:[
+        "The compromised session created the forwarding rule, and the phishing campaign reached additional users; broader credential compromise is not yet confirmed.",
+        "All twelve users are compromised.",
+        "Every forwarded message was exfiltrated.",
+        "The campaign can be closed because the password was reset."
+      ],c:0,
+      explain:"The audit log connects the rule to the suspicious session, while the tenant search expands campaign scope without proving eleven more compromises."
+    },
+    decision:{
+      q:"What should happen next?",
+      a:[
+        "Review mailbox access and forwarding activity, search the tenant campaign-wide, notify/guide exposed users and monitor for additional credential use.",
+        "Restore the suspicious forwarding rule for evidence.",
+        "Reset every employee password regardless of exposure.",
+        "Close the investigation immediately."
+      ],c:0,
+      explain:"The response should scope mailbox impact and campaign reach while targeting users and signals supported by evidence."
+    },
+    handover:"Write a handover that clearly separates confirmed credential theft, confirmed mailbox-rule creation, possible data access and the wider phishing campaign.",
+    handoverChecks:[
+      "I stated what the user confirmed.",
+      "I linked the mailbox rule to the suspicious session without overclaiming data theft.",
+      "I documented the wider campaign scope.",
+      "I gave a precise next mailbox/identity investigation step."
+    ],
+    followup:"Write a client follow-up explaining what is confirmed, what remains unknown, what has been contained and how the wider phishing campaign is being scoped.",
+    followupChecks:[
+      "I separated mailbox access from confirmed data exfiltration.",
+      "I stated the containment actions.",
+      "I explained why the campaign scope has widened.",
+      "I gave clear next actions for the affected and exposed users."
+    ],
+    model:`Subject: Update on phishing and mailbox investigation
+
+We have confirmed that the affected user entered credentials into the phishing site and that the suspicious mailbox forwarding rule was created during the resulting unauthorised session. The password has been reset, active sessions revoked and the rule removed.
+
+We have not yet confirmed the extent of mailbox access or any data exfiltration. A wider search has identified the same phishing URL in messages sent to eleven additional users, but no further credential submission has been confirmed so far.
+
+We are continuing mailbox, identity and campaign-wide scoping and will provide an updated assessment once those checks are complete.`
+  }
+};
+
+function loadClientSimState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(clientSimStateKey))||{};
+    return {
+      attempts:Array.isArray(raw.attempts)?raw.attempts:[],
+      completed:Array.isArray(raw.completed)?raw.completed:[]
+    };
+  }catch(e){return {attempts:[],completed:[]};}
+}
+function saveClientSimState(state){
+  localStorage.setItem(clientSimStateKey,JSON.stringify(state));
+}
+function clientSimStats(){
+  const s=loadClientSimState();
+  const best=s.attempts.length?Math.max(...s.attempts.map(x=>x.coverage||0)):null;
+  return {attempts:s.attempts.length,completed:s.completed.length,best};
+}
+function renderClientSimStats(){
+  const s=clientSimStats();
+  document.getElementById("clientSimAttempts").textContent=s.attempts;
+  document.getElementById("clientSimCompleted").textContent=s.completed.length;
+  document.getElementById("clientSimBest").textContent=s.best===null?"—":`${s.best}/7`;
+}
+function renderClientSimScenarios(){
+  const state=loadClientSimState();
+  const grid=document.getElementById("clientSimScenarioGrid");if(!grid)return;
+  grid.innerHTML=Object.entries(clientSimScenarios).map(([id,s])=>{
+    const done=state.completed.includes(id);
+    return `<button class="client-sim-scenario-card ${done?"completed":""}" type="button" data-client-sim="${id}">
+      <span class="case-code">${s.code}</span>
+      <h4>${s.title}</h4>
+      <p>${s.subtitle}</p>
+      <div class="scenario-tags">${s.tags.map(x=>`<span>${x}</span>`).join("")}</div>
+      <span class="scenario-action">${done?"Run again":"Start mission"} →</span>
+    </button>`;
+  }).join("");
+  document.querySelectorAll("[data-client-sim]").forEach(btn=>btn.addEventListener("click",()=>startClientSim(btn.dataset.clientSim)));
+}
+let activeClientSimId=null;
+let activeClientSimQuestion="";
+let activeClientSimProgress={};
+let activeClientSimIntelRevealed=0;
+let activeClientSimDecisionRetries=0;
+let activeClientSimLogged=false;
+let clientSimRecorder=null;
+let clientSimChunks=[];
+let clientSimStream=null;
+let clientSimRecordingStage=null;
+let clientSimTimerInterval=null;
+const clientSimAudioUrls={};
+
+function emptyClientSimProgress(){
+  return {opening:false,client:false,intel:false,decision:false,handover:false,followup:false,debrief:false};
+}
+function countClientSimCoverage(){
+  return Object.values(activeClientSimProgress).filter(Boolean).length;
+}
+function updateClientSimCoverage(){
+  const n=countClientSimCoverage();
+  document.getElementById("clientSimCoverageText").textContent=`${n} / 7`;
+  document.getElementById("clientSimCoverageBar").style.width=`${Math.round(n/7*100)}%`;
+  Object.entries(activeClientSimProgress).forEach(([key,done])=>{
+    document.querySelector(`[data-sim-stage-indicator="${key}"]`)?.classList.toggle("done",done);
+    document.getElementById(`simStage-${key}`)?.classList.toggle("completed",done);
+  });
+  const finalTitle=document.getElementById("clientSimFinalTitle");
+  const finalText=document.getElementById("clientSimFinalText");
+  const logBtn=document.getElementById("logClientSimMissionBtn");
+  if(n===7){
+    finalTitle.textContent="Mission fully covered ✓";
+    finalText.textContent="You completed all seven operational communication stages. This is mission coverage, not a proficiency grade.";
+    logBtn.disabled=false;
+  }else{
+    finalTitle.textContent=`${7-n} stage${7-n===1?"":"s"} still to complete`;
+    finalText.textContent="Finish the remaining stages before logging the mission.";
+    logBtn.disabled=true;
+  }
+}
+function markClientSimStage(stage,value=true){
+  activeClientSimProgress[stage]=value;
+  updateClientSimCoverage();
+}
+function simWordCount(text){
+  const clean=(text||"").trim();
+  return clean?clean.split(/\s+/).filter(Boolean).length:0;
+}
+function formatSimTime(seconds){
+  return `${String(Math.floor(seconds/60)).padStart(2,"0")}:${String(seconds%60).padStart(2,"0")}`;
+}
+function startClientSimTimer(stage,duration){
+  clearInterval(clientSimTimerInterval);
+  let left=duration;
+  const el=document.getElementById(`simTimer-${stage}`);
+  if(!el)return;
+  el.textContent=formatSimTime(left);
+  clientSimTimerInterval=setInterval(()=>{
+    left--;
+    el.textContent=formatSimTime(Math.max(0,left));
+    if(left<=0){
+      clearInterval(clientSimTimerInterval);
+      el.textContent="00:00";
+    }
+  },1000);
+}
+async function startClientSimRecording(stage,duration){
+  try{
+    if(clientSimRecorder?.state==="recording")clientSimRecorder.stop();
+    clearInterval(clientSimTimerInterval);
+    clientSimStream=await navigator.mediaDevices.getUserMedia({audio:true});
+    clientSimChunks=[];
+    clientSimRecordingStage=stage;
+    clientSimRecorder=new MediaRecorder(clientSimStream);
+    clientSimRecorder.ondataavailable=e=>clientSimChunks.push(e.data);
+    clientSimRecorder.onstop=()=>{
+      const blob=new Blob(clientSimChunks,{type:"audio/webm"});
+      if(clientSimAudioUrls[stage])URL.revokeObjectURL(clientSimAudioUrls[stage]);
+      clientSimAudioUrls[stage]=URL.createObjectURL(blob);
+      const audio=document.getElementById(`simAudio-${stage}`);
+      if(audio){audio.src=clientSimAudioUrls[stage];audio.hidden=false;}
+      clientSimStream?.getTracks().forEach(t=>t.stop());
+      document.querySelector(`[data-sim-record="${stage}"]`)?.removeAttribute("disabled");
+      const stop=document.querySelector(`[data-sim-stop="${stage}"]`);if(stop)stop.disabled=true;
+      document.getElementById(`simRecordStatus-${stage}`).textContent="Recording ready. Listen back once, then decide whether the operational message was clear. Nothing was uploaded.";
+      clearInterval(clientSimTimerInterval);
+    };
+    clientSimRecorder.start();
+    document.querySelector(`[data-sim-record="${stage}"]`).disabled=true;
+    document.querySelector(`[data-sim-stop="${stage}"]`).disabled=false;
+    document.getElementById(`simRecordStatus-${stage}`).textContent="Recording… keep going if you hesitate.";
+    startClientSimTimer(stage,duration);
+    setTimeout(()=>{
+      if(clientSimRecorder?.state==="recording"&&clientSimRecordingStage===stage)clientSimRecorder.stop();
+    },duration*1000);
+  }catch(e){
+    document.getElementById(`simRecordStatus-${stage}`).textContent="Microphone access was not granted. Do the turn aloud anyway and use the completion button below.";
+  }
+}
+function stopClientSimRecording(stage){
+  if(clientSimRecorder?.state==="recording"&&clientSimRecordingStage===stage)clientSimRecorder.stop();
+}
+function renderClientSimPhraseBank(scenario){
+  const target=document.getElementById("clientSimPhraseBank");
+  target.innerHTML=scenario.phraseIds.map(id=>{
+    const item=findPhraseItem(id);if(!item)return "";
+    const saved=!!loadPhraseState().items[id];
+    return `<div class="client-sim-phrase">
+      <div><strong>${item.phrase}</strong><small>${item.category}</small></div>
+      <button type="button" data-client-sim-phrase="${id}">${saved?"✓ Saved":"+ Phrasebook"}</button>
+    </div>`;
+  }).join("");
+  target.querySelectorAll("[data-client-sim-phrase]").forEach(btn=>btn.addEventListener("click",()=>{
+    addPhrase(btn.dataset.clientSimPhrase);renderClientSimPhraseBank(scenario);
+  }));
+}
+function renderClientSimIntel(scenario){
+  document.getElementById("clientSimIntelCards").innerHTML=scenario.intel.map((text,i)=>`
+    <div class="client-sim-intel-card hidden-intel" data-client-sim-intel="${i}">
+      <span>LIVE UPDATE ${i+1}</span>
+      <strong>${text}</strong>
+    </div>`).join("");
+  activeClientSimIntelRevealed=0;
+  document.getElementById("revealClientSimIntelBtn").disabled=false;
+  document.getElementById("revealClientSimIntelBtn").textContent="Reveal first update →";
+  document.getElementById("clientSimIntelCheck").hidden=true;
+  document.getElementById("clientSimRevisedUpdate").hidden=true;
+}
+function revealClientSimIntel(){
+  const s=clientSimScenarios[activeClientSimId];if(!s)return;
+  if(activeClientSimIntelRevealed<s.intel.length){
+    document.querySelector(`[data-client-sim-intel="${activeClientSimIntelRevealed}"]`)?.classList.remove("hidden-intel");
+    activeClientSimIntelRevealed++;
+  }
+  const btn=document.getElementById("revealClientSimIntelBtn");
+  if(activeClientSimIntelRevealed<s.intel.length){
+    btn.textContent="Reveal next update →";
+  }else{
+    btn.disabled=true;btn.textContent="All live updates revealed ✓";
+    document.getElementById("clientSimIntelCheck").hidden=false;
+    document.getElementById("clientSimRevisedUpdate").hidden=false;
+  }
+}
+function renderClientSimChecks(targetId,checks,prefix){
+  document.getElementById(targetId).innerHTML=checks.map((x,i)=>`
+    <label><input type="checkbox" data-${prefix}-check="${i}"><span>${x}</span></label>`).join("");
+}
+function startClientSim(id){
+  const s=clientSimScenarios[id];if(!s)return;
+  activeClientSimId=id;
+  activeClientSimProgress=emptyClientSimProgress();
+  activeClientSimDecisionRetries=0;
+  activeClientSimLogged=false;
+  activeClientSimQuestion=s.clientQuestions[Math.floor(Math.random()*s.clientQuestions.length)];
+  clearInterval(clientSimTimerInterval);
+
+  document.getElementById("clientSimCaseLabel").textContent=s.code;
+  document.getElementById("clientSimCaseTitle").textContent=s.title;
+  document.getElementById("clientSimCaseSubtitle").textContent=s.subtitle;
+  document.getElementById("clientSimInitialFacts").innerHTML=s.facts.map(([label,text])=>`
+    <div class="client-sim-fact"><span>${label}</span><strong>${text}</strong></div>`).join("");
+  document.getElementById("clientSimOpeningNotes").value="";
+  document.getElementById("clientSimOpeningNoteCount").textContent="0";
+  renderClientSimPhraseBank(s);
+
+  document.getElementById("clientSimClientQuestion").textContent=activeClientSimQuestion;
+  renderClientSimIntel(s);
+  document.getElementById("clientSimIntelQuestion").textContent=s.intelCheck.q;
+  document.getElementById("clientSimIntelOptions").innerHTML=s.intelCheck.a.map((x,i)=>`
+    <label><input type="radio" name="client-sim-intel-${id}" value="${i}"><span>${x}</span></label>`).join("");
+  document.getElementById("clientSimIntelFeedback").textContent="";
+  document.getElementById("clientSimIntelFeedback").className="activity-summary";
+
+  document.getElementById("clientSimDecisionQuestion").textContent=s.decision.q;
+  document.getElementById("clientSimDecisionOptions").innerHTML=s.decision.a.map((x,i)=>`
+    <label><input type="radio" name="client-sim-decision-${id}" value="${i}"><span>${x}</span></label>`).join("");
+  document.getElementById("clientSimDecisionFeedback").textContent="";
+  document.getElementById("clientSimDecisionFeedback").className="activity-summary";
+
+  document.getElementById("clientSimHandoverPrompt").textContent=s.handover;
+  document.getElementById("clientSimHandoverText").value="";
+  document.getElementById("clientSimHandoverWords").textContent="0";
+  renderClientSimChecks("clientSimHandoverChecks",s.handoverChecks,"sim-handover");
+  document.getElementById("clientSimHandoverFeedback").textContent="";
+  document.getElementById("clientSimHandoverFeedback").className="activity-summary";
+
+  document.getElementById("clientSimFollowupPrompt").textContent=s.followup;
+  document.getElementById("clientSimFollowupText").value="";
+  document.getElementById("clientSimFollowupWords").textContent="0";
+  renderClientSimChecks("clientSimFollowupChecks",s.followupChecks,"sim-followup");
+  document.getElementById("clientSimFollowupModel").textContent=s.model;
+  document.getElementById("clientSimFollowupModel").hidden=true;
+  document.getElementById("revealClientSimModelBtn").disabled=false;
+  document.getElementById("revealClientSimModelBtn").textContent="Reveal model after drafting";
+  document.getElementById("clientSimFollowupFeedback").textContent="";
+  document.getElementById("clientSimFollowupFeedback").className="activity-summary";
+
+  document.querySelectorAll("[data-sim-debrief]").forEach(x=>x.checked=false);
+  document.getElementById("clientSimDebriefFeedback").textContent="";
+  document.getElementById("clientSimDebriefFeedback").className="activity-summary";
+  document.getElementById("clientSimLogFeedback").textContent="";
+  document.getElementById("clientSimLogFeedback").className="activity-summary";
+
+  ["opening","client","intel"].forEach(stage=>{
+    const audio=document.getElementById(`simAudio-${stage}`);
+    audio.hidden=true;audio.removeAttribute("src");
+    document.getElementById(`simRecordStatus-${stage}`).textContent=stage==="opening"
+      ?"Recording is optional and stays on this device."
+      :stage==="client"
+        ?"Try not to write the answer first."
+        :"Use a clear transition to explain what changed.";
+    document.getElementById(`simTimer-${stage}`).textContent=stage==="opening"?"01:15":stage==="client"?"00:45":"01:00";
+    const complete=document.querySelector(`[data-sim-complete="${stage}"]`);
+    complete.classList.remove("done");
+    complete.textContent=stage==="opening"?"✓ I delivered the opening update aloud":
+      stage==="client"?"✓ I answered the client aloud":"✓ I delivered the revised update aloud";
+  });
+
+  document.getElementById("clientSimWorkspace").hidden=false;
+  document.getElementById("clientSimScenarioGrid").hidden=true;
+  document.querySelector(".client-sim-selector-head").hidden=true;
+  updateClientSimCoverage();
+  document.getElementById("clientSimWorkspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeClientSim(){
+  clearInterval(clientSimTimerInterval);
+  if(clientSimRecorder?.state==="recording")clientSimRecorder.stop();
+  document.getElementById("clientSimWorkspace").hidden=true;
+  document.getElementById("clientSimScenarioGrid").hidden=false;
+  document.querySelector(".client-sim-selector-head").hidden=false;
+  activeClientSimId=null;
+  renderClientSimScenarios();renderClientSimStats();
+  document.getElementById("client-simulator").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function completeClientSimOralTurn(stage){
+  markClientSimStage(stage,true);
+  const btn=document.querySelector(`[data-sim-complete="${stage}"]`);
+  if(btn){btn.classList.add("done");btn.textContent="✓ Oral turn completed";}
+}
+function checkClientSimIntel(){
+  const s=clientSimScenarios[activeClientSimId];if(!s)return;
+  const picked=document.querySelector(`input[name="client-sim-intel-${activeClientSimId}"]:checked`);
+  const fb=document.getElementById("clientSimIntelFeedback");
+  if(!picked){fb.className="activity-summary neutral";fb.textContent="Choose an assessment first.";return;}
+  const ok=Number(picked.value)===s.intelCheck.c;
+  fb.className=`activity-summary ${ok?"correct":"wrong"}`;
+  fb.textContent=ok?`Correct ✓ ${s.intelCheck.explain}`:`Best assessment: “${s.intelCheck.a[s.intelCheck.c]}” — ${s.intelCheck.explain}`;
+}
+function checkClientSimDecision(){
+  const s=clientSimScenarios[activeClientSimId];if(!s)return;
+  const picked=document.querySelector(`input[name="client-sim-decision-${activeClientSimId}"]:checked`);
+  const fb=document.getElementById("clientSimDecisionFeedback");
+  if(!picked){fb.className="activity-summary neutral";fb.textContent="Choose a recommendation first.";return;}
+  const ok=Number(picked.value)===s.decision.c;
+  activeClientSimDecisionRetries++;
+  fb.className=`activity-summary ${ok?"correct":"wrong"}`;
+  fb.textContent=ok?`Correct ✓ ${s.decision.explain}`:`Not yet. Best recommendation: “${s.decision.a[s.decision.c]}” — ${s.decision.explain}`;
+  if(ok)markClientSimStage("decision",true);
+}
+function validateClientSimHandover(){
+  const words=simWordCount(document.getElementById("clientSimHandoverText").value);
+  const checks=[...document.querySelectorAll("[data-sim-handover-check]")];
+  const checked=checks.filter(x=>x.checked).length;
+  const fb=document.getElementById("clientSimHandoverFeedback");
+  if(words<45){
+    fb.className="activity-summary neutral";fb.textContent="The handover is too thin to transfer the case. Aim for at least 45 words.";return;
+  }
+  if(checked<3){
+    fb.className="activity-summary neutral";fb.textContent="Confirm at least three handover criteria first.";return;
+  }
+  fb.className="activity-summary correct";
+  fb.textContent=`Handover validated ✓ ${words} words · ${checked}/${checks.length} operational checks.`;
+  markClientSimStage("handover",true);
+}
+function revealClientSimModel(){
+  const words=simWordCount(document.getElementById("clientSimFollowupText").value);
+  const fb=document.getElementById("clientSimFollowupFeedback");
+  if(words<40){
+    fb.className="activity-summary neutral";fb.textContent="Draft your own follow-up first. The model is locked until you have genuinely attempted it.";return;
+  }
+  document.getElementById("clientSimFollowupModel").hidden=false;
+  document.getElementById("revealClientSimModelBtn").disabled=true;
+  document.getElementById("revealClientSimModelBtn").textContent="Model revealed ✓";
+}
+function validateClientSimFollowup(){
+  const words=simWordCount(document.getElementById("clientSimFollowupText").value);
+  const checks=[...document.querySelectorAll("[data-sim-followup-check]")];
+  const checked=checks.filter(x=>x.checked).length;
+  const fb=document.getElementById("clientSimFollowupFeedback");
+  if(words<70){
+    fb.className="activity-summary neutral";fb.textContent="The follow-up needs enough information to close the communication loop. Aim for at least 70 words.";return;
+  }
+  if(checked<3){
+    fb.className="activity-summary neutral";fb.textContent="Confirm at least three client-writing criteria first.";return;
+  }
+  fb.className="activity-summary correct";
+  fb.textContent=`Follow-up validated ✓ ${words} words · ${checked}/${checks.length} checks.`;
+  markClientSimStage("followup",true);
+}
+function validateClientSimDebrief(){
+  const checks=[...document.querySelectorAll("[data-sim-debrief]")];
+  const n=checks.filter(x=>x.checked).length;
+  const fb=document.getElementById("clientSimDebriefFeedback");
+  if(n<4){
+    fb.className="activity-summary neutral";fb.textContent=`${n}/5 criteria confirmed. Aim for at least four before closing the mission.`;return;
+  }
+  fb.className="activity-summary correct";
+  fb.textContent=`Debrief complete ✓ ${n}/5 operational communication criteria confirmed.`;
+  markClientSimStage("debrief",true);
+}
+function logClientSimMission(){
+  if(activeClientSimLogged)return;
+  const coverage=countClientSimCoverage();
+  if(coverage<7)return;
+  const state=loadClientSimState();
+  state.attempts.push({
+    date:Date.now(),
+    scenario:activeClientSimId,
+    coverage,
+    decisionAttempts:activeClientSimDecisionRetries,
+    handoverWords:simWordCount(document.getElementById("clientSimHandoverText").value),
+    followupWords:simWordCount(document.getElementById("clientSimFollowupText").value)
+  });
+  if(!state.completed.includes(activeClientSimId))state.completed.push(activeClientSimId);
+  if(state.attempts.length>100)state.attempts=state.attempts.slice(-100);
+  saveClientSimState(state);
+  activeClientSimLogged=true;
+  document.getElementById("logClientSimMissionBtn").disabled=true;
+  document.getElementById("logClientSimMissionBtn").textContent="Mission logged ✓";
+  const fb=document.getElementById("clientSimLogFeedback");
+  fb.className="activity-summary correct";
+  fb.textContent="Mission logged ✓ Only completion metadata was saved. Audio, handover text and email text were not stored.";
+  renderClientSimStats();
+  if(typeof renderDashboard==="function")renderDashboard();
+  if(typeof renderProgressCheck==="function")renderProgressCheck();
+}
+function initClientCallSimulator(){
+  if(!document.getElementById("client-simulator"))return;
+  renderClientSimScenarios();renderClientSimStats();
+  document.getElementById("surpriseClientSimBtn")?.addEventListener("click",()=>{
+    const keys=Object.keys(clientSimScenarios);startClientSim(keys[Math.floor(Math.random()*keys.length)]);
+  });
+  document.getElementById("closeClientSimBtn")?.addEventListener("click",closeClientSim);
+  document.getElementById("clientSimOpeningNotes")?.addEventListener("input",e=>{
+    document.getElementById("clientSimOpeningNoteCount").textContent=e.target.value.length;
+  });
+  document.getElementById("clientSimHearQuestionBtn")?.addEventListener("click",()=>phraseSpeak(activeClientSimQuestion));
+  document.querySelectorAll("[data-sim-timer-start]").forEach(btn=>btn.addEventListener("click",()=>startClientSimTimer(btn.dataset.simTimerStart,Number(btn.dataset.duration))));
+  document.querySelectorAll("[data-sim-record]").forEach(btn=>btn.addEventListener("click",()=>startClientSimRecording(btn.dataset.simRecord,Number(btn.dataset.duration))));
+  document.querySelectorAll("[data-sim-stop]").forEach(btn=>btn.addEventListener("click",()=>stopClientSimRecording(btn.dataset.simStop)));
+  document.querySelectorAll("[data-sim-complete]").forEach(btn=>btn.addEventListener("click",()=>completeClientSimOralTurn(btn.dataset.simComplete)));
+  document.getElementById("revealClientSimIntelBtn")?.addEventListener("click",revealClientSimIntel);
+  document.getElementById("checkClientSimIntelBtn")?.addEventListener("click",checkClientSimIntel);
+  document.getElementById("checkClientSimDecisionBtn")?.addEventListener("click",checkClientSimDecision);
+  document.getElementById("clientSimHandoverText")?.addEventListener("input",e=>document.getElementById("clientSimHandoverWords").textContent=simWordCount(e.target.value));
+  document.getElementById("clientSimFollowupText")?.addEventListener("input",e=>document.getElementById("clientSimFollowupWords").textContent=simWordCount(e.target.value));
+  document.getElementById("completeClientSimHandoverBtn")?.addEventListener("click",validateClientSimHandover);
+  document.getElementById("revealClientSimModelBtn")?.addEventListener("click",revealClientSimModel);
+  document.getElementById("completeClientSimFollowupBtn")?.addEventListener("click",validateClientSimFollowup);
+  document.getElementById("validateClientSimDebriefBtn")?.addEventListener("click",validateClientSimDebrief);
+  document.getElementById("logClientSimMissionBtn")?.addEventListener("click",logClientSimMission);
+}
 
 
 // V14 · Authentic Resources Hub
@@ -4175,6 +4851,7 @@ renderLab();
 
 initPhrasebook();
 initSpeakingLab();
+initClientCallSimulator();
 initAuthenticResourcesHub();
 initPronunciationLab();
 initWritingLab();
