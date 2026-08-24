@@ -1,7 +1,7 @@
 {
   "name": "English, Back on Track",
   "short_name": "Back on Track",
-  "description": "Personalised professional English training with offline access and private local progress backup.",
+  "description": "Personalised professional English training with offline access, private local backup and work-based scenario practice.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -34,6 +34,11 @@
       "url": "./#dashboard"
     },
     {
+      "name": "My Work English",
+      "short_name": "My Work",
+      "url": "./#work-english-lab"
+    },
+    {
       "name": "Client Simulator",
       "short_name": "Simulator",
       "url": "./#client-simulator"
@@ -42,11 +47,6 @@
       "name": "Listening Lab",
       "short_name": "Listening",
       "url": "./#listening-lab"
-    },
-    {
-      "name": "Speaking Lab",
-      "short_name": "Speaking",
-      "url": "./#speaking-lab"
     },
     {
       "name": "My Data & Backup",

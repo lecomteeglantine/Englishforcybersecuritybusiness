@@ -232,6 +232,11 @@ const vaultGroups=[
     keys:["ebackontrack-v15-client-simulator"]
   },
   {
+    id:"work",icon:"W",title:"My Work English",
+    description:"Work-based mission metadata and any anonymised scenarios you explicitly chose to save. Writing drafts are not stored.",
+    keys:["ebackontrack-v18-work-lab"]
+  },
+  {
     id:"accessibility",icon:"Aa",title:"Accessibility preferences",
     description:"Text size, contrast, spacing, font, links and motion preferences for this device.",
     keys:["ebackontrack-v16-accessibility"]
@@ -392,6 +397,9 @@ function buildVaultSummary(){
   lines.push(`- Phrasebook: ${phrase.saved||0} saved · ${phrase.due||0} due · ${phrase.active||0} active`);
   lines.push(`- Authentic resources completed: ${(resources.completed||[]).length}`);
   lines.push(`- Client simulations completed: ${(sim.completed||[]).length}`);
+  const work=typeof loadWorkEnglishState==="function"?loadWorkEnglishState():{attempts:[],saved:[]};
+  lines.push(`- Work-based missions completed: ${(work.attempts||[]).length}`);
+  lines.push(`- Anonymised work scenarios saved locally: ${(work.saved||[]).length}`);
   lines.push(`- Progress checkpoints/re-diagnostics: ${(progress.history||[]).length}`);
   lines.push("");
   lines.push("PRIVACY");
@@ -829,10 +837,11 @@ function checkpointReadiness(){
   const pronunciation=loadPronunciationLabState().completed.length;
   const resources=loadAuthenticResourceState().completed.length;
   const simulations=loadClientSimState().completed.length;
+  const workMissions=loadWorkEnglishState().attempts.length;
   const grammar=loadGrammarRepairState().completed.length;
   const listening=listeningLabCompletedCount();
-  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(1,Math.floor(resources/2))+Math.min(2,simulations)+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
-  return {completedModules,speaking,writing,pronunciation,resources,simulations,grammar,listening,evidence};
+  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(1,Math.floor(resources/2))+Math.min(2,simulations)+Math.min(1,workMissions)+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
+  return {completedModules,speaking,writing,pronunciation,resources,simulations,workMissions,grammar,listening,evidence};
 }
 function renderProgressSkillComparison(state){
   const target=document.getElementById("progressSkillComparison");if(!target)return;
@@ -913,6 +922,7 @@ function renderProgressCheck(){
     <div class="readiness-item"><span>Pronunciation units completed</span><strong>${ready.pronunciation}</strong></div>
     <div class="readiness-item"><span>Authentic resources completed</span><strong>${ready.resources}</strong></div>
     <div class="readiness-item"><span>Client simulations completed</span><strong>${ready.simulations}</strong></div>
+    <div class="readiness-item"><span>Work-based missions completed</span><strong>${ready.workMissions}</strong></div>
     <div class="readiness-item"><span>Grammar Repair units completed</span><strong>${ready.grammar}</strong></div>
     <div class="readiness-item"><span>Listening Lab tasks completed</span><strong>${ready.listening} / 5</strong></div>`;
 }
@@ -1650,6 +1660,7 @@ function dashboardReasonCards(results,details){
     if(results.listening<75) cards.push({title:"Listening needs structured work",text:"That usually means gist, decoding and note-taking rather than simply 'more English audio'."});
     if(loadAuthenticResourceState().completed.length<3) cards.push({title:"Authentic input is still limited",text:"The resource hub adds recent real-world cybersecurity English so training is not confined to synthetic exercises."});
     if(loadClientSimState().completed.length===0 && loadSpeakingState().attempts>=2 && loadWritingState().attempts.length>=1) cards.push({title:"Integration is the next step",text:"The Client Call Simulator now combines oral briefing, unexpected questions, new evidence, recommendation, handover and follow-up writing."});
+    if(loadWorkEnglishState().attempts.length===0 && loadClientSimState().completed.length>=1) cards.push({title:"Transfer the skill to your own work",text:"My Work English can turn one anonymised professional situation into a local multi-skill mission without uploading the scenario anywhere."});
     if(results.speaking<75) cards.push({title:"Speaking needs activation",text:"The goal is to move useful language from recognition to spontaneous use."});
     if(results.writing<75) cards.push({title:"Writing needs consolidation",text:"Short client-facing writing is now trained through incident updates, handovers, risk explanations and follow-ups."});
     if(results.grammar<75) cards.push({title:"Accuracy still matters",text:"But it is built into cyber tasks, not treated as isolated textbook drilling."});
@@ -1718,6 +1729,9 @@ function buildRoutineTasks(minutes){
   if(tasks.length < 4 && loadClientSimState().completed.length===0 && loadSpeakingState().attempts>=2 && loadWritingState().attempts.length>=1 && listeningLabCompletedCount()>=2){
     add({id:"client-sim",tag:"SIMULATION",title:"Run a full client call",desc:"Combine listening, speaking, uncertainty, decision-making, handover and follow-up in one end-to-end incident mission.",duration:durations[Math.min(tasks.length,durations.length-1)],anchor:"#client-simulator",cta:"Open Client Simulator"});
   }
+  if(tasks.length < 4 && loadWorkEnglishState().attempts.length===0 && (loadClientSimState().completed.length>=1 || (loadSpeakingState().attempts>=3 && loadWritingState().attempts.length>=2))){
+    add({id:"work-english",tag:"YOUR WORK",title:"Train on one anonymised work situation",desc:"Turn a real professional situation into a local speaking, writing, grammar and pronunciation mission.",duration:durations[Math.min(tasks.length,durations.length-1)],anchor:"#work-english-lab",cta:"Open My Work English"});
+  }
   if(tasks.length < 4 && typeof checkpointReadiness==="function" && checkpointReadiness().evidence>=4){
     add({id:"progress-check",tag:"CHECKPOINT",title:"Take a quick progress check",desc:"You have done enough targeted practice for a fresh snapshot to be useful.",duration:durations[Math.min(tasks.length, durations.length-1)],anchor:"#progress-check",cta:"Open Progress Check"});
   }
@@ -1764,6 +1778,7 @@ function renderQuickLinks(){
   const links=[
     {anchor:"#my-plan", title:"My personalised plan", sub:"Resume the selected cyber modules"},
     {anchor:"#client-simulator", title:"Client Call Simulator", sub:"Full incident mission from briefing to follow-up"},
+    {anchor:"#work-english-lab", title:"My Work English", sub:"Turn anonymised real situations into local practice"},
     {anchor:"#resources-hub", title:"Authentic Resources", sub:"Recent real-world cyber English with short tasks"},
     {anchor:"#listening-lab", title:"Listening Lab", sub:"Gist, decoding, dictation and note-taking"},
     {anchor:"#speaking-lab", title:"Speaking Lab", sub:"Quick responses, client questions and roleplay"},
@@ -1894,6 +1909,566 @@ function initDashboard(){
 
 
 
+
+
+
+
+// V18 · My Work English Lab
+const workEnglishStateKey="ebackontrack-v18-work-lab";
+
+const workLabTypeMeta={
+  client:{
+    label:"CLIENT UPDATE",
+    title:"Explain the situation and protect the level of certainty",
+    questions:[
+      "How confident are you in that assessment?",
+      "What evidence would change your conclusion?",
+      "Does this mean the incident is contained?",
+      "What should we do in the next 30 minutes?"
+    ],
+    writingTitle:"Send a short client follow-up",
+    writing:"Write 70–120 words: current status → action already taken → what remains uncertain → next step / next update."
+  },
+  incident:{
+    label:"INCIDENT INVESTIGATION",
+    title:"Turn investigation facts into a clear operational update",
+    questions:[
+      "What is confirmed, and what is still only a hypothesis?",
+      "What is the main outstanding investigation step?",
+      "Could this still be a false positive?",
+      "What would make you escalate this case?"
+    ],
+    writingTitle:"Write an investigation update",
+    writing:"Write 70–120 words for the case record: trigger → evidence → action → outstanding question → next investigation step."
+  },
+  handover:{
+    label:"SOC HANDOVER",
+    title:"Transfer the case without losing the reasoning",
+    questions:[
+      "What should the next analyst check first?",
+      "Which conclusion should the next analyst avoid making too early?",
+      "What evidence is still missing?",
+      "What has already been ruled out?"
+    ],
+    writingTitle:"Write the handover",
+    writing:"Write 60–100 words: trigger → evidence → actions completed → outstanding point → next analyst action."
+  },
+  risk:{
+    label:"RISK / REMEDIATION",
+    title:"Explain severity, likelihood and action in plain English",
+    questions:[
+      "How urgent is this in practical terms?",
+      "What makes the likelihood higher or lower?",
+      "What temporary mitigation would you use if the preferred fix is delayed?",
+      "Can you guarantee this recommendation removes the risk?"
+    ],
+    writingTitle:"Write a remediation recommendation",
+    writing:"Write 70–120 words: issue → likelihood/exposure → impact → immediate recommendation → fallback / next step."
+  },
+  internal:{
+    label:"INTERNAL TECHNICAL DISCUSSION",
+    title:"Be precise without turning the update into a wall of jargon",
+    questions:[
+      "What is the strongest evidence for your current hypothesis?",
+      "What would you rule out next?",
+      "Which assumption are we making here?",
+      "What should another team do with this information?"
+    ],
+    writingTitle:"Write an internal technical note",
+    writing:"Write 60–110 words: finding → evidence → interpretation → uncertainty → action requested."
+  }
+};
+
+const workAudienceLabels={
+  "client-nontechnical":"Non-technical client",
+  "client-technical":"Technical client",
+  "soc":"SOC / analyst colleague",
+  "manager":"Manager / decision-maker",
+  "mixed":"Mixed audience"
+};
+
+const workPhraseGroups={
+  client:["client-current-assessment","client-what-we-know","client-not-confirmed","inc-next-update","inc-keep-posted","meeting-understood"],
+  incident:["soc-at-this-stage","soc-rule-out","inc-so-far","inc-currently-reviewing","inc-outstanding","handover-next-analyst"],
+  handover:["handover-next-analyst","inc-outstanding","inc-currently-reviewing","soc-rule-out","inc-so-far","inc-next-update"],
+  risk:["risk-likelihood-depends","risk-no-exploitation","rem-immediate","rem-fallback","risk-immediate-reduced","client-doesnt-mean"],
+  internal:["soc-at-this-stage","soc-rule-out","inc-currently-reviewing","meeting-no-jump","meeting-come-back","meet-put-another-way"]
+};
+
+const workGrammarMap={
+  perfect:{
+    title:"Timeline control: Past vs Present Perfect",
+    prompt:"Use Past Simple for finished timestamped actions; use Present Perfect for findings that matter now or a time period that is still open.",
+    examples:["We isolated the endpoint at 09:20.","We have found no evidence of lateral movement so far."]
+  },
+  conditionals:{
+    title:"Conditionals for action and consequence",
+    prompt:"Use a real future conditional for the next operational step; use a hypothetical conditional when discussing a possible scenario rather than a confirmed event.",
+    examples:["If we identify additional activity, we'll widen the investigation.","If the account were still active, the exposure would be higher."]
+  },
+  modals:{
+    title:"Modals for uncertainty and evidence",
+    prompt:"Match certainty to evidence: may / might / could for possibility; must only when the evidence strongly supports the conclusion.",
+    examples:["The activity could be legitimate, but we still need to confirm it.","The attacker may have obtained valid credentials."]
+  },
+  passive:{
+    title:"Passive voice for incident processes",
+    prompt:"Use the passive when the action/result matters more than the actor, especially in incident timelines and remediation updates.",
+    examples:["The endpoint has been isolated.","The affected credentials should be rotated."]
+  },
+  structure:{
+    title:"Question and clause structure",
+    prompt:"Keep indirect questions and embedded clauses in normal statement word order.",
+    examples:["Could you confirm whether the login was expected?","We still don't know why the rule was created."]
+  },
+  verbs:{
+    title:"Verb patterns for recommendations",
+    prompt:"Use recommend + -ing or recommend that + base verb; use ask + person + to + verb.",
+    examples:["We recommend rotating the affected credentials.","We recommend that the client restrict access temporarily."]
+  },
+  precision:{
+    title:"Precision with quantifiers and agreement",
+    prompt:"Be careful with countable technical items (alerts, accounts, endpoints) versus uncountable concepts (traffic, evidence, activity).",
+    examples:["We saw fewer failed logins after the block.","There is not enough evidence to confirm attribution."]
+  },
+  comparison:{
+    title:"Comparisons for risk and severity",
+    prompt:"Compare likelihood, severity or exposure explicitly instead of relying on vague words such as 'bigger' or 'worse'.",
+    examples:["The likelihood is higher because the service is internet-facing.","This control is less effective than full credential rotation."]
+  },
+  prepositions:{
+    title:"High-frequency work prepositions",
+    prompt:"Rehearse common professional combinations rather than translating prepositions from French.",
+    examples:["responsible for the review","at 09:20 UTC","on Monday","move to the next stage"]
+  }
+};
+
+const workPronMap={
+  wordStress:{
+    title:"Word stress in long technical words",
+    prompt:"Make the stressed syllable clearly stronger so the listener recognises the word quickly.",
+    lines:["authentication","investigation","remediation","vulnerability"]
+  },
+  sentenceStress:{
+    title:"Sentence stress: make the key fact land",
+    prompt:"Stress the information that changes the client's understanding, not every word equally.",
+    lines:["We have NO evidence of lateral movement.","The SECOND login was not recognised."]
+  },
+  edEndings:{
+    title:"-ed endings in incident timelines",
+    prompt:"Keep past actions audible: /t/, /d/ or /ɪd/ depending on the final sound.",
+    lines:["blocked /t/","confirmed /d/","detected /ɪd/","isolated /ɪd/"]
+  },
+  sEndings:{
+    title:"Final -s for technical meaning",
+    prompt:"Keep plural and third-person endings audible so counts and technical meanings remain clear.",
+    lines:["alerts /s/","logs /z/","addresses /ɪz/","patches /ɪz/"]
+  },
+  connectedSpeech:{
+    title:"Connected speech in meetings",
+    prompt:"Recognise and produce natural linking without sacrificing key technical words.",
+    lines:["Could you run that by me again?","We've been reviewing the logs since the alert came in."]
+  },
+  chunking:{
+    title:"Chunk long updates into meaning groups",
+    prompt:"Pause at operational boundaries: finding / scope / action / uncertainty / next step.",
+    lines:["At this stage / we have no evidence of lateral movement / but the investigation is ongoing.","The account has been disabled / as a precaution / while we review recent sign-ins."]
+  },
+  soundClarity:{
+    title:"Sound clarity that affects intelligibility",
+    prompt:"Keep key contrasts and final consonants clear rather than trying to remove your accent.",
+    lines:["live / leave","host","risk","breach"]
+  }
+};
+
+function loadWorkEnglishState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(workEnglishStateKey))||{};
+    return {
+      attempts:Array.isArray(raw.attempts)?raw.attempts:[],
+      saved:Array.isArray(raw.saved)?raw.saved:[]
+    };
+  }catch(e){return {attempts:[],saved:[]};}
+}
+function saveWorkEnglishState(state){
+  localStorage.setItem(workEnglishStateKey,JSON.stringify(state));
+}
+function workWordCount(text){
+  const clean=(text||"").trim();
+  return clean?clean.split(/\s+/).filter(Boolean).length:0;
+}
+function currentWorkForm(){
+  return {
+    type:document.getElementById("workSituationType").value,
+    audience:document.getElementById("workAudience").value,
+    goal:document.getElementById("workGoal").value.trim(),
+    facts:document.getElementById("workFacts").value.trim(),
+    keyTerms:document.getElementById("workKeyTerms").value.trim()
+  };
+}
+function workScenarioFingerprint(data){
+  const text=[data.type,data.audience,data.goal,data.facts,data.keyTerms].join("|").toLowerCase();
+  let hash=0;
+  for(let i=0;i<text.length;i++)hash=((hash<<5)-hash+text.charCodeAt(i))|0;
+  return Math.abs(hash).toString(36);
+}
+function scanWorkPrivacy(){
+  const text=[document.getElementById("workGoal").value,document.getElementById("workFacts").value,document.getElementById("workKeyTerms").value].join("\n");
+  const checks=[
+    {label:"email address",re:/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i},
+    {label:"IPv4 address",re:/\b(?:\d{1,3}\.){3}\d{1,3}\b/},
+    {label:"URL",re:/https?:\/\/|www\./i},
+    {label:"possible domain name",re:/\b[a-z0-9-]+\.(?:com|net|org|io|fr|co\.uk|internal|local)\b/i},
+    {label:"possible ticket / long identifier",re:/\b[A-Z]{2,8}[-_]\d{3,}\b|\b\d{8,}\b/},
+    {label:"credential-like text",re:/password\s*[:=]|passwd\s*[:=]|api[_ -]?key\s*[:=]|token\s*[:=]/i}
+  ];
+  const warnings=checks.filter(c=>c.re.test(text)).map(c=>c.label);
+  const target=document.getElementById("workPrivacyResults");
+  if(!text.trim()){
+    target.innerHTML=`<div class="work-privacy-result warn"><span>⚠</span><div>Add an anonymised situation before running the scan.</div></div>`;
+    return warnings;
+  }
+  if(warnings.length){
+    target.innerHTML=warnings.map(x=>`<div class="work-privacy-result warn"><span>⚠</span><div>Possible ${x} detected. Check whether it should be removed or generalised.</div></div>`).join("");
+  }else{
+    target.innerHTML=`<div class="work-privacy-result ok"><span>✓</span><div>No obvious email, IP, URL, domain, long identifier or credential pattern detected. You still need to judge confidentiality yourself.</div></div>`;
+  }
+  return warnings;
+}
+function workGrammarTarget(){
+  try{
+    const state=ensureProgressBaseline();
+    const details=state?.current?.details?.grammar;
+    if(details?.tags){
+      const weakness=Object.entries(details.tags)
+        .map(([tag,v])=>({tag,pct:Math.round(v.score/v.total*100)}))
+        .sort((a,b)=>a.pct-b.pct);
+      const map=typeof grammarTagToUnit!=="undefined"?grammarTagToUnit:{};
+      for(const w of weakness){
+        const unit=map[w.tag];
+        if(unit&&workGrammarMap[unit])return unit;
+      }
+    }
+  }catch(e){}
+  return "modals";
+}
+function workPronTarget(){
+  try{
+    const queue=pronunciationPriorityQueue();
+    if(queue?.length&&workPronMap[queue[0]])return queue[0];
+  }catch(e){}
+  return "sentenceStress";
+}
+function workPhraseItems(type){
+  const ids=workPhraseGroups[type]||workPhraseGroups.client;
+  return ids.map(id=>findPhraseItem(id)).filter(Boolean).slice(0,5);
+}
+function workTypeTitle(type){return workLabTypeMeta[type]?.label||"WORK SITUATION";}
+function workQuestion(data){
+  const list=workLabTypeMeta[data.type]?.questions||workLabTypeMeta.client.questions;
+  const seed=parseInt(workScenarioFingerprint(data),36)||1;
+  return list[seed%list.length];
+}
+function workBriefPrompt(data){
+  const audience=workAudienceLabels[data.audience]||"your listener";
+  const templates={
+    client:`Give ${audience.toLowerCase()} a 60-second update. Structure it as: what happened → what is confirmed → what is still uncertain → what has been done → what happens next.`,
+    incident:`Brief ${audience.toLowerCase()} on the investigation. Prioritise evidence, scope, action already taken and the next outstanding check.`,
+    handover:`Give a concise oral handover to ${audience.toLowerCase()}: trigger → evidence → actions → outstanding question → next analyst action.`,
+    risk:`Explain the risk to ${audience.toLowerCase()}: issue → likelihood/exposure → potential impact → recommendation → fallback if the preferred action is delayed.`,
+    internal:`Give ${audience.toLowerCase()} a technical update that is precise but easy to follow: finding → evidence → interpretation → uncertainty → requested action.`
+  };
+  return templates[data.type]||templates.client;
+}
+function workWritingChecks(type){
+  const common=[
+    "The reader can identify the main message quickly.",
+    "I separated facts from uncertainty.",
+    "I stated a concrete action or next step.",
+    "I removed detail that the reader does not need."
+  ];
+  if(type==="handover")common[3]="The next analyst knows exactly what to check next.";
+  if(type==="risk")common[1]="I separated technical severity from likelihood / exposure.";
+  return common;
+}
+function renderWorkLabStats(){
+  const s=loadWorkEnglishState();
+  const types=new Set(s.attempts.map(x=>x.type));
+  document.getElementById("workLabAttempts").textContent=s.attempts.length;
+  document.getElementById("workLabSaved").textContent=s.saved.length;
+  document.getElementById("workLabTypes").textContent=`${types.size} / 5`;
+  document.getElementById("workSavedCount").textContent=s.saved.length;
+}
+function renderSavedWorkScenarios(){
+  const target=document.getElementById("workSavedList");if(!target)return;
+  const s=loadWorkEnglishState();
+  if(!s.saved.length){
+    target.innerHTML=`<div class="work-saved-empty">No anonymised scenario saved yet.</div>`;
+    return;
+  }
+  target.innerHTML=s.saved.slice().reverse().map(item=>`
+    <article class="work-saved-item">
+      <div class="work-saved-item-top">
+        <div><strong>${workTypeTitle(item.type)}</strong><small>${workAudienceLabels[item.audience]||item.audience} · ${new Date(item.date).toLocaleDateString()}</small></div>
+      </div>
+      <small>${item.goal||"Work-based practice scenario"}</small>
+      <div class="work-saved-item-actions">
+        <button type="button" data-work-load="${item.id}">Load</button>
+        <button type="button" data-work-delete="${item.id}">Delete</button>
+      </div>
+    </article>`).join("");
+  target.querySelectorAll("[data-work-load]").forEach(btn=>btn.addEventListener("click",()=>loadSavedWorkScenario(btn.dataset.workLoad)));
+  target.querySelectorAll("[data-work-delete]").forEach(btn=>btn.addEventListener("click",()=>deleteSavedWorkScenario(btn.dataset.workDelete)));
+}
+function saveCurrentWorkScenario(data){
+  const state=loadWorkEnglishState();
+  const fingerprint=workScenarioFingerprint(data);
+  const existing=state.saved.find(x=>x.fingerprint===fingerprint);
+  if(existing)return existing.id;
+  const item={...data,id:`work-${Date.now()}`,date:Date.now(),fingerprint};
+  state.saved.push(item);
+  if(state.saved.length>30)state.saved=state.saved.slice(-30);
+  saveWorkEnglishState(state);
+  renderWorkLabStats();renderSavedWorkScenarios();
+  return item.id;
+}
+function loadSavedWorkScenario(id){
+  const item=loadWorkEnglishState().saved.find(x=>x.id===id);if(!item)return;
+  document.getElementById("workSituationType").value=item.type;
+  document.getElementById("workAudience").value=item.audience;
+  document.getElementById("workGoal").value=item.goal||"";
+  document.getElementById("workFacts").value=item.facts||"";
+  document.getElementById("workKeyTerms").value=item.keyTerms||"";
+  document.getElementById("workPrivacyConfirm").checked=false;
+  document.getElementById("saveWorkScenario").checked=true;
+  renderWorkFactMetrics();scanWorkPrivacy();
+  document.querySelector(".work-builder-card").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function deleteSavedWorkScenario(id){
+  if(!confirm("Delete this anonymised work scenario from local storage?"))return;
+  const state=loadWorkEnglishState();
+  state.saved=state.saved.filter(x=>x.id!==id);
+  saveWorkEnglishState(state);renderWorkLabStats();renderSavedWorkScenarios();
+}
+function renderWorkFactMetrics(){
+  const text=document.getElementById("workFacts").value;
+  document.getElementById("workFactsWords").textContent=workWordCount(text);
+  document.getElementById("workFactsChars").textContent=text.length;
+}
+function loadSafeWorkExample(){
+  document.getElementById("workSituationType").value="client";
+  document.getElementById("workAudience").value="client-nontechnical";
+  document.getElementById("workGoal").value="Explain the current assessment without overclaiming and give the next investigation step.";
+  document.getElementById("workFacts").value="09:20 — unusual privileged login\nactive session revoked\nuser does not recognise the login\nno evidence of lateral movement so far\nidentity logs still under review\nnext client update planned after log review";
+  document.getElementById("workKeyTerms").value="privileged account, containment, lateral movement, identity logs";
+  document.getElementById("workPrivacyConfirm").checked=false;
+  renderWorkFactMetrics();scanWorkPrivacy();
+}
+let activeWorkMissionData=null;
+let activeWorkMissionProgress={};
+let workTimerInterval=null;
+
+function emptyWorkMissionProgress(){
+  return {brief:false,question:false,language:false,accuracy:false,pronunciation:false,writing:false};
+}
+function updateWorkMissionProgress(){
+  const n=Object.values(activeWorkMissionProgress).filter(Boolean).length;
+  document.getElementById("workMissionProgressText").textContent=`${n} / 6`;
+  document.getElementById("workMissionProgressBar").style.width=`${Math.round(n/6*100)}%`;
+  Object.entries(activeWorkMissionProgress).forEach(([key,done])=>{
+    document.querySelector(`[data-work-task-card="${key}"]`)?.classList.toggle("completed",done);
+    const btn=document.querySelector(`[data-work-complete="${key}"]`);
+    if(btn){
+      btn.classList.toggle("done",done);
+      if(done)btn.textContent="✓ Completed";
+    }
+  });
+  const log=document.getElementById("logWorkMissionBtn");
+  const title=document.getElementById("workMissionFinishTitle");
+  const text=document.getElementById("workMissionFinishText");
+  if(n===6){
+    log.disabled=false;
+    title.textContent="Work-based mission fully covered ✓";
+    text.textContent="You used your own anonymised professional context across speaking, language, accuracy, pronunciation and writing.";
+  }else{
+    log.disabled=true;
+    title.textContent=`${6-n} practice step${6-n===1?"":"s"} still to complete`;
+    text.textContent="This tracks practice coverage, not a language grade.";
+  }
+}
+function markWorkTask(task){
+  if(task==="writing"){
+    const words=workWordCount(document.getElementById("workWritingDraft").value);
+    const checks=[...document.querySelectorAll("[data-work-writing-check]")].filter(x=>x.checked).length;
+    if(words<45){
+      const fb=document.getElementById("workMissionFeedback");
+      fb.className="activity-summary neutral";fb.textContent="Write at least 45 words before marking the writing task complete.";return;
+    }
+    if(checks<3){
+      const fb=document.getElementById("workMissionFeedback");
+      fb.className="activity-summary neutral";fb.textContent="Confirm at least three writing checks before completing this task.";return;
+    }
+  }
+  activeWorkMissionProgress[task]=true;updateWorkMissionProgress();
+}
+function renderWorkPhraseSuggestions(type){
+  const items=workPhraseItems(type);
+  const target=document.getElementById("workPhraseSuggestions");
+  target.innerHTML=items.map(item=>{
+    const saved=!!loadPhraseState().items[item.id];
+    return `<div class="work-phrase-suggestion">
+      <div><strong>${item.phrase}</strong><small>${item.category}</small></div>
+      <button type="button" data-work-phrase="${item.id}">${saved?"✓ Saved":"+ Phrasebook"}</button>
+    </div>`;
+  }).join("");
+  target.querySelectorAll("[data-work-phrase]").forEach(btn=>btn.addEventListener("click",()=>{
+    addPhrase(btn.dataset.workPhrase);renderWorkPhraseSuggestions(type);
+  }));
+}
+function renderWorkAccuracy(){
+  const key=workGrammarTarget(),g=workGrammarMap[key]||workGrammarMap.modals;
+  document.getElementById("workGrammarTitle").textContent=g.title;
+  document.getElementById("workGrammarPrompt").textContent=g.prompt;
+  document.getElementById("workGrammarExamples").innerHTML=g.examples.map(x=>`<div class="work-grammar-example">${x}</div>`).join("");
+}
+function renderWorkPronunciation(){
+  const key=workPronTarget(),p=workPronMap[key]||workPronMap.sentenceStress;
+  document.getElementById("workPronTitle").textContent=p.title;
+  document.getElementById("workPronPrompt").textContent=p.prompt;
+  document.getElementById("workPronLines").innerHTML=p.lines.map((line,i)=>`
+    <div class="work-pron-line"><span>${line}</span><button type="button" data-work-pron-hear="${i}" aria-label="Hear target">🔊</button></div>`).join("");
+  document.querySelectorAll("[data-work-pron-hear]").forEach(btn=>btn.addEventListener("click",()=>{
+    speakPron(p.lines[Number(btn.dataset.workPronHear)].replace(/\s\/\s/g,", "));
+  }));
+}
+function buildWorkMission(){
+  const data=currentWorkForm();
+  const fb=document.getElementById("workBuildFeedback");
+  if(!data.goal || data.goal.length<12){
+    fb.className="activity-summary neutral";fb.textContent="Add a clear communication goal first.";return;
+  }
+  if(workWordCount(data.facts)<10){
+    fb.className="activity-summary neutral";fb.textContent="Add at least a few anonymised factual notes before building the mission.";return;
+  }
+  if(!document.getElementById("workPrivacyConfirm").checked){
+    fb.className="activity-summary neutral";fb.textContent="Confirm the anonymisation/privacy check before using the scenario.";return;
+  }
+  const warnings=scanWorkPrivacy();
+  if(warnings.length){
+    fb.className="activity-summary neutral";
+    fb.textContent="Sensitive-looking patterns are still present. Review the privacy warnings before continuing.";
+    return;
+  }
+  if(document.getElementById("saveWorkScenario").checked)saveCurrentWorkScenario(data);
+
+  activeWorkMissionData=data;
+  activeWorkMissionProgress=emptyWorkMissionProgress();
+  clearInterval(workTimerInterval);
+
+  const meta=workLabTypeMeta[data.type];
+  document.getElementById("workMissionTypeLabel").textContent=meta.label;
+  document.getElementById("workMissionTitle").textContent=meta.title;
+  document.getElementById("workMissionGoal").textContent=data.goal;
+  document.getElementById("workMissionAudience").textContent=workAudienceLabels[data.audience]||data.audience;
+  document.getElementById("workBriefPrompt").textContent=workBriefPrompt(data);
+  document.getElementById("workBriefNotes").value="";
+  document.getElementById("workBriefNotesCount").textContent="0";
+  document.getElementById("workUnexpectedQuestion").textContent=workQuestion(data);
+  document.getElementById("workQuestionGuidance").textContent=data.audience==="soc"
+    ?"Answer in 30–45 seconds: evidence → interpretation → uncertainty → next check."
+    :"Answer in 30–45 seconds: clarify if needed → what is known → what is not known → practical next step.";
+  renderWorkPhraseSuggestions(data.type);
+  renderWorkAccuracy();
+  renderWorkPronunciation();
+  document.getElementById("workWritingTitle").textContent=meta.writingTitle;
+  document.getElementById("workWritingPrompt").textContent=meta.writing;
+  document.getElementById("workWritingDraft").value="";
+  document.getElementById("workWritingWords").textContent="0";
+  document.getElementById("workWritingChecklist").innerHTML=workWritingChecks(data.type).map((x,i)=>`
+    <label><input type="checkbox" data-work-writing-check="${i}"><span>${x}</span></label>`).join("");
+  document.getElementById("workMissionFeedback").textContent="";
+  document.getElementById("workMissionFeedback").className="activity-summary";
+  document.querySelectorAll("[data-work-complete]").forEach(btn=>{
+    btn.classList.remove("done");
+    const labels={
+      brief:"✓ I delivered it aloud",
+      question:"✓ I answered aloud",
+      language:"✓ I rehearsed at least three chunks",
+      accuracy:"✓ I used the target pattern",
+      pronunciation:"✓ I rehearsed the target aloud",
+      writing:"✓ Writing task complete"
+    };
+    btn.textContent=labels[btn.dataset.workComplete];
+  });
+  document.getElementById("logWorkMissionBtn").disabled=true;
+  document.getElementById("logWorkMissionBtn").textContent="Log work-based mission";
+  document.getElementById("workBriefTimer").textContent="01:00";
+  updateWorkMissionProgress();
+
+  document.getElementById("workMission").hidden=false;
+  document.querySelector(".work-lab-grid").hidden=true;
+  document.getElementById("workMission").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeWorkMission(){
+  clearInterval(workTimerInterval);
+  document.getElementById("workMission").hidden=true;
+  document.querySelector(".work-lab-grid").hidden=false;
+  activeWorkMissionData=null;
+  renderWorkEnglishLab();
+  document.getElementById("work-english-lab").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function startWorkBriefTimer(){
+  clearInterval(workTimerInterval);
+  let left=60;
+  const el=document.getElementById("workBriefTimer");
+  el.textContent="01:00";
+  workTimerInterval=setInterval(()=>{
+    left--;
+    el.textContent=`00:${String(Math.max(0,left)).padStart(2,"0")}`;
+    if(left<=0){clearInterval(workTimerInterval);el.textContent="00:00";}
+  },1000);
+}
+function logWorkMission(){
+  if(!activeWorkMissionData || Object.values(activeWorkMissionProgress).filter(Boolean).length<6)return;
+  const state=loadWorkEnglishState();
+  state.attempts.push({
+    date:Date.now(),
+    type:activeWorkMissionData.type,
+    audience:activeWorkMissionData.audience,
+    fingerprint:workScenarioFingerprint(activeWorkMissionData),
+    writingWords:workWordCount(document.getElementById("workWritingDraft").value)
+  });
+  if(state.attempts.length>100)state.attempts=state.attempts.slice(-100);
+  saveWorkEnglishState(state);
+  document.getElementById("logWorkMissionBtn").disabled=true;
+  document.getElementById("logWorkMissionBtn").textContent="Mission logged ✓";
+  const fb=document.getElementById("workMissionFeedback");
+  fb.className="activity-summary correct";
+  fb.textContent="Work-based mission logged ✓ The scenario text is only stored if you explicitly selected “Save this anonymised scenario locally”. The writing draft itself was not saved.";
+  renderWorkLabStats();
+  if(typeof renderDashboard==="function")renderDashboard();
+  if(typeof renderProgressCheck==="function")renderProgressCheck();
+  if(typeof renderProgressVault==="function")renderProgressVault();
+}
+function renderWorkEnglishLab(){
+  if(!document.getElementById("work-english-lab"))return;
+  renderWorkLabStats();renderSavedWorkScenarios();renderWorkFactMetrics();
+}
+function initWorkEnglishLab(){
+  if(!document.getElementById("work-english-lab"))return;
+  document.getElementById("workFacts")?.addEventListener("input",renderWorkFactMetrics);
+  document.getElementById("loadWorkExampleBtn")?.addEventListener("click",loadSafeWorkExample);
+  document.getElementById("scanWorkPrivacyBtn")?.addEventListener("click",scanWorkPrivacy);
+  document.getElementById("buildWorkMissionBtn")?.addEventListener("click",buildWorkMission);
+  document.getElementById("closeWorkMissionBtn")?.addEventListener("click",closeWorkMission);
+  document.getElementById("workBriefNotes")?.addEventListener("input",e=>document.getElementById("workBriefNotesCount").textContent=e.target.value.length);
+  document.getElementById("workBriefTimerBtn")?.addEventListener("click",startWorkBriefTimer);
+  document.getElementById("workHearQuestionBtn")?.addEventListener("click",()=>phraseSpeak(document.getElementById("workUnexpectedQuestion").textContent));
+  document.getElementById("workWritingDraft")?.addEventListener("input",e=>document.getElementById("workWritingWords").textContent=workWordCount(e.target.value));
+  document.querySelectorAll("[data-work-complete]").forEach(btn=>btn.addEventListener("click",()=>markWorkTask(btn.dataset.workComplete)));
+  document.getElementById("logWorkMissionBtn")?.addEventListener("click",logWorkMission);
+  renderWorkEnglishLab();
+}
 
 
 // V15 · Full Client Call Simulator
@@ -5435,6 +6010,7 @@ function initV16AppExperience(){
 
 initPhrasebook();
 initSpeakingLab();
+initWorkEnglishLab();
 initClientCallSimulator();
 initAuthenticResourcesHub();
 initPronunciationLab();

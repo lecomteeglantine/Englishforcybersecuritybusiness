@@ -30,6 +30,7 @@
       <a class="nav-pill" href="#progress-check">Progress</a>
       <a class="nav-pill" href="#progress-vault">My Data</a>
       <a class="nav-pill" href="#client-simulator">Client Simulator</a>
+      <a class="nav-pill" href="#work-english-lab">My Work English</a>
       <a class="nav-pill" href="#resources-hub">Authentic Resources</a>
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
       <a class="nav-pill" href="#speaking-lab">Speaking Lab</a>
@@ -801,6 +802,238 @@
 
 
 
+
+
+    <section class="section work-english-section" id="work-english-lab">
+      <div class="section-heading work-english-heading">
+        <div>
+          <p class="eyebrow">MY WORK ENGLISH LAB</p>
+          <h2>Turn a real work situation into English practice — locally.</h2>
+          <p>Paste only anonymised facts. The browser then builds a short speaking, writing, vocabulary, grammar and pronunciation mission from your own context. No AI call, no server upload and no hidden data transfer.</p>
+        </div>
+        <div class="work-lab-stats">
+          <div><strong id="workLabAttempts">0</strong><span>missions built</span></div>
+          <div><strong id="workLabSaved">0</strong><span>saved locally</span></div>
+          <div><strong id="workLabTypes">0 / 5</strong><span>formats practised</span></div>
+        </div>
+      </div>
+
+      <div class="work-privacy-banner">
+        <div class="work-privacy-icon" aria-hidden="true">⌁</div>
+        <div>
+          <strong>Use anonymised professional situations only.</strong>
+          <span>Remove names, email addresses, customer names, domains, public IPs, ticket numbers, credentials, internal hostnames and any information your employer would consider confidential. The lab works entirely in your browser, but privacy starts with what you paste.</span>
+        </div>
+      </div>
+
+      <div class="work-lab-grid">
+        <article class="work-builder-card">
+          <div class="work-builder-head">
+            <div>
+              <p class="small-label">1 · DESCRIBE THE SITUATION</p>
+              <h3>Keep it factual and anonymised</h3>
+            </div>
+            <button class="secondary-button" id="loadWorkExampleBtn" type="button">Load safe example</button>
+          </div>
+
+          <div class="work-form-grid">
+            <label>
+              <span>Situation type</span>
+              <select id="workSituationType">
+                <option value="client">Client meeting / update</option>
+                <option value="incident">Incident investigation</option>
+                <option value="handover">SOC handover</option>
+                <option value="risk">Risk / remediation explanation</option>
+                <option value="internal">Internal technical discussion</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Audience</span>
+              <select id="workAudience">
+                <option value="client-nontechnical">Non-technical client</option>
+                <option value="client-technical">Technical client</option>
+                <option value="soc">SOC / analyst colleague</option>
+                <option value="manager">Manager / decision-maker</option>
+                <option value="mixed">Mixed audience</option>
+              </select>
+            </label>
+
+            <label class="full">
+              <span>Your goal in English</span>
+              <input id="workGoal" type="text" maxlength="140" placeholder="e.g. explain what is confirmed, what is still uncertain and what happens next">
+            </label>
+
+            <label class="full">
+              <span>Anonymised facts · bullet points are perfect</span>
+              <textarea id="workFacts" rows="7" maxlength="1600" placeholder="09:20 — unusual privileged login&#10;session revoked&#10;user does not recognise the login&#10;no evidence of lateral movement so far&#10;reviewing identity logs"></textarea>
+            </label>
+
+            <label class="full">
+              <span>Words / concepts you expect to need</span>
+              <input id="workKeyTerms" type="text" maxlength="220" placeholder="e.g. privileged account, lateral movement, containment, identity logs">
+            </label>
+          </div>
+
+          <div class="work-text-metrics">
+            <span><strong id="workFactsWords">0</strong> words</span>
+            <span><strong id="workFactsChars">0</strong> / 1600 characters</span>
+          </div>
+
+          <div class="work-privacy-check">
+            <div>
+              <p class="small-label">2 · PRIVACY CHECK</p>
+              <h3>Scan for sensitive-looking data before building the mission</h3>
+              <p>The scan is deliberately conservative. It cannot know your employer's confidentiality rules, so a clean scan is not a guarantee.</p>
+            </div>
+            <button class="secondary-button" id="scanWorkPrivacyBtn" type="button">Scan locally</button>
+            <div id="workPrivacyResults" class="work-privacy-results"></div>
+          </div>
+
+          <label class="work-confirm">
+            <input type="checkbox" id="workPrivacyConfirm">
+            <span>I have removed identifying and confidential details and I am comfortable using this anonymised scenario for local practice.</span>
+          </label>
+
+          <div class="work-build-actions">
+            <button class="primary-button" id="buildWorkMissionBtn" type="button">Build my practice mission →</button>
+            <label class="work-save-toggle">
+              <input type="checkbox" id="saveWorkScenario">
+              <span>Save this anonymised scenario locally</span>
+            </label>
+          </div>
+          <div id="workBuildFeedback" class="activity-summary" aria-live="polite"></div>
+        </article>
+
+        <aside class="work-saved-card">
+          <div class="work-saved-head">
+            <div>
+              <p class="small-label">SAVED LOCALLY</p>
+              <h3>My anonymised scenarios</h3>
+            </div>
+            <span class="question-count" id="workSavedCount">0</span>
+          </div>
+          <div id="workSavedList" class="work-saved-list"></div>
+          <p class="microcopy">Saved scenarios are included in Progress Vault backups. Delete them here at any time.</p>
+        </aside>
+      </div>
+
+      <div class="work-mission" id="workMission" hidden>
+        <div class="work-mission-top">
+          <button class="back-link" id="closeWorkMissionBtn" type="button">← Back to scenario builder</button>
+          <div class="work-mission-progress">
+            <span>MISSION</span>
+            <strong id="workMissionProgressText">0 / 6</strong>
+            <div class="work-mission-progress-bar"><span id="workMissionProgressBar"></span></div>
+          </div>
+        </div>
+
+        <div class="work-mission-hero">
+          <div>
+            <p class="small-label" id="workMissionTypeLabel">CLIENT UPDATE</p>
+            <h2 id="workMissionTitle">Your work-based practice mission</h2>
+            <p id="workMissionGoal"></p>
+          </div>
+          <div class="work-mission-meta">
+            <span>Audience</span>
+            <strong id="workMissionAudience">Client</strong>
+            <small>Generated locally from your anonymised notes</small>
+          </div>
+        </div>
+
+        <div class="work-mission-grid">
+          <article class="work-task-card" data-work-task-card="brief">
+            <div class="work-task-number">1</div>
+            <div>
+              <p class="small-label">60-SECOND BRIEFING</p>
+              <h3 id="workBriefTitle">Explain the situation clearly</h3>
+              <p id="workBriefPrompt"></p>
+              <div class="work-keyword-plan">
+                <label><span>Keywords only · max 120 characters</span><input id="workBriefNotes" type="text" maxlength="120" placeholder="facts / uncertainty / action / next step"></label>
+                <span><strong id="workBriefNotesCount">0</strong> / 120</span>
+              </div>
+              <div class="work-oral-actions">
+                <button class="secondary-button" id="workBriefTimerBtn" type="button">Start 60s timer</button>
+                <span class="work-timer" id="workBriefTimer">01:00</span>
+              </div>
+              <button class="work-task-complete" type="button" data-work-complete="brief">✓ I delivered it aloud</button>
+            </div>
+          </article>
+
+          <article class="work-task-card" data-work-task-card="question">
+            <div class="work-task-number">2</div>
+            <div>
+              <p class="small-label">UNEXPECTED QUESTION</p>
+              <h3>Answer without inventing certainty</h3>
+              <div class="work-question-bubble">
+                <span>QUESTION</span>
+                <strong id="workUnexpectedQuestion"></strong>
+                <button class="tiny-speak-button" id="workHearQuestionBtn" type="button">🔊 Hear it</button>
+              </div>
+              <p id="workQuestionGuidance" class="work-guidance"></p>
+              <button class="work-task-complete" type="button" data-work-complete="question">✓ I answered aloud</button>
+            </div>
+          </article>
+
+          <article class="work-task-card" data-work-task-card="language">
+            <div class="work-task-number">3</div>
+            <div>
+              <p class="small-label">LANGUAGE BANK</p>
+              <h3>Use chunks instead of translating sentence by sentence</h3>
+              <div id="workPhraseSuggestions" class="work-phrase-suggestions"></div>
+              <button class="work-task-complete" type="button" data-work-complete="language">✓ I rehearsed at least three chunks</button>
+            </div>
+          </article>
+
+          <article class="work-task-card" data-work-task-card="accuracy">
+            <div class="work-task-number">4</div>
+            <div>
+              <p class="small-label">ACCURACY TARGET</p>
+              <h3 id="workGrammarTitle">Grammar repair</h3>
+              <p id="workGrammarPrompt"></p>
+              <div id="workGrammarExamples" class="work-grammar-examples"></div>
+              <a class="secondary-button" href="#grammar-lab">Open Grammar Repair →</a>
+              <button class="work-task-complete" type="button" data-work-complete="accuracy">✓ I used the target pattern</button>
+            </div>
+          </article>
+
+          <article class="work-task-card" data-work-task-card="pronunciation">
+            <div class="work-task-number">5</div>
+            <div>
+              <p class="small-label">INTELLIGIBILITY TARGET</p>
+              <h3 id="workPronTitle">Pronunciation focus</h3>
+              <p id="workPronPrompt"></p>
+              <div id="workPronLines" class="work-pron-lines"></div>
+              <a class="secondary-button" href="#pronunciation-lab">Open Pronunciation Lab →</a>
+              <button class="work-task-complete" type="button" data-work-complete="pronunciation">✓ I rehearsed the target aloud</button>
+            </div>
+          </article>
+
+          <article class="work-task-card" data-work-task-card="writing">
+            <div class="work-task-number">6</div>
+            <div>
+              <p class="small-label">SHORT WRITING TASK</p>
+              <h3 id="workWritingTitle">Close the communication loop</h3>
+              <p id="workWritingPrompt"></p>
+              <textarea id="workWritingDraft" rows="7" placeholder="Write the short professional message here."></textarea>
+              <div class="work-writing-meta"><span><strong id="workWritingWords">0</strong> words</span><span id="workWritingTarget">Target: 70–120</span></div>
+              <div id="workWritingChecklist" class="work-writing-checklist"></div>
+              <button class="work-task-complete" type="button" data-work-complete="writing">✓ Writing task complete</button>
+            </div>
+          </article>
+        </div>
+
+        <div class="work-mission-finish">
+          <div>
+            <p class="small-label">MISSION STATUS</p>
+            <h3 id="workMissionFinishTitle">Complete all six practice steps</h3>
+            <p id="workMissionFinishText">This tracks practice coverage, not a language grade.</p>
+          </div>
+          <button class="primary-button" id="logWorkMissionBtn" type="button" disabled>Log work-based mission</button>
+        </div>
+        <div id="workMissionFeedback" class="activity-summary" aria-live="polite"></div>
+      </div>
+    </section>
 
     <section class="section client-simulator-section" id="client-simulator">
       <div class="section-heading client-simulator-heading">
