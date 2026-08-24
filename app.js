@@ -876,7 +876,7 @@ function buildRoutineTasks(minutes){
     add({id:"module",tag:"PLAN",title:`Continue: ${nextModule.module.title}`,desc:`Resume your personalised plan. Current progress: ${nextModule.stages} / 5 stages in this module.`,duration:durations[3],anchor:"#my-plan",cta:"Open my plan"});
   }
   if(results.grammar < 75){
-    add({id:"grammar-repair",tag:"ACCURACY",title:"Repair one recurring grammar issue",desc:"Open your personalised plan and focus on the grammar point embedded in your current cyber module.",duration:durations[3],anchor:"#my-plan",cta:"Open my plan"});
+    add({id:"grammar-repair",tag:"ACCURACY",title:"Repair one recurring grammar issue",desc:"Open the adaptive Grammar Repair Lab and fix one pattern selected from your diagnostic.",duration:durations[3],anchor:"#grammar-lab",cta:"Open Grammar Repair"});
   }
   if(results.pronunciation < 75 && tasks.length < 4){
     add({id:"pron",tag:"PRONUNCIATION",title:"Say it clearly, not perfectly",desc:"Record a short answer and listen specifically for stress, endings and linked speech.",duration:durations[3],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
@@ -925,6 +925,7 @@ function renderQuickLinks(){
     {anchor:"#my-plan", title:"My personalised plan", sub:"Resume the selected cyber modules"},
     {anchor:"#listening-lab", title:"Listening Lab", sub:"Gist, decoding, dictation and note-taking"},
     {anchor:"#speaking-lab", title:"Speaking Lab", sub:"Quick responses, client questions and roleplay"},
+    {anchor:"#grammar-lab", title:"Grammar Repair", sub:"Adaptive repair based on diagnostic weak points"},
     {anchor:"#phrasebook", title:"Phrasebook", sub:"Chunks, favourites and spaced review"}
   ];
   target.innerHTML = `<div class="dashboard-mini-list">${
@@ -1030,6 +1031,409 @@ function initDashboard(){
   }
   document.getElementById("refreshRoutineBtn")?.addEventListener("click",renderDashboard);
   renderDashboard();
+}
+
+
+
+
+// V9 · Grammar Repair Lab
+const grammarRepairStateKey="ebackontrack-v9-grammar";
+
+const grammarRepairUnits={
+  perfect:{
+    title:"Timeline control: Past & Perfect forms",
+    short:"Stop mixing finished events, current findings and ongoing investigation.",
+    tags:["Present & perfect forms","Past vs present perfect","Past forms"],
+    rule:"Use Past Simple for a finished event at a finished time. Use Present Perfect for findings or actions connected to now, especially with so far / already / yet. Use Present Perfect Continuous for activity continuing up to now.",
+    patterns:[
+      ["PAST SIMPLE","We isolated the endpoint at 09:20."],
+      ["PRESENT PERFECT","We have found no evidence of exfiltration so far."],
+      ["PRESENT PERFECT CONTINUOUS","We have been reviewing the logs since 10:00."],
+      ["PAST PERFECT","The account had already been disabled when the client joined."]
+    ],
+    error:{q:"Which repair is correct?",a:["We didn't find any evidence of exfiltration so far.","We haven't found any evidence of exfiltration so far.","We haven't find any evidence of exfiltration so far.","We don't found any evidence of exfiltration so far."],c:1,explain:"So far connects the past investigation to the present, so Present Perfect is the natural choice."},
+    choose:{q:"The alert fired at 08:45. Which update is best at 10:00?",a:["We detected suspicious activity at 08:45 and we have isolated the host.","We have detected suspicious activity at 08:45 and isolated the host now.","We detect suspicious activity at 08:45 and have isolate the host.","We were detected suspicious activity at 08:45."],c:0,explain:"Past Simple anchors the detection at 08:45; Present Perfect can report a completed action with a present result."},
+    transform:{prompt:"Repair this sentence: “We didn't see lateral movement so far.”",accepted:["we haven't seen lateral movement so far","we have not seen lateral movement so far","we haven't seen any lateral movement so far","we have not seen any lateral movement so far"],target:"We haven't seen any lateral movement so far.",explain:"Use Present Perfect with so far."},
+    production:{prompt:"Write a two-sentence incident update: sentence 1 = what happened at a specific time; sentence 2 = what you have found so far.",checks:["I used Past Simple for the timed event.","I used Present Perfect for the current finding.","My two sentences describe the same incident.","I did not use a finished-time expression with Present Perfect."]}
+  },
+  conditionals:{
+    title:"Conditionals & future time clauses",
+    short:"Explain consequences, controls and counterfactual risk accurately.",
+    tags:["Conditionals","Advanced conditionals","Future time clauses"],
+    rule:"Use present tense after if / when / as soon as for real future conditions. Use would + verb for hypothetical present/future situations. Use would have + past participle for unreal past consequences.",
+    patterns:[
+      ["REAL FUTURE","If we find lateral movement, we'll widen the investigation."],
+      ["FUTURE TIME CLAUSE","I'll update you as soon as the review is complete."],
+      ["HYPOTHETICAL","If the service were exposed, the risk would be higher."],
+      ["UNREAL PAST","If MFA had been enabled, the attacker might not have gained access."]
+    ],
+    error:{q:"Which sentence is correct?",a:["If we will find evidence, we will escalate.","If we find evidence, we will escalate.","If we found evidence tomorrow, we will escalate.","If we find evidence, we escalate yesterday."],c:1,explain:"Do not normally use will in the if-clause of a real future condition."},
+    choose:{q:"You are discussing a missed control in a post-incident review. Which is best?",a:["If MFA was enabled, the attacker won't gain access.","If MFA had been enabled, the attacker might not have gained access so easily.","If MFA will be enabled, the attacker didn't gain access.","If MFA has enabled, the attacker would not access."],c:1,explain:"This is an unreal past condition, so use if + past perfect and would/might have + past participle."},
+    transform:{prompt:"Repair this sentence: “I'll send the report as soon as the investigation will be complete.”",accepted:["i'll send the report as soon as the investigation is complete","i will send the report as soon as the investigation is complete"],target:"I'll send the report as soon as the investigation is complete.",explain:"Future time clauses normally use present tense, not will."},
+    production:{prompt:"Write two sentences: one real future consequence if new evidence appears, and one unreal past consequence about a control that was missing.",checks:["My real future sentence uses present tense after if.","My real future result uses will / may / might appropriately.","My unreal past condition uses had + past participle.","My unreal past result uses would/might/could have + past participle."]}
+  },
+  modals:{
+    title:"Modals: uncertainty, obligation & past inference",
+    short:"Sound cautious when evidence is incomplete and firm when action is required.",
+    tags:["Modals & uncertainty","Modals & obligation","Past modals"],
+    rule:"Use may / might / could for possibility, must / can't for strong inference, and may/might/could have + past participle for past possibilities. Use mustn't for prohibition, not lack of necessity.",
+    patterns:[
+      ["POSSIBILITY","The activity may be malicious."],
+      ["PAST POSSIBILITY","The attacker may have used valid credentials."],
+      ["PROHIBITION","You mustn't delete the evidence yet."],
+      ["NO NECESSITY","You don't have to rebuild the server at this stage."]
+    ],
+    error:{q:"Which sentence communicates uncertainty correctly?",a:["The attacker may used valid credentials.","The attacker may have used valid credentials.","The attacker must to have used valid credentials.","The attacker could using valid credentials."],c:1,explain:"Past modal structure = modal + have + past participle."},
+    choose:{q:"The evidence is incomplete. Which client sentence is best?",a:["This must definitely be the attacker.","This could be malicious, but we need more evidence.","This may definitely prove compromise.","This can't perhaps be legitimate."],c:1,explain:"Could expresses possibility without overclaiming."},
+    transform:{prompt:"Repair this sentence: “The logs suggest the attacker may used a valid account.”",accepted:["the logs suggest the attacker may have used a valid account","the logs suggest that the attacker may have used a valid account"],target:"The logs suggest that the attacker may have used a valid account.",explain:"Use may have used for a possible past action."},
+    production:{prompt:"Write a two-sentence client note: one cautious hypothesis about what may have happened, then one firm action the client must or must not take.",checks:["I used a modal + have + past participle for the past hypothesis.","I did not present the hypothesis as a confirmed fact.","I used must / mustn't accurately for the required action.","The recommendation is professionally realistic."]}
+  },
+  passive:{
+    title:"Passive voice for incidents & processes",
+    short:"Focus on the affected asset or action when the actor is unknown or unimportant.",
+    tags:["Passive voice"],
+    rule:"Passive = be + past participle. Choose the tense on be: was isolated, has been isolated, needs to be tested. Use the passive when the action/result matters more than who performed it.",
+    patterns:[
+      ["PAST PASSIVE","The endpoint was isolated at 09:30."],
+      ["PRESENT PERFECT PASSIVE","The account has been disabled."],
+      ["MODAL PASSIVE","The host should be rebuilt."],
+      ["NEEDS + PASSIVE","The patch needs to be tested first."]
+    ],
+    error:{q:"Which sentence is correctly passive?",a:["The endpoint was isolate from the network.","The endpoint was isolated from the network.","The endpoint has isolating from the network.","The endpoint isolated by from the network."],c:1,explain:"Passive requires be + past participle: was isolated."},
+    choose:{q:"You do not need to emphasise who performed the action. Which update is clearest?",a:["Our analyst Sophie isolated the host, and this is about Sophie.","The host has been isolated as a precaution.","There has isolated the host.","The host has isolate as precaution."],c:1,explain:"The passive keeps the focus on the host and the completed containment action."},
+    transform:{prompt:"Rewrite in the passive: “The team temporarily disabled the account.”",accepted:["the account was temporarily disabled by the team","the account was temporarily disabled","the account has been temporarily disabled by the team","the account has been temporarily disabled"],target:"The account was temporarily disabled.",explain:"The actor is not essential, so the short passive is natural."},
+    production:{prompt:"Write two short incident-update sentences using the passive: one completed containment action and one action that still needs to be done.",checks:["I used be + past participle correctly.","My first passive reports a completed action.","My second passive describes an outstanding action or recommendation.","The passive improves focus rather than making the sentence vague."]}
+  },
+  structure:{
+    title:"Sentence structure: questions, clauses & relatives",
+    short:"Build clear questions and connect technical information without French word order.",
+    tags:["Question structure","Clause structure","Relative clauses"],
+    rule:"Indirect questions keep statement word order: Could you tell me when the user changed the password? Use whether for yes/no uncertainty. Relative clauses let you attach precise information: the analyst who handled the alert; two accounts, both of which…",
+    patterns:[
+      ["INDIRECT QUESTION","Could you tell me when the user changed the password?"],
+      ["WHETHER","We don't know whether the credentials were used."],
+      ["WHO","The analyst who handled the alert is off shift."],
+      ["OF WHICH","We found two accounts, both of which had admin rights."]
+    ],
+    error:{q:"Which indirect question is correct?",a:["Could you tell me when did the user change the password?","Could you tell me when the user changed the password?","Could you tell me when changed the user the password?","Could you tell me when does the user changed the password?"],c:1,explain:"After Could you tell me…, use statement word order, not do/does/did inversion."},
+    choose:{q:"Which sentence is clearest and grammatically correct?",a:["We don't know that the credentials were used or not.","We don't know whether the credentials were used.","We don't know which the credentials were used.","We don't know whether were used the credentials."],c:1,explain:"Whether introduces an unresolved yes/no alternative."},
+    transform:{prompt:"Repair this sentence: “Can you tell me where can I find the authentication logs?”",accepted:["can you tell me where i can find the authentication logs","could you tell me where i can find the authentication logs"],target:"Can you tell me where I can find the authentication logs?",explain:"Indirect question = question opener + statement word order."},
+    production:{prompt:"Write one polite indirect question to a client asking for information, then one sentence using who / which / whether to add detail.",checks:["My indirect question uses statement word order after the opener.","I did not add unnecessary do/does/did inversion.","My second sentence uses who / which / whether accurately.","Both sentences would sound natural in a client exchange."]}
+  },
+  verbs:{
+    title:"Verb patterns & formal recommendations",
+    short:"Avoid French-style verb constructions in requests and recommendations.",
+    tags:["Verb patterns","Formal structures"],
+    rule:"Common patterns matter: need to review, ask someone to send, recommend + -ing, or formal recommend that + base verb. After recommend that, formal English can use the base form: We recommend that the client disable the service.",
+    patterns:[
+      ["NEED TO","We need to review the logs."],
+      ["ASK + PERSON + TO","We asked the client to send the logs."],
+      ["RECOMMEND + -ING","We recommend isolating the host."],
+      ["RECOMMEND THAT + BASE","We recommend that the client disable the service."]
+    ],
+    error:{q:"Which sentence is correct?",a:["We need review the logs.","We need to review the logs.","We need reviewing to the logs.","We need to reviewing the logs."],c:1,explain:"Need is followed by to + infinitive in this structure."},
+    choose:{q:"Which formal recommendation is correct?",a:["We recommend that the client disables the service immediately.","We recommend that the client disable the service immediately.","We recommend the client to disables the service.","We recommend that the client will disable immediately."],c:1,explain:"Formal recommend that can take the base verb: recommend that the client disable."},
+    transform:{prompt:"Repair this sentence: “The client asked us confirm the timeline.”",accepted:["the client asked us to confirm the timeline","the client asked us to confirm the incident timeline"],target:"The client asked us to confirm the timeline.",explain:"Ask + person + to + infinitive."},
+    production:{prompt:"Write one request and one recommendation about an incident: use ask + person + to in one sentence and recommend that + base verb or recommend + -ing in the other.",checks:["My request uses ask + person + to + infinitive.","My recommendation uses a correct recommend pattern.","I did not use a French-style infinitive construction.","Both actions fit an incident-response context."]}
+  },
+  precision:{
+    title:"Precision: quantifiers & agreement",
+    short:"Make technical statements grammatically precise when quantities and subjects get complicated.",
+    tags:["Quantifiers","Agreement"],
+    rule:"Use fewer with countable nouns and less with uncountable nouns. Enough comes before a noun. With neither…nor, agreement usually follows the nearer subject; but keep technical sentences simple when possible.",
+    patterns:[
+      ["FEWER + COUNTABLE","We saw fewer failed login attempts."],
+      ["LESS + UNCOUNTABLE","There is less traffic than usual."],
+      ["ENOUGH + NOUN","There isn't enough evidence yet."],
+      ["PLURAL SUBJECT","Neither the logs nor the alerts show persistence."]
+    ],
+    error:{q:"Which sentence is correct?",a:["We have less failed login attempts than yesterday.","We have fewer failed login attempts than yesterday.","We have fewest failed login attempts than yesterday.","We have fewer failed login attempt than yesterday."],c:1,explain:"Attempts are countable plural, so use fewer."},
+    choose:{q:"Which sentence is best?",a:["There isn't many evidence to confirm compromise.","There isn't enough evidence to confirm compromise.","There aren't enough evidence to confirm compromise.","There isn't several evidence to confirm compromise."],c:1,explain:"Evidence is uncountable; enough evidence is the natural structure."},
+    transform:{prompt:"Repair this sentence: “There aren't enough evidence to attribute the activity.”",accepted:["there isn't enough evidence to attribute the activity","there is not enough evidence to attribute the activity"],target:"There isn't enough evidence to attribute the activity.",explain:"Evidence is uncountable, so use singular agreement."},
+    production:{prompt:"Write two short findings: one comparing a countable security event with yesterday, and one saying that the investigation still lacks sufficient evidence.",checks:["I used fewer with a countable plural noun.","I treated evidence as uncountable.","I used enough in the correct position.","My statements are concise and operational."]}
+  },
+  comparison:{
+    title:"Comparisons for risk & severity",
+    short:"Compare exposure, likelihood and impact without malformed comparative structures.",
+    tags:["Comparison"],
+    rule:"Use more + adjective for many longer adjectives, adjective-er for many short adjectives, than after a comparative, and as…as for equality. In cyber risk, higher/lower risk and more/less likely are especially useful.",
+    patterns:[
+      ["MORE + ADJECTIVE","This control is more effective than the previous one."],
+      ["HIGHER / LOWER","The exposure is lower than we first thought."],
+      ["MORE / LESS LIKELY","Exploitation is more likely on internet-facing systems."],
+      ["NOT AS…AS","The impact is not as severe as initially reported."]
+    ],
+    error:{q:"Which sentence is correct?",a:["This control is more effective that the previous one.","This control is more effective than the previous one.","This control is most effective than the previous one.","This control is more effectively than previous."],c:1,explain:"Comparatives take than: more effective than."},
+    choose:{q:"Which sentence communicates the revised risk clearly?",a:["The current exposure is not as high as we first thought.","The current exposure is not as high than we first thought.","The current exposure is less higher that before.","The current exposure is not so higher as we first thought."],c:0,explain:"Not as + adjective + as is the correct equality comparison."},
+    transform:{prompt:"Repair this sentence: “The incident was more serious that initially reported.”",accepted:["the incident was more serious than initially reported","the incident was more serious than was initially reported"],target:"The incident was more serious than initially reported.",explain:"Comparative + than."},
+    production:{prompt:"Write two risk-comparison sentences: compare the current exposure with the initial assessment, then compare two remediation options.",checks:["I used than correctly after a comparative.","I used a natural risk adjective such as high, severe, likely or effective.","My comparison makes the business meaning clearer.","I avoided double comparatives such as more higher."]}
+  },
+  prepositions:{
+    title:"Prepositions that recur at work",
+    short:"Fix small errors that make otherwise good professional English sound less natural.",
+    tags:["Prepositions"],
+    rule:"Learn high-frequency chunks rather than translating prepositions from French: responsible for, at 11 p.m., on Thursday, in March, move to Thursday, during the investigation.",
+    patterns:[
+      ["RESPONSIBLE FOR","We are responsible for monitoring the environment."],
+      ["AT + CLOCK TIME","The maintenance window starts at 11 p.m."],
+      ["ON + DAY","The review is on Thursday."],
+      ["MOVE TO","The meeting has been moved to Thursday afternoon."]
+    ],
+    error:{q:"Which sentence is correct?",a:["We are responsible of monitoring these events.","We are responsible for monitoring these events.","We are responsible to monitoring these events.","We are responsible with monitoring these events."],c:1,explain:"The fixed phrase is responsible for + noun / -ing."},
+    choose:{q:"Which scheduling sentence is natural?",a:["The review has been moved at Thursday afternoon.","The review has been moved to Thursday afternoon.","The review has been moved in Thursday afternoon.","The review has been moved for Thursday afternoon."],c:1,explain:"Move an event to a new time/date."},
+    transform:{prompt:"Repair this sentence: “The maintenance window starts on 11 p.m.”",accepted:["the maintenance window starts at 11 pm","the maintenance window starts at 11 p.m","the maintenance window starts at 11 p.m."],target:"The maintenance window starts at 11 p.m.",explain:"Use at with clock times."},
+    production:{prompt:"Write two work sentences using two different target chunks from this unit (for example responsible for, at + time, on + day, moved to).",checks:["I used two different preposition chunks.","I did not translate the preposition directly from French.","The time/date preposition matches the expression.","Both sentences are plausible in my work context."]}
+  }
+};
+
+const grammarTagToUnit={};
+Object.entries(grammarRepairUnits).forEach(([unitId,unit])=>unit.tags.forEach(tag=>grammarTagToUnit[tag]=unitId));
+
+function loadGrammarRepairState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(grammarRepairStateKey))||{};
+    return {
+      completed:Array.isArray(raw.completed)?raw.completed:[],
+      attempts:Number(raw.attempts||0),
+      closedCorrect:Number(raw.closedCorrect||0),
+      closedTotal:Number(raw.closedTotal||0),
+      unitAttempts:raw.unitAttempts||{}
+    };
+  }catch(e){return {completed:[],attempts:0,closedCorrect:0,closedTotal:0,unitAttempts:{}};}
+}
+function saveGrammarRepairState(state){
+  localStorage.setItem(grammarRepairStateKey,JSON.stringify(state));
+}
+function normaliseGrammarAnswer(s){
+  return (s||"").toLowerCase()
+    .replace(/[’]/g,"'")
+    .replace(/[.,!?;:]+$/g,"")
+    .replace(/\s+/g," ")
+    .trim();
+}
+function savedGrammarDiagnostic(){
+  try{
+    const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));
+    if(saved?.results&&saved?.details?.grammar) return saved;
+  }catch(e){}
+  return null;
+}
+function grammarUnitSignal(unitId){
+  const saved=savedGrammarDiagnostic();
+  if(!saved) return {pct:null,label:"Starter unit",className:""};
+  const unit=grammarRepairUnits[unitId];
+  const tagResults=unit.tags.map(tag=>{
+    const v=saved.details.grammar.tags?.[tag];
+    return v ? Math.round(v.score/v.total*100) : null;
+  }).filter(v=>v!==null);
+  if(!tagResults.length) return {pct:null,label:"No signal",className:""};
+  const pct=Math.min(...tagResults);
+  if(pct<55) return {pct,label:`${pct}% · priority`,className:"critical"};
+  if(pct<75) return {pct,label:`${pct}% · review`,className:"review"};
+  return {pct,label:`${pct}% · maintain`,className:"good"};
+}
+function grammarRepairQueue(){
+  const saved=savedGrammarDiagnostic();
+  const fallback=["perfect","modals","conditionals","structure"];
+  if(!saved) return fallback;
+  const weaknesses=tagWeaknesses(saved.details.grammar,19);
+  const queue=[];
+  weaknesses.forEach(w=>{
+    const id=grammarTagToUnit[w.name];
+    if(id&&!queue.includes(id)) queue.push(id);
+  });
+  Object.keys(grammarRepairUnits).forEach(id=>{if(!queue.includes(id))queue.push(id);});
+  return queue.slice(0,4);
+}
+function grammarRepairStats(){
+  const state=loadGrammarRepairState();
+  const accuracy=state.closedTotal?Math.round(state.closedCorrect/state.closedTotal*100):null;
+  return {completed:state.completed.length,attempts:state.attempts,accuracy};
+}
+function updateGrammarRepairStats(){
+  const s=grammarRepairStats();
+  const a=document.getElementById("grammarRepairTopics");
+  const b=document.getElementById("grammarRepairAttempts");
+  const c=document.getElementById("grammarRepairAccuracy");
+  if(a)a.textContent=s.completed;
+  if(b)b.textContent=s.attempts;
+  if(c)c.textContent=s.accuracy===null?"—":`${s.accuracy}%`;
+}
+function renderGrammarRepair(){
+  if(!document.getElementById("grammar-lab"))return;
+  const diagnostic=savedGrammarDiagnostic();
+  document.getElementById("grammarNoDiagnostic").hidden=!!diagnostic;
+  document.getElementById("grammarQueueTitle").textContent=diagnostic
+    ?"Priority grammar, selected from your diagnostic"
+    :"Starter repair queue until the diagnostic is complete";
+  const state=loadGrammarRepairState();
+  const queue=grammarRepairQueue();
+  const q=document.getElementById("grammarRepairQueue");
+  q.innerHTML=queue.map((id,i)=>{
+    const u=grammarRepairUnits[id],signal=grammarUnitSignal(id),done=state.completed.includes(id);
+    return `<button class="grammar-priority-card ${done?"completed":""}" type="button" data-grammar-unit="${id}">
+      <div class="grammar-card-top">
+        <span class="grammar-priority-rank">${i+1}</span>
+        <span class="grammar-signal ${signal.className}">${done?"✓ repaired":signal.label}</span>
+      </div>
+      <h4>${u.title}</h4>
+      <p>${u.short}</p>
+      <div class="grammar-card-tags">${u.tags.map(t=>`<span>${t}</span>`).join("")}</div>
+      <span class="grammar-card-action">${done?"Review again":"Start repair"} →</span>
+    </button>`;
+  }).join("");
+
+  const lib=document.getElementById("grammarUnitLibrary");
+  lib.innerHTML=Object.entries(grammarRepairUnits).map(([id,u])=>{
+    const signal=grammarUnitSignal(id),done=state.completed.includes(id);
+    return `<button class="grammar-library-card ${done?"completed":""}" type="button" data-grammar-unit="${id}">
+      <div class="grammar-card-top">
+        <span class="grammar-signal ${signal.className}">${done?"✓ repaired":signal.label}</span>
+      </div>
+      <h4>${u.title}</h4>
+      <p>${u.short}</p>
+      <div class="grammar-card-tags">${u.tags.map(t=>`<span>${t}</span>`).join("")}</div>
+    </button>`;
+  }).join("");
+  document.querySelectorAll("[data-grammar-unit]").forEach(btn=>btn.addEventListener("click",()=>openGrammarUnit(btn.dataset.grammarUnit)));
+  updateGrammarRepairStats();
+}
+let currentGrammarUnitId=null;
+let grammarClosedResults={error:null,choose:null,transform:null};
+
+function renderGrammarOptions(targetId,name,items){
+  const target=document.getElementById(targetId);
+  target.innerHTML=items.map((opt,i)=>`<label><input type="radio" name="${name}" value="${i}"><span>${opt}</span></label>`).join("");
+}
+function openGrammarUnit(id){
+  const u=grammarRepairUnits[id]; if(!u)return;
+  currentGrammarUnitId=id;
+  grammarClosedResults={error:null,choose:null,transform:null};
+  const signal=grammarUnitSignal(id);
+  document.getElementById("grammarUnitDiagnosticLabel").textContent=signal.pct===null?"STARTER REPAIR":"DIAGNOSTIC TARGET";
+  document.getElementById("grammarUnitTitle").textContent=u.title;
+  document.getElementById("grammarUnitSubtitle").textContent=u.short;
+  document.getElementById("grammarUnitDiagnosticScore").textContent=signal.pct===null?"—":`${signal.pct}%`;
+  document.getElementById("grammarUnitDiagnosticNote").textContent=signal.pct===null?"No diagnostic signal yet":signal.label.replace(/^\d+%\s*·\s*/,"");
+  document.getElementById("grammarRuleText").textContent=u.rule;
+  document.getElementById("grammarPatternBank").innerHTML=u.patterns.map(([label,example])=>`<div class="grammar-pattern"><strong>${label}</strong><span>${example}</span></div>`).join("");
+
+  document.getElementById("grammarErrorQuestion").textContent=u.error.q;
+  renderGrammarOptions("grammarErrorOptions",`grammar-error-${id}`,u.error.a);
+  document.getElementById("grammarChooseQuestion").textContent=u.choose.q;
+  renderGrammarOptions("grammarChooseOptions",`grammar-choose-${id}`,u.choose.a);
+
+  document.getElementById("grammarTransformPrompt").textContent=u.transform.prompt;
+  document.getElementById("grammarTransformInput").value="";
+  document.getElementById("grammarProductionPrompt").textContent=u.production.prompt;
+  document.getElementById("grammarProductionInput").value="";
+  document.getElementById("grammarProductionChecks").innerHTML=u.production.checks.map((x,i)=>`<label><input type="checkbox" id="grammar-prod-${id}-${i}"><span>${x}</span></label>`).join("");
+
+  ["grammarErrorFeedback","grammarChooseFeedback","grammarTransformFeedback","grammarRepairFeedback"].forEach(fid=>{
+    const f=document.getElementById(fid); f.className="activity-summary"; f.textContent="";
+  });
+  document.getElementById("grammarWorkspaceStatus").textContent="Repair in progress";
+  document.getElementById("grammarWorkspace").hidden=false;
+  document.querySelector(".grammar-queue-shell").hidden=true;
+  document.querySelector(".grammar-library-shell").hidden=true;
+  document.querySelector(".grammar-philosophy").hidden=true;
+  document.getElementById("grammarWorkspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeGrammarWorkspace(){
+  document.getElementById("grammarWorkspace").hidden=true;
+  document.querySelector(".grammar-queue-shell").hidden=false;
+  document.querySelector(".grammar-library-shell").hidden=false;
+  document.querySelector(".grammar-philosophy").hidden=false;
+  currentGrammarUnitId=null;
+  renderGrammarRepair();
+  document.getElementById("grammar-lab").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function recordGrammarClosedResult(kind,correct){
+  grammarClosedResults[kind]=correct;
+}
+function checkGrammarError(){
+  if(!currentGrammarUnitId)return;
+  const u=grammarRepairUnits[currentGrammarUnitId];
+  const picked=document.querySelector(`input[name="grammar-error-${currentGrammarUnitId}"]:checked`);
+  const fb=document.getElementById("grammarErrorFeedback");
+  if(!picked){fb.className="activity-summary neutral";fb.textContent="Choose an answer first.";return;}
+  const ok=Number(picked.value)===u.error.c;
+  recordGrammarClosedResult("error",ok);
+  fb.className=`activity-summary ${ok?"correct":"wrong"}`;
+  fb.textContent=ok?`Correct ✓ ${u.error.explain}`:`Not quite. Best answer: “${u.error.a[u.error.c]}” — ${u.error.explain}`;
+}
+function checkGrammarChoose(){
+  if(!currentGrammarUnitId)return;
+  const u=grammarRepairUnits[currentGrammarUnitId];
+  const picked=document.querySelector(`input[name="grammar-choose-${currentGrammarUnitId}"]:checked`);
+  const fb=document.getElementById("grammarChooseFeedback");
+  if(!picked){fb.className="activity-summary neutral";fb.textContent="Choose an answer first.";return;}
+  const ok=Number(picked.value)===u.choose.c;
+  recordGrammarClosedResult("choose",ok);
+  fb.className=`activity-summary ${ok?"correct":"wrong"}`;
+  fb.textContent=ok?`Correct ✓ ${u.choose.explain}`:`Not quite. Best answer: “${u.choose.a[u.choose.c]}” — ${u.choose.explain}`;
+}
+function checkGrammarTransform(){
+  if(!currentGrammarUnitId)return;
+  const u=grammarRepairUnits[currentGrammarUnitId];
+  const value=normaliseGrammarAnswer(document.getElementById("grammarTransformInput").value);
+  const accepted=u.transform.accepted.map(normaliseGrammarAnswer);
+  const ok=accepted.includes(value);
+  recordGrammarClosedResult("transform",ok);
+  const fb=document.getElementById("grammarTransformFeedback");
+  if(!value){fb.className="activity-summary neutral";fb.textContent="Type your repaired sentence first.";return;}
+  fb.className=`activity-summary ${ok?"correct":"wrong"}`;
+  fb.textContent=ok?`Correct ✓ ${u.transform.explain}`:`Target: “${u.transform.target}” — ${u.transform.explain}`;
+}
+function completeGrammarRepair(){
+  if(!currentGrammarUnitId)return;
+  const u=grammarRepairUnits[currentGrammarUnitId];
+  const closedValues=Object.values(grammarClosedResults);
+  const completedClosed=closedValues.filter(v=>v!==null).length;
+  const correctClosed=closedValues.filter(Boolean).length;
+  const checks=[...document.querySelectorAll(`#grammarProductionChecks input[type="checkbox"]`)];
+  const checked=checks.filter(x=>x.checked).length;
+  const production=document.getElementById("grammarProductionInput").value.trim();
+  const fb=document.getElementById("grammarRepairFeedback");
+
+  if(completedClosed<3){
+    fb.className="activity-summary neutral";
+    fb.textContent="Complete the three closed repair tasks first.";
+    return;
+  }
+  if(correctClosed<2){
+    fb.className="activity-summary wrong";
+    fb.textContent=`${correctClosed} / 3 closed tasks correct. Review the rule and repair at least two before completing the unit.`;
+    return;
+  }
+  if(production.length<20 || checked<3){
+    fb.className="activity-summary neutral";
+    fb.textContent="Use the target grammar in the short work task and check at least three criteria before completing the unit.";
+    return;
+  }
+
+  const state=loadGrammarRepairState();
+  state.attempts++;
+  state.closedCorrect+=correctClosed;
+  state.closedTotal+=3;
+  state.unitAttempts[currentGrammarUnitId]=(state.unitAttempts[currentGrammarUnitId]||0)+1;
+  if(!state.completed.includes(currentGrammarUnitId))state.completed.push(currentGrammarUnitId);
+  saveGrammarRepairState(state);
+  document.getElementById("grammarWorkspaceStatus").textContent="Repair completed ✓";
+  fb.className="activity-summary correct";
+  fb.textContent=`Repair completed ✓ ${correctClosed} / 3 closed tasks correct and ${checked} / ${checks.length} production checks confirmed. Reuse this structure in the Speaking Lab or your next cyber module.`;
+  updateGrammarRepairStats();
+  if(typeof renderDashboard==="function")renderDashboard();
+}
+function initGrammarRepairLab(){
+  if(!document.getElementById("grammar-lab"))return;
+  document.getElementById("refreshGrammarQueueBtn")?.addEventListener("click",renderGrammarRepair);
+  document.getElementById("closeGrammarWorkspaceBtn")?.addEventListener("click",closeGrammarWorkspace);
+  document.getElementById("checkGrammarErrorBtn")?.addEventListener("click",checkGrammarError);
+  document.getElementById("checkGrammarChooseBtn")?.addEventListener("click",checkGrammarChoose);
+  document.getElementById("checkGrammarTransformBtn")?.addEventListener("click",checkGrammarTransform);
+  document.getElementById("completeGrammarRepairBtn")?.addEventListener("click",completeGrammarRepair);
+  renderGrammarRepair();
 }
 
 
@@ -1977,3 +2381,4 @@ renderLab();
 initPhrasebook();
 initSpeakingLab();
 initDashboard();
+initGrammarRepairLab();

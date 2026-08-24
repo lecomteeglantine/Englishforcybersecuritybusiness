@@ -16,6 +16,7 @@
       <a class="nav-pill" href="#dashboard">Dashboard</a>
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
       <a class="nav-pill" href="#speaking-lab">Speaking Lab</a>
+      <a class="nav-pill" href="#grammar-lab">Grammar Repair</a>
       <a class="nav-pill" href="#phrasebook">Phrasebook</a>
       <span class="role-chip">Cybersecurity · SOC</span>
       <button class="ghost-button" id="resetBtn" type="button">Reset diagnostic</button>
@@ -470,6 +471,136 @@
     </section>
 
 
+
+
+    <section class="section grammar-lab-section" id="grammar-lab">
+      <div class="section-heading grammar-lab-heading">
+        <div>
+          <p class="eyebrow">GRAMMAR REPAIR LAB</p>
+          <h2>Fix the grammar that actually gets in your way.</h2>
+          <p>No chapter-by-chapter grammar course. The lab reads the diagnostic, identifies recurring weak patterns and repairs them inside cybersecurity situations.</p>
+        </div>
+        <div class="grammar-lab-stats">
+          <div><strong id="grammarRepairTopics">0</strong><span>units repaired</span></div>
+          <div><strong id="grammarRepairAttempts">0</strong><span>repair attempts</span></div>
+          <div><strong id="grammarRepairAccuracy">—</strong><span>closed-task accuracy</span></div>
+        </div>
+      </div>
+
+      <div id="grammarNoDiagnostic" class="grammar-diagnostic-callout" hidden>
+        <div>
+          <p class="small-label">NO DIAGNOSTIC DATA YET</p>
+          <h3>We can train grammar now, but personalisation starts after the diagnostic.</h3>
+          <p>The lab will use a sensible starter queue until Romain completes the diagnostic.</p>
+        </div>
+        <a class="primary-button" href="#diagnostic">Open diagnostic →</a>
+      </div>
+
+      <div class="grammar-queue-shell">
+        <div class="grammar-queue-head">
+          <div>
+            <p class="small-label">YOUR REPAIR QUEUE</p>
+            <h3 id="grammarQueueTitle">Priority grammar, selected from your diagnostic</h3>
+          </div>
+          <button class="secondary-button" id="refreshGrammarQueueBtn" type="button">Refresh priorities</button>
+        </div>
+        <div id="grammarRepairQueue" class="grammar-repair-queue"></div>
+      </div>
+
+      <div class="grammar-library-shell">
+        <div class="grammar-library-head">
+          <div>
+            <p class="small-label">ALL REPAIR UNITS</p>
+            <h3>Open any topic whenever you need it</h3>
+          </div>
+          <span class="question-count">9 focused units</span>
+        </div>
+        <div id="grammarUnitLibrary" class="grammar-unit-library"></div>
+      </div>
+
+      <div class="grammar-workspace" id="grammarWorkspace" hidden>
+        <div class="grammar-workspace-top">
+          <button class="back-link" id="closeGrammarWorkspaceBtn" type="button">← Back to Grammar Repair</button>
+          <span class="speaking-status-pill" id="grammarWorkspaceStatus">Repair in progress</span>
+        </div>
+
+        <div class="grammar-unit-hero">
+          <div>
+            <p class="small-label" id="grammarUnitDiagnosticLabel">DIAGNOSTIC TARGET</p>
+            <h2 id="grammarUnitTitle">Grammar repair</h2>
+            <p id="grammarUnitSubtitle"></p>
+          </div>
+          <div class="grammar-unit-score">
+            <span>Diagnostic signal</span>
+            <strong id="grammarUnitDiagnosticScore">—</strong>
+            <small id="grammarUnitDiagnosticNote">Starter unit</small>
+          </div>
+        </div>
+
+        <div class="grammar-repair-flow">
+          <article class="grammar-stage rule-stage">
+            <div class="grammar-stage-number">1</div>
+            <div>
+              <p class="small-label">60-SECOND RULE</p>
+              <h3 id="grammarRuleTitle">The pattern you need</h3>
+              <p id="grammarRuleText"></p>
+              <div id="grammarPatternBank" class="grammar-pattern-bank"></div>
+            </div>
+          </article>
+
+          <article class="grammar-stage">
+            <div class="grammar-stage-number">2</div>
+            <div class="grammar-stage-body">
+              <p class="small-label">SPOT THE REPAIR</p>
+              <h3 id="grammarErrorQuestion"></h3>
+              <div id="grammarErrorOptions" class="activity-options grammar-options"></div>
+              <button class="secondary-button" id="checkGrammarErrorBtn" type="button">Check answer</button>
+              <div id="grammarErrorFeedback" class="activity-summary" aria-live="polite"></div>
+            </div>
+          </article>
+
+          <article class="grammar-stage">
+            <div class="grammar-stage-number">3</div>
+            <div class="grammar-stage-body">
+              <p class="small-label">CHOOSE IT IN CONTEXT</p>
+              <h3 id="grammarChooseQuestion"></h3>
+              <div id="grammarChooseOptions" class="activity-options grammar-options"></div>
+              <button class="secondary-button" id="checkGrammarChooseBtn" type="button">Check answer</button>
+              <div id="grammarChooseFeedback" class="activity-summary" aria-live="polite"></div>
+            </div>
+          </article>
+
+          <article class="grammar-stage">
+            <div class="grammar-stage-number">4</div>
+            <div class="grammar-stage-body">
+              <p class="small-label">REBUILD THE SENTENCE</p>
+              <h3 id="grammarTransformPrompt"></h3>
+              <input type="text" id="grammarTransformInput" class="grammar-transform-input" autocomplete="off" placeholder="Type the repaired sentence">
+              <button class="secondary-button" id="checkGrammarTransformBtn" type="button">Check my sentence</button>
+              <div id="grammarTransformFeedback" class="activity-summary" aria-live="polite"></div>
+            </div>
+          </article>
+
+          <article class="grammar-stage production-stage">
+            <div class="grammar-stage-number">5</div>
+            <div class="grammar-stage-body">
+              <p class="small-label">USE IT AT WORK</p>
+              <h3 id="grammarProductionPrompt"></h3>
+              <p class="grammar-production-help">Write only 1–3 sentences. The point is to force the target structure into a realistic cyber message, not to write an essay.</p>
+              <textarea id="grammarProductionInput" rows="4" placeholder="Write your short professional response here."></textarea>
+              <div id="grammarProductionChecks" class="grammar-production-checks"></div>
+              <button class="primary-button" id="completeGrammarRepairBtn" type="button">Complete this repair unit</button>
+              <div id="grammarRepairFeedback" class="activity-summary" aria-live="polite"></div>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <div class="grammar-philosophy">
+        <strong>Repair principle:</strong>
+        <span>If a grammar point is already strong, do not spend twenty exercises polishing it. Fix weak patterns, reuse them in cyber communication, then move on.</span>
+      </div>
+    </section>
 
     <section class="section speaking-lab-section" id="speaking-lab">
       <div class="section-heading speaking-heading">

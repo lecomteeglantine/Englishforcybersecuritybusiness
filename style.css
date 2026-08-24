@@ -476,3 +476,84 @@ footer{display:flex;justify-content:space-between;gap:20px;padding:28px clamp(22
   .dashboard-controls{display:block}
   .dashboard-controls .primary-button{margin-top:12px}
 }
+
+
+/* V9 · Grammar Repair Lab */
+.grammar-lab-section{background:#fff}
+.grammar-lab-heading{display:flex;justify-content:space-between;gap:34px;align-items:flex-end;max-width:none}
+.grammar-lab-heading>div:first-child{max-width:860px}
+.grammar-lab-stats{display:grid;grid-template-columns:repeat(3,1fr);min-width:390px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+.grammar-lab-stats div{padding:18px;text-align:center;border-right:1px solid var(--line)}
+.grammar-lab-stats div:last-child{border-right:0}
+.grammar-lab-stats strong,.grammar-lab-stats span{display:block}
+.grammar-lab-stats strong{font-size:1.55rem}
+.grammar-lab-stats span{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:850}
+.grammar-diagnostic-callout{display:flex;justify-content:space-between;gap:20px;align-items:center;border:1px solid #efd08b;background:#fff8e8;border-radius:20px;padding:20px;margin:24px 0}
+.grammar-diagnostic-callout h3{margin:4px 0 6px}
+.grammar-diagnostic-callout p:last-child{margin:0;color:#6c5a2e}
+.grammar-queue-shell,.grammar-library-shell{margin-top:28px}
+.grammar-queue-head,.grammar-library-head{display:flex;justify-content:space-between;gap:18px;align-items:end;margin-bottom:14px}
+.grammar-queue-head h3,.grammar-library-head h3{font-size:1.45rem;margin:4px 0 0}
+.grammar-repair-queue{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.grammar-priority-card,.grammar-library-card{border:1px solid var(--line);border-radius:19px;padding:17px;background:#fff;text-align:left;color:var(--ink)}
+.grammar-priority-card{min-height:220px;display:flex;flex-direction:column}
+.grammar-priority-card.completed,.grammar-library-card.completed{border-color:#8fc7bb;background:#fbfffd}
+.grammar-card-top{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.grammar-priority-rank{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:#fff;font-weight:900}
+.grammar-signal{font-size:.75rem;font-weight:900;border-radius:999px;padding:6px 9px;background:#edf1f4;color:var(--muted)}
+.grammar-signal.critical{background:#fbeaea;color:#9a3434}
+.grammar-signal.review{background:#fff3d6;color:#80611e}
+.grammar-signal.good{background:#e9f6f2;color:#176958}
+.grammar-priority-card h4,.grammar-library-card h4{font-size:1.08rem;margin:18px 0 7px}
+.grammar-priority-card p,.grammar-library-card p{color:var(--muted);font-size:.9rem;margin:0}
+.grammar-card-tags{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+.grammar-card-tags span{font-size:.7rem;border-radius:999px;background:var(--pale);padding:5px 8px;color:var(--muted);font-weight:800}
+.grammar-card-action{margin-top:auto;padding-top:12px;font-weight:900;color:var(--accent)}
+.grammar-unit-library{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.grammar-library-card{appearance:none;cursor:pointer}
+.grammar-library-card:hover,.grammar-priority-card:hover{border-color:#9bcfc4;box-shadow:0 10px 24px rgba(19,34,56,.06)}
+.grammar-workspace{margin-top:28px;border:1px solid var(--line);border-radius:28px;padding:24px;background:#f9fbfb;box-shadow:var(--shadow)}
+.grammar-workspace-top{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-bottom:18px}
+.grammar-unit-hero{display:grid;grid-template-columns:1.25fr .75fr;gap:18px;background:var(--ink);color:#fff;border-radius:22px;padding:25px}
+.grammar-unit-hero .small-label{color:#91d1c5}
+.grammar-unit-hero h2{font-size:2rem;margin:4px 0 8px}
+.grammar-unit-hero p{color:#dbe4eb}
+.grammar-unit-score{align-self:start;border:1px solid rgba(255,255,255,.14);border-radius:17px;padding:18px;text-align:center}
+.grammar-unit-score span,.grammar-unit-score strong,.grammar-unit-score small{display:block}
+.grammar-unit-score span{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#a9bbc8;font-weight:850}
+.grammar-unit-score strong{font-size:2rem;margin:7px 0}
+.grammar-unit-score small{color:#d5e0e8}
+.grammar-repair-flow{display:grid;gap:14px;margin-top:14px}
+.grammar-stage{display:grid;grid-template-columns:48px minmax(0,1fr);gap:14px;border:1px solid var(--line);border-radius:20px;padding:20px;background:#fff}
+.grammar-stage-number{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:#e8f4f1;color:var(--accent-dark);font-weight:950}
+.grammar-stage h3{font-size:1.2rem;margin:4px 0 12px}
+.rule-stage{background:#f4f8f7}
+.grammar-pattern-bank{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:14px}
+.grammar-pattern{border:1px solid var(--line);border-radius:13px;background:#fff;padding:11px 12px}
+.grammar-pattern strong,.grammar-pattern span{display:block}
+.grammar-pattern span{margin-top:4px;color:var(--muted);font-size:.88rem}
+.grammar-options{max-width:900px}
+.grammar-transform-input{width:100%;max-width:900px;border:1px solid var(--line);border-radius:13px;padding:12px 14px;margin-bottom:10px}
+.production-stage textarea{max-width:900px}
+.grammar-production-help{color:var(--muted)}
+.grammar-production-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 0}
+.grammar-production-checks label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px 11px;font-weight:750}
+.grammar-production-checks input{margin-top:4px}
+.grammar-philosophy{display:flex;gap:8px;align-items:flex-start;border-radius:16px;background:var(--pale);padding:15px 17px;margin-top:20px;color:var(--muted)}
+.grammar-philosophy strong{color:var(--ink);white-space:nowrap}
+@media(max-width:1050px){
+  .grammar-repair-queue{grid-template-columns:repeat(2,1fr)}
+  .grammar-unit-library{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:900px){
+  .grammar-lab-heading{display:block}
+  .grammar-lab-stats{margin-top:20px;min-width:0;max-width:460px}
+  .grammar-unit-hero{grid-template-columns:1fr}
+}
+@media(max-width:650px){
+  .grammar-repair-queue,.grammar-unit-library,.grammar-pattern-bank,.grammar-production-checks{grid-template-columns:1fr}
+  .grammar-diagnostic-callout,.grammar-queue-head,.grammar-library-head{display:block}
+  .grammar-diagnostic-callout .primary-button,.grammar-queue-head .secondary-button{display:inline-block;margin-top:12px}
+  .grammar-stage{grid-template-columns:1fr}
+  .grammar-lab-stats div{padding:12px 7px}
+}
