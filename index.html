@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="A personalised professional English diagnostic for a cybersecurity and SOC consultant." />
+  <title>English, Back on Track</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#home" aria-label="English, Back on Track home">
+      <span class="brand-mark">↗</span><span>English, Back on Track</span>
+    </a>
+    <div class="top-actions">
+      <span class="role-chip">Cybersecurity · SOC</span>
+      <button class="ghost-button" id="resetBtn" type="button">Reset diagnostic</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="home">
+      <div class="hero-copy">
+        <p class="eyebrow">ROMAIN'S PROFESSIONAL ENGLISH PROGRAMME</p>
+        <h1>Make English a tool,<br><span>not an obstacle.</span></h1>
+        <p class="lead">A diagnostic and training programme built around the English you need to monitor threats, investigate incidents, assess risk and communicate clearly with international clients and security teams.</p>
+        <div class="hero-actions">
+          <button class="primary-button" data-go="diagnostic">Start my diagnostic</button>
+          <a class="text-link" href="#how-it-works">How it works ↓</a>
+        </div>
+      </div>
+
+      <aside class="profile-card">
+        <div class="profile-avatar" aria-hidden="true">R</div>
+        <div>
+          <p class="small-label">YOUR TARGET</p>
+          <h2>Operational confidence</h2>
+          <p>Follow real conversations, explain technical situations without translating everything mentally, and handle client-facing exchanges with more fluency.</p>
+        </div>
+        <div class="profile-grid">
+          <div><strong>Listening</strong><span>High priority</span></div>
+          <div><strong>Speaking</strong><span>High priority</span></div>
+          <div><strong>Accuracy</strong><span>Diagnose</span></div>
+          <div><strong>Cyber English</strong><span>Job-specific</span></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section pale" id="how-it-works">
+      <div class="section-heading">
+        <p class="eyebrow">HOW IT WORKS</p>
+        <h2>No TOEIC drilling. No generic business-English treadmill.</h2>
+        <p>The aim is not to become good at a test. The aim is to become more effective in the situations that actually happen at work.</p>
+      </div>
+      <div class="steps-grid">
+        <article class="step-card"><span>01</span><h3>Diagnose</h3><p>75 scored items plus speaking and writing production tasks.</p></article>
+        <article class="step-card"><span>02</span><h3>Pinpoint</h3><p>Identify the exact grammar, listening, pronunciation and cybersecurity-language gaps.</p></article>
+        <article class="step-card"><span>03</span><h3>Train</h3><p>Practise through alerts, incidents, handovers, risk explanations and client updates.</p></article>
+        <article class="step-card"><span>04</span><h3>Re-test</h3><p>Use short checkpoints to make the learning plan evolve with your progress.</p></article>
+      </div>
+    </section>
+
+    <section class="section" id="diagnostic">
+      <div class="section-heading">
+        <p class="eyebrow">INITIAL DIAGNOSTIC</p>
+        <h2>Find out what is really slowing you down.</h2>
+        <p>Five diagnostic sections separate language knowledge from the ability to use English under professional pressure. Your answers and results stay in this browser only.</p>
+      </div>
+
+      <div class="diagnostic-shell">
+        <nav class="diagnostic-nav" aria-label="Diagnostic sections">
+          <button class="diag-tab active" data-section="grammar"><span>1</span> Grammar</button>
+          <button class="diag-tab" data-section="cyber"><span>2</span> Cyber English</button>
+          <button class="diag-tab" data-section="listening"><span>3</span> Listening</button>
+          <button class="diag-tab" data-section="pronunciation"><span>4</span> Pronunciation</button>
+          <button class="diag-tab" data-section="production"><span>5</span> Speaking & writing</button>
+          <button class="diag-tab" data-section="results"><span>6</span> My profile</button>
+        </nav>
+
+        <div class="diagnostic-content">
+          <section class="diag-panel active" id="panel-grammar">
+            <div class="panel-head">
+              <div><p class="small-label">SECTION 1</p><h3>Grammar & accuracy</h3></div>
+              <span class="question-count">30 questions</span>
+            </div>
+            <p class="section-note">Not grammar for grammar's sake: every item is built around reporting, investigation, risk, meetings or client communication.</p>
+            <div id="grammarQuestions"></div>
+            <button class="primary-button next-section" data-next="cyber">Continue →</button>
+          </section>
+
+          <section class="diag-panel" id="panel-cyber">
+            <div class="panel-head">
+              <div><p class="small-label">SECTION 2</p><h3>Cybersecurity & SOC English</h3></div>
+              <span class="question-count">25 questions</span>
+            </div>
+            <p class="section-note">Terminology is tested together with the language needed to qualify an alert, explain uncertainty, escalate an incident, recommend remediation and speak to a client.</p>
+            <div id="cyberQuestions"></div>
+            <button class="primary-button next-section" data-next="listening">Continue →</button>
+          </section>
+
+          <section class="diag-panel" id="panel-listening">
+            <div class="panel-head">
+              <div><p class="small-label">SECTION 3</p><h3>Listening under SOC pressure</h3></div>
+              <span class="question-count">5 mini tasks</span>
+            </div>
+            <p class="section-note">Use headphones if possible. Each item can be played twice. This prototype uses your browser's English voice; authentic multi-accent recordings can replace these later.</p>
+            <div id="listeningQuestions"></div>
+            <button class="primary-button next-section" data-next="pronunciation">Continue →</button>
+          </section>
+
+          <section class="diag-panel" id="panel-pronunciation">
+            <div class="panel-head">
+              <div><p class="small-label">SECTION 4</p><h3>Pronunciation for intelligibility</h3></div>
+              <span class="question-count">15 questions + recording</span>
+            </div>
+            <div id="pronunciationQuestions"></div>
+
+            <div class="record-card">
+              <p class="small-label">VOICE SAMPLE</p>
+              <h4>Read this as if you were updating a client.</h4>
+              <p class="reading-text">“We've identified suspicious activity on one endpoint. At this stage, we have no evidence of lateral movement. The device has been isolated and we're reviewing the logs before recommending further remediation.”</p>
+              <div class="record-actions">
+                <button class="secondary-button" id="recordBtn" type="button">● Start recording</button>
+                <button class="secondary-button" id="stopBtn" type="button" disabled>■ Stop</button>
+              </div>
+              <audio id="recordingPlayback" controls hidden></audio>
+              <p class="microcopy" id="recordingStatus">Your recording is processed locally and is not uploaded anywhere.</p>
+            </div>
+            <button class="primary-button next-section" data-next="production">Continue →</button>
+          </section>
+
+          <section class="diag-panel" id="panel-production">
+            <div class="panel-head">
+              <div><p class="small-label">SECTION 5</p><h3>Speaking & writing under realistic constraints</h3></div>
+              <span class="question-count">4 production tasks</span>
+            </div>
+
+            <article class="production-card">
+              <span class="task-number">A</span><div>
+                <h4>60 seconds · Explain your role</h4>
+                <p>Explain what you do to a new international client who is not a cybersecurity specialist.</p>
+                <p class="prompt-help">Include what you monitor, what happens when an alert is raised, how you work with other teams, and what value your work provides.</p>
+                <textarea id="speakingReflection" rows="4" placeholder="After speaking, note what slowed you down: vocabulary, grammar, hesitation, pronunciation, sentence structure, translating from French..."></textarea>
+              </div>
+            </article>
+
+            <article class="production-card">
+              <span class="task-number">B</span><div>
+                <h4>90 seconds · Incident update</h4>
+                <p>A suspicious login has triggered an alert. The account has been temporarily disabled. Investigation is ongoing and there is currently no evidence of data exfiltration. Give a calm spoken update to the client.</p>
+                <textarea id="incidentReflection" rows="4" placeholder="What was difficult when you tried to explain uncertainty and next steps?"></textarea>
+              </div>
+            </article>
+
+            <article class="production-card">
+              <span class="task-number">C</span><div>
+                <h4>Client message · 90–130 words</h4>
+                <p>Write to a client after a high-severity alert. Explain what was detected, what has already been done, what is still being investigated, and when they will receive the next update.</p>
+                <textarea id="writingTask" rows="9" placeholder="Write 90–130 words."></textarea>
+                <div class="word-count"><span id="wordCount">0</span> words</div>
+              </div>
+            </article>
+
+            <article class="production-card">
+              <span class="task-number">D</span><div>
+                <h4>Explain risk without jargon</h4>
+                <p>In 3–5 sentences, explain to a non-technical manager why a vulnerability does not automatically mean that a system has been compromised.</p>
+                <textarea id="plainEnglishTask" rows="6" placeholder="Aim for clear, non-technical English."></textarea>
+              </div>
+            </article>
+
+            <div class="self-rating">
+              <h4>How did that feel?</h4>
+              <div class="rating-row">
+                <label>Spoken fluency
+                  <select id="speakingRating"><option value="">Choose</option><option value="1">1 — Very difficult</option><option value="2">2 — Difficult</option><option value="3">3 — Manageable</option><option value="4">4 — Fairly comfortable</option><option value="5">5 — Comfortable</option></select>
+                </label>
+                <label>Writing confidence
+                  <select id="writingRating"><option value="">Choose</option><option value="1">1 — Very difficult</option><option value="2">2 — Difficult</option><option value="3">3 — Manageable</option><option value="4">4 — Fairly comfortable</option><option value="5">5 — Comfortable</option></select>
+                </label>
+              </div>
+            </div>
+            <button class="primary-button" id="calculateBtn" type="button">Build my English profile →</button>
+          </section>
+
+          <section class="diag-panel" id="panel-results">
+            <div class="panel-head">
+              <div><p class="small-label">YOUR PROFILE</p><h3>Your current English priorities</h3></div>
+              <span class="question-count">Diagnostic summary</span>
+            </div>
+            <div id="resultsEmpty" class="empty-state">Complete the diagnostic first, then click <strong>Build my English profile</strong>.</div>
+            <div id="resultsContent" hidden>
+              <div class="score-grid" id="scoreGrid"></div>
+              <div class="breakdown-box">
+                <div><p class="small-label">PINPOINTED GAPS</p><h4>What to revise first</h4></div>
+                <div class="weakness-grid" id="weaknessGrid"></div>
+              </div>
+              <div class="priority-box"><p class="small-label">YOUR PRIORITIES</p><ol id="priorityList"></ol></div>
+              <div class="roadmap-preview"><p class="small-label">FIRST TRAINING BLOCK</p><h4>Your programme starts here</h4><div id="roadmapCards" class="roadmap-grid"></div></div>
+              <p class="microcopy">This profile is an orientation tool, not a CEFR certification. Speaking and writing are self-rated in this prototype and should later be reviewed by a teacher.</p>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="section pale" id="programme">
+      <div class="section-heading">
+        <p class="eyebrow">JOB-SPECIFIC ROADMAP</p>
+        <h2>The training programme speaks cybersecurity.</h2>
+        <p>Each module combines listening, vocabulary, grammar, pronunciation and spoken production instead of treating them as separate school subjects.</p>
+      </div>
+      <div class="module-grid">
+        <article><span>01</span><h3>Explain your SOC role</h3><p>Monitoring, alert triage, responsibilities, tools and collaboration — in plain English.</p></article>
+        <article><span>02</span><h3>Qualify an alert</h3><p>Evidence, false positives, severity, confidence, scope and next checks.</p></article>
+        <article><span>03</span><h3>Give an incident update</h3><p>What happened, what is known, what is not yet known, containment and next update.</p></article>
+        <article><span>04</span><h3>Investigate & hand over</h3><p>Logs, indicators, timelines, hypotheses, actions taken and shift handovers.</p></article>
+        <article><span>05</span><h3>Explain risk to a client</h3><p>Likelihood, impact, exposure, vulnerabilities and priorities without drowning people in jargon.</p></article>
+        <article><span>06</span><h3>Recommend remediation</h3><p>Immediate containment, short-term fixes, long-term hardening and diplomatic recommendations.</p></article>
+        <article><span>07</span><h3>Threat intelligence</h3><p>Threat actors, campaigns, IOCs, TTPs and careful language when evidence is incomplete.</p></article>
+        <article><span>08</span><h3>Meetings under pressure</h3><p>Clarify, interrupt, challenge assumptions, reformulate and buy thinking time naturally.</p></article>
+        <article><span>09</span><h3>Post-incident review</h3><p>Root cause, lessons learned, actions, ownership and communicating improvement without blame.</p></article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>English, Back on Track · Personal professional-English programme</p>
+    <p>No account · No tracking · Diagnostic data stays in this browser.</p>
+  </footer>
+  <script src="app.js"></script>
+</body>
+</html>
