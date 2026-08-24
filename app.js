@@ -1043,6 +1043,398 @@ document.addEventListener("click",e=>{
 });
 
 
+
+
+// V7 · Speaking Lab
+const speakingStateKey="ebackontrack-v7-speaking";
+
+const speakingModes={
+  quick:{
+    label:"QUICK RESPONSE",title:"Answer without building the perfect sentence first",prep:15,duration:30,phraseCount:1,
+    categories:["SOC & Alerts","Clients","Meetings"],
+    prompts:[
+      "A client asks: “What exactly does your SOC monitor?” Give a clear, non-technical answer.",
+      "A colleague asks what you do when a new alert arrives. Explain the first steps.",
+      "A client asks why one suspicious login is not automatically proof of compromise.",
+      "Explain the difference between detecting an event and confirming an incident.",
+      "A manager asks what information you need before escalating an alert."
+    ]
+  },
+  explain:{
+    label:"EXPLAIN IT SIMPLY",title:"Turn cyber jargon into client English",prep:30,duration:60,phraseCount:2,
+    categories:["Clients","Risk","SOC & Alerts"],
+    prompts:[
+      "Explain to a non-technical client why a critical vulnerability does not automatically mean their system has been compromised.",
+      "Explain what a false positive is and why analysts still need to investigate alerts.",
+      "Explain lateral movement without assuming the client knows the term.",
+      "Explain why MFA reduces risk but does not make an account impossible to compromise.",
+      "Explain the difference between likelihood and impact when you assess cyber risk.",
+      "Explain why threat-actor attribution is often uncertain even when some indicators match."
+    ]
+  },
+  incident:{
+    label:"INCIDENT UPDATE",title:"Give a structured client update",prep:45,duration:90,phraseCount:3,
+    categories:["Incidents","Clients","Risk"],
+    prompts:[
+      "09:20 UTC: unusual sign-in on a privileged account. The session has been disabled. No evidence of lateral movement or data exfiltration so far. Identity and endpoint logs are still being reviewed. Give the client an update and set the next communication point.",
+      "Several endpoints generated suspicious PowerShell alerts. Two devices have been isolated. The team has confirmed execution but not persistence. Explain what is known, what is still being checked and what happens next.",
+      "A service account authenticated from an unfamiliar country. The credentials have been rotated and active sessions revoked. You cannot yet confirm whether the access was malicious. Give a calm 90-second update.",
+      "A client-facing web service has a critical vulnerability. There is no evidence of exploitation in the available telemetry. A patch is available but deployment requires a maintenance window. Explain the immediate risk and recommendation."
+    ]
+  },
+  meeting:{
+    label:"MEETING UNDER PRESSURE",title:"React naturally when the conversation moves fast",prep:15,duration:45,phraseCount:2,
+    categories:["Meetings","Clients","Risk"],
+    prompts:[
+      "The client says: “So this proves the attacker stole our data.” You do not have evidence of exfiltration. Correct the conclusion diplomatically.",
+      "You did not catch which privileged account the client mentioned. Interrupt and clarify without derailing the meeting.",
+      "A manager asks for a definite answer on attribution, but the evidence is incomplete. Respond without sounding evasive.",
+      "The client asks a detailed question you cannot answer until you check the logs. Buy time professionally and set an expectation.",
+      "A colleague uses a very technical explanation and the client looks lost. Step in and reformulate the point in plain English."
+    ]
+  },
+  roleplay:{
+    label:"CLIENT ROLEPLAY",title:"Handle a worried client across three turns",prep:30,duration:45,phraseCount:3,
+    categories:["Clients","Meetings","Incidents","Risk"],
+    prompts:[
+      "A privileged-account alert has been escalated. The client is worried that sensitive data may have been stolen.",
+      "A critical vulnerability has been announced in software the client uses. They want to know if they have already been compromised.",
+      "Several authentication alerts occurred overnight. The client wants an immediate explanation before the investigation is complete."
+    ]
+  }
+};
+
+const roleplaySets=[
+  [
+    "Is this definitely an attack?",
+    "So are you saying our data may already have been stolen?",
+    "What exactly do you need us to do right now?"
+  ],
+  [
+    "If the vulnerability is critical, doesn't that mean we're already compromised?",
+    "Can you guarantee that nobody exploited it?",
+    "What should we prioritise before the maintenance window?"
+  ],
+  [
+    "Why did the SOC not block this immediately?",
+    "How much of our environment is actually affected?",
+    "When will you be able to give us a firmer answer?"
+  ]
+];
+
+const unexpectedClientQuestions=[
+  "Can you say that in simpler terms?",
+  "How confident are you in that assessment?",
+  "What evidence would change your conclusion?",
+  "Does this mean the incident is contained?",
+  "What should we do in the next thirty minutes?",
+  "Why are you not able to confirm that yet?",
+  "Could this still be a false positive?",
+  "What is the worst realistic impact at this stage?",
+  "When will we know more?",
+  "Which part of the investigation is still outstanding?",
+  "Do you need anything from our internal team?",
+  "Are you recommending that we take the system offline?"
+];
+
+const emergencyGroups=[
+  {title:"I didn't catch it",ids:["meet-say-again","meeting-run-by","meet-follow"]},
+  {title:"I need thinking time",ids:["meet-think","meeting-come-back","meeting-no-jump"]},
+  {title:"Let me clarify",ids:["meeting-understood","meet-put-another-way","meet-does-make-sense"]},
+  {title:"Evidence is incomplete",ids:["client-current-assessment","client-what-we-know","client-not-confirmed"]},
+  {title:"Reassure without overpromising",ids:["inc-so-far","risk-immediate-reduced","client-doesnt-mean"]},
+  {title:"Close with next steps",ids:["inc-next-update","inc-keep-posted","client-written-update"]}
+];
+
+let currentSpeakingMode=null;
+let currentSpeakingPromptIndex=0;
+let currentSpeakingPhraseIds=[];
+let currentRoleplaySet=null;
+let currentRoleplayTurn=0;
+let speakingRecorder=null;
+let speakingAudioChunks=[];
+let prepTimerInterval=null;
+let speakingTimerInterval=null;
+let currentRecordedSeconds=0;
+let currentAttemptRecordedSeconds=0;
+let speakingPlaybackUrl=null;
+
+function loadSpeakingState(){
+  try{
+    const s=JSON.parse(localStorage.getItem(speakingStateKey))||{};
+    return {attempts:s.attempts||0,seconds:s.seconds||0,modes:s.modes||{},lastAttempt:s.lastAttempt||null};
+  }catch(e){return {attempts:0,seconds:0,modes:{},lastAttempt:null};}
+}
+function saveSpeakingState(s){localStorage.setItem(speakingStateKey,JSON.stringify(s));}
+function speakingTime(seconds){
+  const m=Math.floor(seconds/60),s=seconds%60;
+  return `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+}
+function renderSpeakingStats(){
+  const s=loadSpeakingState();
+  const a=document.getElementById("speakingAttempts"),m=document.getElementById("speakingMinutes"),modes=document.getElementById("speakingModes");
+  if(a)a.textContent=s.attempts;
+  if(m)m.textContent=(s.seconds/60).toFixed(s.seconds>=600?0:1);
+  if(modes)modes.textContent=`${Object.keys(s.modes).filter(k=>s.modes[k]>0).length} / 5`;
+}
+function getSpeakingPhraseIds(mode){
+  const cfg=speakingModes[mode],state=loadPhraseState();
+  const saved=Object.keys(state.items).filter(id=>{
+    const item=findPhraseItem(id);
+    return item&&cfg.categories.includes(item.category);
+  });
+  const fallback=phrasebookItems.filter(item=>cfg.categories.includes(item.category)).map(x=>x.id);
+  const pool=[...saved,...fallback.filter(id=>!saved.includes(id))];
+  const chosen=[];
+  let cursor=(currentSpeakingPromptIndex*2 + (Date.now()%7))%Math.max(1,pool.length);
+  while(chosen.length<cfg.phraseCount&&chosen.length<pool.length){
+    const id=pool[cursor%pool.length];
+    if(!chosen.includes(id))chosen.push(id);
+    cursor+=3;
+  }
+  return chosen;
+}
+function renderSpeakingPhrases(){
+  const box=document.getElementById("speakingRequiredPhrases");if(!box)return;
+  const saved=loadPhraseState().items;
+  box.innerHTML=currentSpeakingPhraseIds.map(id=>{
+    const item=findPhraseItem(id);if(!item)return "";
+    return `<label class="speaking-required-phrase">
+      <input type="checkbox" data-speaking-phrase-used="${id}">
+      <div><strong>${item.phrase}</strong><small>${saved[id]?"From your Phrasebook":"Starter phrase · not saved yet"}</small></div>
+      <button class="icon-button" type="button" data-speaking-hear="${id}" aria-label="Hear phrase">🔊</button>
+    </label>`;
+  }).join("");
+  box.querySelectorAll("[data-speaking-hear]").forEach(btn=>btn.addEventListener("click",()=>{
+    const item=findPhraseItem(btn.dataset.speakingHear);if(item)phraseSpeak(item.phrase);
+  }));
+}
+function pickPrompt(mode,forceNew=false){
+  const cfg=speakingModes[mode];
+  if(forceNew)currentSpeakingPromptIndex=(currentSpeakingPromptIndex+1)%cfg.prompts.length;
+  else currentSpeakingPromptIndex=Math.floor(Math.random()*cfg.prompts.length);
+  if(mode==="roleplay"){
+    currentRoleplaySet=roleplaySets[currentSpeakingPromptIndex%roleplaySets.length];
+    currentRoleplayTurn=0;
+  }
+  currentSpeakingPhraseIds=getSpeakingPhraseIds(mode);
+}
+function roleplayMarkup(){
+  if(currentSpeakingMode!=="roleplay"||!currentRoleplaySet)return "";
+  return `<div class="roleplay-turns">
+    ${currentRoleplaySet.map((q,i)=>`<div class="roleplay-turn ${i===currentRoleplayTurn?"current":i<currentRoleplayTurn?"done":""}">
+      <span>CLIENT TURN ${i+1}</span><p>${i<=currentRoleplayTurn?q:"Next question hidden until you respond."}</p>
+    </div>`).join("")}
+    <button class="secondary-button" id="nextRoleplayTurnBtn" type="button" ${currentRoleplayTurn>=2?"disabled":""}>Reveal next client turn →</button>
+  </div>`;
+}
+function renderSpeakingChallenge(){
+  const cfg=speakingModes[currentSpeakingMode];if(!cfg)return;
+  const prompt=cfg.prompts[currentSpeakingPromptIndex];
+  document.getElementById("speakingModeLabel").textContent=cfg.label;
+  document.getElementById("speakingPromptTitle").textContent=cfg.title;
+  document.getElementById("speakingPrompt").innerHTML=`${prompt}${roleplayMarkup()}`;
+  document.getElementById("prepTimeDisplay").textContent=speakingTime(cfg.prep);
+  document.getElementById("speakTimeDisplay").textContent=currentSpeakingMode==="roleplay"?"00:45 / turn":speakingTime(cfg.duration);
+  document.getElementById("liveSpeakingTimer").textContent=speakingTime(cfg.duration);
+  document.getElementById("speakingStatusPill").textContent="Ready";
+  document.getElementById("speakingKeywords").value="";
+  document.getElementById("keywordCount").textContent="0";
+  document.getElementById("clientQuestionBox").hidden=true;
+  document.getElementById("speakingAttemptFeedback").textContent="";
+  document.querySelectorAll("[data-speaking-check]").forEach(x=>x.checked=false);
+  const playback=document.getElementById("speakingPlayback");
+  playback.hidden=true;playback.removeAttribute("src");
+  document.getElementById("speakingRecordingStatus").textContent="Microphone access is requested only when you start recording.";
+  document.getElementById("speakingRecordBtn").disabled=false;
+  document.getElementById("speakingStopBtn").disabled=true;
+  const prepBtn=document.getElementById("startPrepBtn");
+  prepBtn.disabled=false;prepBtn.textContent="Start preparation timer";
+  currentRecordedSeconds=0;currentAttemptRecordedSeconds=0;
+  renderSpeakingPhrases();
+  bindRoleplayButton();
+}
+function bindRoleplayButton(){
+  document.getElementById("nextRoleplayTurnBtn")?.addEventListener("click",()=>{
+    if(currentRoleplayTurn<2){
+      currentRoleplayTurn++;
+      document.getElementById("speakingPrompt").innerHTML=`${speakingModes.roleplay.prompts[currentSpeakingPromptIndex]}${roleplayMarkup()}`;
+      bindRoleplayButton();
+      const q=currentRoleplaySet[currentRoleplayTurn];
+      phraseSpeak(q);
+    }
+  });
+}
+function openSpeakingMode(mode){
+  if(!speakingModes[mode])return;
+  clearInterval(prepTimerInterval);clearInterval(speakingTimerInterval);
+  currentSpeakingMode=mode;pickPrompt(mode);
+  const w=document.getElementById("speakingWorkspace");w.hidden=false;
+  renderSpeakingChallenge();
+  w.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeSpeakingMode(){
+  clearInterval(prepTimerInterval);clearInterval(speakingTimerInterval);
+  if(speakingRecorder?.state==="recording")speakingRecorder.stop();
+  document.getElementById("speakingWorkspace").hidden=true;
+  document.getElementById("speaking-lab").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function startPrepTimer(){
+  const cfg=speakingModes[currentSpeakingMode];if(!cfg)return;
+  clearInterval(prepTimerInterval);
+  let left=cfg.prep;
+  const out=document.getElementById("prepTimeDisplay"),btn=document.getElementById("startPrepBtn");
+  btn.disabled=true;document.getElementById("speakingStatusPill").textContent="Preparing";
+  out.textContent=speakingTime(left);
+  prepTimerInterval=setInterval(()=>{
+    left--;out.textContent=speakingTime(Math.max(0,left));
+    if(left<=0){
+      clearInterval(prepTimerInterval);btn.disabled=false;btn.textContent="Preparation finished";
+      document.getElementById("speakingStatusPill").textContent="Speak now";
+    }
+  },1000);
+}
+async function startSpeakingRecording(){
+  const cfg=speakingModes[currentSpeakingMode];if(!cfg)return;
+  clearInterval(speakingTimerInterval);
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    speakingAudioChunks=[];
+    speakingRecorder=new MediaRecorder(stream);
+    speakingRecorder.ondataavailable=e=>speakingAudioChunks.push(e.data);
+    speakingRecorder.onstop=()=>{
+      currentAttemptRecordedSeconds+=currentRecordedSeconds;
+      const blob=new Blob(speakingAudioChunks,{type:"audio/webm"});
+      if(speakingPlaybackUrl)URL.revokeObjectURL(speakingPlaybackUrl);
+      speakingPlaybackUrl=URL.createObjectURL(blob);
+      const playback=document.getElementById("speakingPlayback");
+      playback.src=speakingPlaybackUrl;playback.hidden=false;
+      document.getElementById("speakingRecordingStatus").textContent="Recording ready. Listen back before you log the attempt. Nothing has been uploaded.";
+      stream.getTracks().forEach(t=>t.stop());
+      document.getElementById("speakingRecordBtn").disabled=false;
+      document.getElementById("speakingStopBtn").disabled=true;
+      document.getElementById("speakingStatusPill").textContent="Listen back";
+    };
+    speakingRecorder.start();
+    document.getElementById("speakingRecordBtn").disabled=true;
+    document.getElementById("speakingStopBtn").disabled=false;
+    document.getElementById("speakingRecordingStatus").textContent="Recording… keep going even if you hesitate.";
+    document.getElementById("speakingStatusPill").textContent="Speaking";
+    let left=cfg.duration;
+    currentRecordedSeconds=0;
+    const timer=document.getElementById("liveSpeakingTimer");
+    timer.textContent=speakingTime(left);
+    speakingTimerInterval=setInterval(()=>{
+      left--;currentRecordedSeconds++;
+      timer.textContent=speakingTime(Math.max(0,left));
+      if(left<=0){
+        clearInterval(speakingTimerInterval);
+        if(speakingRecorder?.state==="recording")speakingRecorder.stop();
+      }
+    },1000);
+  }catch(e){
+    document.getElementById("speakingRecordingStatus").textContent="Microphone access was not granted. You can still do the speaking task aloud and log the attempt manually.";
+  }
+}
+function stopSpeakingRecording(){
+  clearInterval(speakingTimerInterval);
+  if(speakingRecorder?.state==="recording")speakingRecorder.stop();
+}
+function unexpectedQuestion(){
+  const q=unexpectedClientQuestions[Math.floor(Math.random()*unexpectedClientQuestions.length)];
+  document.getElementById("clientQuestionText").textContent=q;
+  document.getElementById("clientQuestionBox").hidden=false;
+  document.getElementById("clientQuestionSpeakBtn").dataset.question=q;
+}
+function applySpeakingPhraseReview(){
+  const phraseState=loadPhraseState();
+  currentSpeakingPhraseIds.forEach(id=>{
+    const checkbox=document.querySelector(`[data-speaking-phrase-used="${id}"]`);
+    const entry=phraseState.items[id];
+    if(entry&&!checkbox?.checked){
+      entry.level=Math.max(0,(entry.level||0)-1);
+      entry.due=Date.now();
+      entry.lastRating="speaking-missed";
+    }
+  });
+  savePhraseState(phraseState);
+  renderPhrasebookStats();renderReviewCard();
+}
+function logSpeakingAttempt(){
+  if(!currentSpeakingMode)return;
+  const state=loadSpeakingState();
+  const checked=document.querySelectorAll("[data-speaking-check]:checked").length;
+  const used=document.querySelectorAll("[data-speaking-phrase-used]:checked").length;
+  state.attempts++;
+  state.seconds+=Math.max(10,currentAttemptRecordedSeconds||currentRecordedSeconds||speakingModes[currentSpeakingMode].duration);
+  state.modes[currentSpeakingMode]=(state.modes[currentSpeakingMode]||0)+1;
+  state.lastAttempt=Date.now();
+  saveSpeakingState(state);
+  applySpeakingPhraseReview();
+  renderSpeakingStats();
+  const totalPhrases=currentSpeakingPhraseIds.length;
+  const fb=document.getElementById("speakingAttemptFeedback");
+  fb.textContent=`Attempt logged · self-check ${checked}/5 · target phrases used ${used}/${totalPhrases}${used<totalPhrases?" · missed saved phrases are back in your review queue":""}.`;
+  document.getElementById("speakingStatusPill").textContent="Attempt logged";
+}
+function renderEmergencyEnglish(){
+  const grid=document.getElementById("emergencyPhraseGrid");if(!grid)return;
+  const state=loadPhraseState();
+  grid.innerHTML=emergencyGroups.map(group=>`<section class="emergency-group">
+    <h3>${group.title}</h3>
+    ${group.ids.map(id=>{
+      const item=findPhraseItem(id);if(!item)return "";
+      const saved=!!state.items[id];
+      return `<div class="emergency-phrase">
+        <span>${item.phrase}</span>
+        <button type="button" data-emergency-speak="${id}" aria-label="Hear phrase">🔊</button>
+        <button type="button" data-emergency-save="${id}" aria-label="Save phrase">${saved?"✓":"＋"}</button>
+      </div>`;
+    }).join("")}
+  </section>`).join("");
+  grid.querySelectorAll("[data-emergency-speak]").forEach(btn=>btn.addEventListener("click",()=>{
+    const item=findPhraseItem(btn.dataset.emergencySpeak);if(item)phraseSpeak(item.phrase);
+  }));
+  grid.querySelectorAll("[data-emergency-save]").forEach(btn=>btn.addEventListener("click",()=>{
+    addPhrase(btn.dataset.emergencySave);renderEmergencyEnglish();
+  }));
+}
+function openEmergency(){
+  renderEmergencyEnglish();
+  document.getElementById("emergencyModal").hidden=false;
+  document.body.style.overflow="hidden";
+}
+function closeEmergency(){
+  document.getElementById("emergencyModal").hidden=true;
+  document.body.style.overflow="";
+}
+function initSpeakingLab(){
+  if(!document.getElementById("speaking-lab"))return;
+  renderSpeakingStats();
+  document.querySelectorAll("[data-speaking-mode]").forEach(btn=>btn.addEventListener("click",()=>openSpeakingMode(btn.dataset.speakingMode)));
+  document.getElementById("surpriseSpeakingBtn")?.addEventListener("click",()=>{
+    const modes=Object.keys(speakingModes);openSpeakingMode(modes[Math.floor(Math.random()*modes.length)]);
+  });
+  document.getElementById("closeSpeakingBtn")?.addEventListener("click",closeSpeakingMode);
+  document.getElementById("startPrepBtn")?.addEventListener("click",startPrepTimer);
+  document.getElementById("speakingRecordBtn")?.addEventListener("click",startSpeakingRecording);
+  document.getElementById("speakingStopBtn")?.addEventListener("click",stopSpeakingRecording);
+  document.getElementById("clientQuestionBtn")?.addEventListener("click",unexpectedQuestion);
+  document.getElementById("clientQuestionSpeakBtn")?.addEventListener("click",e=>phraseSpeak(e.currentTarget.dataset.question||document.getElementById("clientQuestionText").textContent));
+  document.getElementById("logSpeakingAttemptBtn")?.addEventListener("click",logSpeakingAttempt);
+  document.getElementById("newSpeakingPromptBtn")?.addEventListener("click",()=>{
+    pickPrompt(currentSpeakingMode,true);renderSpeakingChallenge();
+  });
+  document.getElementById("speakingKeywords")?.addEventListener("input",e=>{
+    document.getElementById("keywordCount").textContent=e.target.value.length;
+  });
+  [document.getElementById("emergencyEnglishBtn"),document.getElementById("emergencyEnglishInlineBtn")].filter(Boolean).forEach(b=>b.addEventListener("click",openEmergency));
+  document.getElementById("emergencyCloseBtn")?.addEventListener("click",closeEmergency);
+  document.querySelector("[data-emergency-close]")?.addEventListener("click",closeEmergency);
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.getElementById("emergencyModal")?.hidden)closeEmergency();});
+}
+
+
 // V5 · Listening Lab
 const listeningLab = {
   gist:{
@@ -1295,3 +1687,4 @@ renderLab();
 
 
 initPhrasebook();
+initSpeakingLab();
