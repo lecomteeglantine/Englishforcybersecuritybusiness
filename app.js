@@ -163,10 +163,10 @@ document.getElementById("calculateBtn").addEventListener("click",()=>{
   const writingWords=document.getElementById("writingTask").value.trim().split(/\s+/).filter(Boolean).length;
   const speakingPct=speakingRating?speakingRating*20:50;let writingPct=writingRating?writingRating*20:50;if(writingWords>=90&&writingWords<=140)writingPct=Math.min(100,writingPct+5);if(writingWords>0&&writingWords<60)writingPct=Math.max(20,writingPct-10);
   const results={grammar:grammar.pct,cyber:cyber.pct,listening:listening.pct,pronunciation:pronunciation.pct,speaking:speakingPct,writing:writingPct};
-  const details={grammar,cyber,listening,pronunciation}; localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details})); recordFullDiagnosticSnapshot(results,details); renderProfile(results,details); renderTrainingPlan(results,details); if(typeof renderGrammarRepair==="function")renderGrammarRepair(); if(typeof renderDashboard==="function")renderDashboard(); showSection("results");
+  const details={grammar,cyber,listening,pronunciation}; localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details})); recordFullDiagnosticSnapshot(results,details); updateSmartHomeMode(); renderProfile(results,details); renderTrainingPlan(results,details); if(typeof renderGrammarRepair==="function")renderGrammarRepair(); if(typeof renderDashboard==="function")renderDashboard(); showSection("results");
 });
 
-document.getElementById("resetBtn").addEventListener("click",()=>{if(!confirm("Reset all answers and local diagnostic results?"))return;localStorage.removeItem("ebackontrack-v2");localStorage.removeItem("ebackontrack-v3-progress");localStorage.removeItem("ebackontrack-v10-progress");document.querySelectorAll("#diagnostic input[type=radio]").forEach(i=>i.checked=false);document.querySelectorAll("#diagnostic textarea").forEach(t=>t.value="");document.querySelectorAll("#diagnostic select").forEach(s=>s.value="");document.getElementById("wordCount").textContent="0";document.getElementById("resultsEmpty").hidden=false;document.getElementById("resultsContent").hidden=true;document.getElementById("planUnlocked").hidden=true;document.getElementById("planLocked").hidden=false;showSection("grammar");});
+document.getElementById("resetBtn").addEventListener("click",()=>{if(!confirm("Reset all answers and local diagnostic results?"))return;localStorage.removeItem("ebackontrack-v2");localStorage.removeItem("ebackontrack-v3-progress");localStorage.removeItem("ebackontrack-v10-progress");document.querySelectorAll("#diagnostic input[type=radio]").forEach(i=>i.checked=false);document.querySelectorAll("#diagnostic textarea").forEach(t=>t.value="");document.querySelectorAll("#diagnostic select").forEach(s=>s.value="");document.getElementById("wordCount").textContent="0";document.getElementById("resultsEmpty").hidden=false;document.getElementById("resultsContent").hidden=true;document.getElementById("planUnlocked").hidden=true;document.getElementById("planLocked").hidden=false;updateSmartHomeMode();renderDashboard();document.getElementById("home")?.scrollIntoView({behavior:"smooth",block:"start"});});
 
 try{const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));if(saved?.results&&saved?.details)renderProfile(saved.results,saved.details);}catch(e){}
 
@@ -453,6 +453,7 @@ function submitQuickCheckpoint(){
   renderTrainingPlan(results,details);
   renderGrammarRepair();
   renderDashboard();
+  updateSmartHomeMode();
   renderProgressCheck();
 
   const baseline=state.baseline.results;
@@ -1166,6 +1167,60 @@ try{const saved=JSON.parse(localStorage.getItem('ebackontrack-v2'));if(saved?.re
 
 
 
+
+
+// V11 · Smart returning-user home
+function smartHomeSavedProfile(){
+  try{
+    const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));
+    return saved?.results&&saved?.details ? saved : null;
+  }catch(e){return null;}
+}
+function smartHomeSummaryText(saved){
+  if(!saved?.results)return "Your current profile is loaded.";
+  const weak=weakestSkill(saved.results);
+  const next=nextIncompleteModuleData();
+  const due=phraseStats().due;
+  const parts=[`Current focus: ${weak.label}`];
+  if(next&&!next.completed)parts.push(`next module: ${next.module.title}`);
+  if(due)parts.push(`${due} Phrasebook review${due===1?"":"s"} due`);
+  return parts.join(" · ");
+}
+function updateSmartHomeMode(){
+  const saved=smartHomeSavedProfile();
+  const returning=!!saved;
+  document.body.classList.toggle("returning-user",returning);
+
+  const brand=document.getElementById("homeBrandLink");
+  if(brand){
+    brand.href=returning?"#dashboard":"#home";
+    brand.setAttribute("aria-label",returning?"English, Back on Track dashboard":"English, Back on Track home");
+  }
+
+  const row=document.getElementById("smartHomeRow");
+  if(row){
+    row.hidden=!returning;
+    const summary=document.getElementById("smartHomeSummary");
+    if(summary&&returning)summary.textContent=smartHomeSummaryText(saved);
+  }
+
+  // On a fresh visit with no explicit deep link, the Dashboard is physically the first visible section.
+  // We intentionally do not force-scroll when a URL hash is present.
+}
+function bindDashboardDirectResume(){
+  document.querySelectorAll("[data-dashboard-resume-module]").forEach(btn=>{
+    if(btn.dataset.resumeBound==="1")return;
+    btn.dataset.resumeBound="1";
+    btn.addEventListener("click",()=>{
+      const key=btn.dataset.dashboardResumeModule;
+      if(!key)return;
+      document.getElementById("my-plan")?.scrollIntoView({behavior:"smooth",block:"start"});
+      setTimeout(()=>openTrainingModule(key),180);
+    });
+  });
+}
+
+
 // V8 · Daily dashboard
 const dashboardStateKey="ebackontrack-v8-dashboard";
 
@@ -1363,7 +1418,8 @@ function renderDashboardNextStep(results){
     return;
   }
   if(nextModule && !nextModule.completed){
-    target.innerHTML=`<div class="next-step-box"><strong>${nextModule.module.title}</strong><span>${nextModule.module.short}</span><span>${nextModule.stages} / 5 stages completed · ${nextModule.attempts} checkpoint attempt${nextModule.attempts===1?"":"s"}</span><a class="primary-button" href="#my-plan">Resume module</a></div>`;
+    target.innerHTML=`<div class="next-step-box"><strong>${nextModule.module.title}</strong><span>${nextModule.module.short}</span><span>${nextModule.stages} / 5 stages completed · ${nextModule.attempts} checkpoint attempt${nextModule.attempts===1?"":"s"}</span><button class="dashboard-direct-resume" type="button" data-dashboard-resume-module="${nextModule.key}">Resume exactly where I left off →</button></div>`;
+    bindDashboardDirectResume();
     return;
   }
   const due=phraseStats();
@@ -1429,6 +1485,7 @@ function renderDashboard(){
 
   renderDashboardNextStep(results);
   renderQuickLinks();
+  updateSmartHomeMode();
 
   const reasons=document.getElementById("dashboardFocusReasons");
   reasons.innerHTML = dashboardReasonCards(results,details).map(card=>`
@@ -2806,3 +2863,4 @@ initSpeakingLab();
 initDashboard();
 initGrammarRepairLab();
 initProgressChecks();
+updateSmartHomeMode();

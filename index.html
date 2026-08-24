@@ -9,7 +9,7 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="#home" aria-label="English, Back on Track home">
+    <a class="brand" id="homeBrandLink" href="#home" aria-label="English, Back on Track home">
       <span class="brand-mark">↗</span><span>English, Back on Track</span>
     </a>
     <div class="top-actions">
@@ -25,7 +25,7 @@
   </header>
 
   <main>
-    <section class="hero" id="home">
+    <section class="hero first-visit-hero" id="home">
       <div class="hero-copy">
         <p class="eyebrow">ROMAIN'S PROFESSIONAL ENGLISH PROGRAMME</p>
         <h1>Make English a tool,<br><span>not an obstacle.</span></h1>
@@ -60,6 +60,14 @@
             <p class="eyebrow">DAILY DASHBOARD</p>
             <h2 id="dashboardGreeting">Good afternoon, Romain.</h2>
             <p id="dashboardSubcopy">Today, the site will turn your priorities into a short, realistic session.</p>
+          </div>
+
+          <div class="smart-home-row" id="smartHomeRow" hidden>
+            <div>
+              <span class="smart-home-pill">WELCOME BACK MODE</span>
+              <strong id="smartHomeSummary">Your current profile is loaded.</strong>
+            </div>
+            <a class="smart-home-overview" href="#how-it-works">Programme overview</a>
           </div>
 
           <div class="dashboard-controls">
