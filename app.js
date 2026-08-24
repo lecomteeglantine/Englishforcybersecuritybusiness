@@ -163,7 +163,8 @@ document.getElementById("calculateBtn").addEventListener("click",()=>{
   const writingWords=document.getElementById("writingTask").value.trim().split(/\s+/).filter(Boolean).length;
   const speakingPct=speakingRating?speakingRating*20:50;let writingPct=writingRating?writingRating*20:50;if(writingWords>=90&&writingWords<=140)writingPct=Math.min(100,writingPct+5);if(writingWords>0&&writingWords<60)writingPct=Math.max(20,writingPct-10);
   const results={grammar:grammar.pct,cyber:cyber.pct,listening:listening.pct,pronunciation:pronunciation.pct,speaking:speakingPct,writing:writingPct};
-  const details={grammar,cyber,listening,pronunciation}; localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details})); recordFullDiagnosticSnapshot(results,details); updateSmartHomeMode(); renderProfile(results,details); renderTrainingPlan(results,details); if(typeof renderGrammarRepair==="function")renderGrammarRepair(); if(typeof renderDashboard==="function")renderDashboard(); showSection("results");
+  const details={grammar,cyber,listening,pronunciation}; localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details})); recordFullDiagnosticSnapshot(results,details); updateSmartHomeMode();
+initV16AppExperience(); renderProfile(results,details); renderTrainingPlan(results,details); if(typeof renderGrammarRepair==="function")renderGrammarRepair(); if(typeof renderDashboard==="function")renderDashboard(); showSection("results");
 });
 
 document.getElementById("resetBtn").addEventListener("click",()=>{if(!confirm("Reset all answers and local diagnostic results?"))return;localStorage.removeItem("ebackontrack-v2");localStorage.removeItem("ebackontrack-v3-progress");localStorage.removeItem("ebackontrack-v10-progress");document.querySelectorAll("#diagnostic input[type=radio]").forEach(i=>i.checked=false);document.querySelectorAll("#diagnostic textarea").forEach(t=>t.value="");document.querySelectorAll("#diagnostic select").forEach(s=>s.value="");document.getElementById("wordCount").textContent="0";document.getElementById("resultsEmpty").hidden=false;document.getElementById("resultsContent").hidden=true;document.getElementById("planUnlocked").hidden=true;document.getElementById("planLocked").hidden=false;updateSmartHomeMode();renderDashboard();document.getElementById("home")?.scrollIntoView({behavior:"smooth",block:"start"});});
@@ -4847,6 +4848,247 @@ document.getElementById("resetLabBtn")?.addEventListener("click",()=>{
   renderLab();
 });
 renderLab();
+
+
+
+
+// V16 · PWA, offline, mobile navigation & accessibility
+const accessibilityStateKey="ebackontrack-v16-accessibility";
+let deferredInstallPrompt=null;
+let appToastTimer=null;
+
+function showAppToast(message,timeout=3200){
+  const toast=document.getElementById("appToast");if(!toast)return;
+  toast.textContent=message;toast.hidden=false;
+  clearTimeout(appToastTimer);
+  appToastTimer=setTimeout(()=>toast.hidden=true,timeout);
+}
+function isStandaloneMode(){
+  return window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone===true;
+}
+function updateInstallStatus(){
+  const btn=document.getElementById("installAppBtn");
+  const text=document.getElementById("installStatusText");
+  if(isStandaloneMode()){
+    if(btn){btn.textContent="App installed";btn.disabled=true;}
+    if(text)text.textContent="Running in installed-app mode on this device.";
+    return;
+  }
+  if(btn){btn.textContent="Install app";btn.disabled=false;}
+  if(text)text.textContent=deferredInstallPrompt
+    ?"Installation is available on this device."
+    :"Install from your browser menu if no install prompt appears.";
+}
+function manualInstallInstructions(){
+  const ua=navigator.userAgent||"";
+  if(/iPad|iPhone|iPod/.test(ua)){
+    return "On iPhone/iPad: open the browser Share menu, then choose “Add to Home Screen”.";
+  }
+  if(/Android/i.test(ua)){
+    return "On Android: use the browser menu and choose “Install app” or “Add to Home screen” if the install button is unavailable.";
+  }
+  return "On desktop: look for “Install” in the browser address bar or browser menu if the install button is unavailable.";
+}
+function openInstallDialog(){
+  const dialog=document.getElementById("installDialog");if(!dialog)return;
+  document.getElementById("manualInstallHelp").textContent=manualInstallInstructions();
+  document.getElementById("confirmInstallBtn").hidden=isStandaloneMode();
+  document.getElementById("installDialogMessage").textContent=isStandaloneMode()
+    ?"The app is already installed on this device."
+    :"Install the site for quicker access and an app-like experience. GitHub Pages provides the secure HTTPS connection required for installation.";
+  dialog.hidden=false;
+  document.body.style.overflow="hidden";
+  dialog.querySelector(".app-dialog-close")?.focus();
+}
+function closeAppDialog(which){
+  const id=which==="install"?"installDialog":"accessibilityDialog";
+  const dialog=document.getElementById(id);if(!dialog)return;
+  dialog.hidden=true;
+  document.body.style.overflow="";
+  if(which==="install")document.getElementById("installAppBtn")?.focus();
+  else document.getElementById("accessibilityBtn")?.focus();
+}
+async function triggerInstall(){
+  if(isStandaloneMode()){
+    showAppToast("The app is already installed.");
+    return;
+  }
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    const choice=await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt=null;
+    updateInstallStatus();
+    if(choice?.outcome==="accepted"){
+      closeAppDialog("install");
+      showAppToast("Installation accepted. The app will use the same local progress.");
+    }
+    return;
+  }
+  document.getElementById("manualInstallHelp").textContent=manualInstallInstructions();
+  showAppToast("Use your browser's install / Add to Home Screen option.");
+}
+function updateNetworkStatus(showOnlineToast=false){
+  const el=document.getElementById("networkStatus");if(!el)return;
+  const offline=!navigator.onLine;
+  document.body.classList.toggle("is-offline",offline);
+  if(offline){
+    el.hidden=false;el.className="network-status offline";
+    el.textContent="Offline mode · training content remains available; external resources need a connection.";
+    document.getElementById("offlineReadyText").textContent="Offline mode active. Core training remains available.";
+  }else{
+    document.getElementById("offlineReadyText").textContent="The training app shell is available without a connection after first load.";
+    if(showOnlineToast){
+      el.hidden=false;el.className="network-status online";el.textContent="Back online.";
+      setTimeout(()=>{if(navigator.onLine)el.hidden=true;},2200);
+    }else el.hidden=true;
+  }
+}
+function loadAccessibilityState(){
+  try{
+    const x=JSON.parse(localStorage.getItem(accessibilityStateKey))||{};
+    return {
+      textScale:String(x.textScale||"100"),
+      readableFont:!!x.readableFont,
+      highContrast:!!x.highContrast,
+      spacious:!!x.spacious,
+      underlineLinks:!!x.underlineLinks,
+      reduceMotion:!!x.reduceMotion
+    };
+  }catch(e){
+    return {textScale:"100",readableFont:false,highContrast:false,spacious:false,underlineLinks:false,reduceMotion:false};
+  }
+}
+function saveAccessibilityState(state){
+  localStorage.setItem(accessibilityStateKey,JSON.stringify(state));
+}
+function applyAccessibilityState(state=loadAccessibilityState()){
+  document.documentElement.dataset.textScale=state.textScale;
+  document.body.classList.toggle("a11y-readable-font",state.readableFont);
+  document.body.classList.toggle("a11y-high-contrast",state.highContrast);
+  document.body.classList.toggle("a11y-spacious",state.spacious);
+  document.body.classList.toggle("a11y-underline-links",state.underlineLinks);
+  document.body.classList.toggle("a11y-reduce-motion",state.reduceMotion);
+
+  document.querySelectorAll("[data-text-scale]").forEach(btn=>{
+    const active=btn.dataset.textScale===state.textScale;
+    btn.classList.toggle("active",active);
+    btn.setAttribute("aria-pressed",String(active));
+  });
+  const map={
+    a11yReadableFont:"readableFont",
+    a11yHighContrast:"highContrast",
+    a11ySpacious:"spacious",
+    a11yUnderlineLinks:"underlineLinks",
+    a11yReduceMotion:"reduceMotion"
+  };
+  Object.entries(map).forEach(([id,key])=>{
+    const el=document.getElementById(id);if(el)el.checked=state[key];
+  });
+}
+function openAccessibilityDialog(){
+  applyAccessibilityState();
+  const dialog=document.getElementById("accessibilityDialog");if(!dialog)return;
+  dialog.hidden=false;
+  document.body.style.overflow="hidden";
+  dialog.querySelector(".app-dialog-close")?.focus();
+}
+function updateAccessibilitySetting(key,value){
+  const state=loadAccessibilityState();
+  state[key]=value;saveAccessibilityState(state);applyAccessibilityState(state);
+}
+function resetAccessibility(){
+  const state={textScale:"100",readableFont:false,highContrast:false,spacious:false,underlineLinks:false,reduceMotion:false};
+  saveAccessibilityState(state);applyAccessibilityState(state);showAppToast("Accessibility display settings reset.");
+}
+function closeMobileNav(){
+  const actions=document.getElementById("topActions");
+  const btn=document.getElementById("mobileNavBtn");
+  if(!actions||!btn)return;
+  actions.classList.remove("mobile-open");
+  btn.setAttribute("aria-expanded","false");
+  btn.querySelector("[aria-hidden]") && (btn.querySelector("[aria-hidden]").textContent="☰");
+}
+function toggleMobileNav(){
+  const actions=document.getElementById("topActions");
+  const btn=document.getElementById("mobileNavBtn");
+  if(!actions||!btn)return;
+  const open=!actions.classList.contains("mobile-open");
+  actions.classList.toggle("mobile-open",open);
+  btn.setAttribute("aria-expanded",String(open));
+  btn.querySelector("[aria-hidden]") && (btn.querySelector("[aria-hidden]").textContent=open?"×":"☰");
+}
+function interceptOfflineExternalLinks(e){
+  const a=e.target.closest("a[href]");
+  if(!a || navigator.onLine)return;
+  try{
+    const url=new URL(a.href,location.href);
+    if(url.origin!==location.origin){
+      e.preventDefault();
+      showAppToast("This external resource needs an internet connection.");
+    }
+  }catch(err){}
+}
+async function registerOfflineSupport(){
+  if(!("serviceWorker" in navigator))return;
+  try{
+    const registration=await navigator.serviceWorker.register("./service-worker.js");
+    await navigator.serviceWorker.ready;
+    document.documentElement.classList.add("service-worker-ready");
+    if(navigator.onLine){
+      document.getElementById("offlineReadyText").textContent="Offline cache ready on this device.";
+    }
+    registration.update().catch(()=>{});
+  }catch(e){
+    document.getElementById("offlineReadyText").textContent="Offline installation is unavailable in this browser context.";
+  }
+}
+function initV16AppExperience(){
+  applyAccessibilityState();
+  updateNetworkStatus(false);
+  updateInstallStatus();
+  registerOfflineSupport();
+
+  window.addEventListener("beforeinstallprompt",e=>{
+    e.preventDefault();
+    deferredInstallPrompt=e;
+    updateInstallStatus();
+  });
+  window.addEventListener("appinstalled",()=>{
+    deferredInstallPrompt=null;updateInstallStatus();showAppToast("App installed successfully.");
+  });
+  window.addEventListener("offline",()=>updateNetworkStatus(false));
+  window.addEventListener("online",()=>updateNetworkStatus(true));
+
+  document.getElementById("installAppBtn")?.addEventListener("click",openInstallDialog);
+  document.getElementById("confirmInstallBtn")?.addEventListener("click",triggerInstall);
+  document.getElementById("accessibilityBtn")?.addEventListener("click",openAccessibilityDialog);
+  document.querySelectorAll("[data-app-dialog-close]").forEach(el=>el.addEventListener("click",()=>closeAppDialog(el.dataset.appDialogClose)));
+
+  document.querySelectorAll("[data-text-scale]").forEach(btn=>btn.addEventListener("click",()=>updateAccessibilitySetting("textScale",btn.dataset.textScale)));
+  const toggles={
+    a11yReadableFont:"readableFont",
+    a11yHighContrast:"highContrast",
+    a11ySpacious:"spacious",
+    a11yUnderlineLinks:"underlineLinks",
+    a11yReduceMotion:"reduceMotion"
+  };
+  Object.entries(toggles).forEach(([id,key])=>{
+    document.getElementById(id)?.addEventListener("change",e=>updateAccessibilitySetting(key,e.target.checked));
+  });
+  document.getElementById("resetAccessibilityBtn")?.addEventListener("click",resetAccessibility);
+
+  document.getElementById("mobileNavBtn")?.addEventListener("click",toggleMobileNav);
+  document.querySelectorAll("#topActions a").forEach(a=>a.addEventListener("click",closeMobileNav));
+  window.addEventListener("resize",()=>{if(window.innerWidth>820)closeMobileNav();});
+  document.addEventListener("click",interceptOfflineExternalLinks);
+
+  document.addEventListener("keydown",e=>{
+    if(e.key!=="Escape")return;
+    if(!document.getElementById("installDialog")?.hidden)closeAppDialog("install");
+    else if(!document.getElementById("accessibilityDialog")?.hidden)closeAppDialog("accessibility");
+    else if(document.getElementById("topActions")?.classList.contains("mobile-open"))closeMobileNav();
+  });
+}
 
 
 initPhrasebook();

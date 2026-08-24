@@ -1,0 +1,52 @@
+{
+  "name": "English, Back on Track",
+  "short_name": "Back on Track",
+  "description": "Personalised professional English training for cybersecurity and SOC communication.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#132238",
+  "orientation": "any",
+  "lang": "en",
+  "categories": [
+    "education",
+    "productivity"
+  ],
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Daily Dashboard",
+      "short_name": "Dashboard",
+      "url": "./#dashboard"
+    },
+    {
+      "name": "Client Simulator",
+      "short_name": "Simulator",
+      "url": "./#client-simulator"
+    },
+    {
+      "name": "Listening Lab",
+      "short_name": "Listening",
+      "url": "./#listening-lab"
+    },
+    {
+      "name": "Speaking Lab",
+      "short_name": "Speaking",
+      "url": "./#speaking-lab"
+    }
+  ]
+}

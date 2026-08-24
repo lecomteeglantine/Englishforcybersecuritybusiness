@@ -3,16 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="A personalised professional English diagnostic for a cybersecurity and SOC consultant." />
+  <meta name="description" content="A personalised professional English diagnostic and training app for cybersecurity and SOC communication." />
+  <meta name="theme-color" content="#132238" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="English Back on Track" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <title>English, Back on Track</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <a class="skip-link" href="#mainContent">Skip to main content</a>
+  <div class="network-status" id="networkStatus" role="status" aria-live="polite" hidden></div>
+
   <header class="topbar">
     <a class="brand" id="homeBrandLink" href="#home" aria-label="English, Back on Track home">
       <span class="brand-mark">↗</span><span>English, Back on Track</span>
     </a>
-    <div class="top-actions">
+    <button class="mobile-nav-button" id="mobileNavBtn" type="button" aria-expanded="false" aria-controls="topActions">
+      <span aria-hidden="true">☰</span><span class="sr-only">Open navigation</span>
+    </button>
+    <div class="top-actions" id="topActions">
       <a class="nav-pill" href="#dashboard">Dashboard</a>
       <a class="nav-pill" href="#progress-check">Progress</a>
       <a class="nav-pill" href="#client-simulator">Client Simulator</a>
@@ -24,11 +37,13 @@
       <a class="nav-pill" href="#grammar-lab">Grammar Repair</a>
       <a class="nav-pill" href="#phrasebook">Phrasebook</a>
       <span class="role-chip">Cybersecurity · SOC</span>
+      <button class="ghost-button app-utility-button" id="installAppBtn" type="button">Install app</button>
+      <button class="ghost-button app-utility-button" id="accessibilityBtn" type="button" aria-haspopup="dialog">Accessibility</button>
       <button class="ghost-button" id="resetBtn" type="button">Reset diagnostic</button>
     </div>
   </header>
 
-  <main>
+  <main id="mainContent" tabindex="-1">
     <section class="hero first-visit-hero" id="home">
       <div class="hero-copy">
         <p class="eyebrow">PERSONALISED PROFESSIONAL ENGLISH PROGRAMME</p>
@@ -72,6 +87,21 @@
               <strong id="smartHomeSummary">Your current profile is loaded.</strong>
             </div>
             <a class="smart-home-overview" href="#how-it-works">Programme overview</a>
+          </div>
+
+          <div class="app-readiness-row" id="appReadinessRow">
+            <div class="app-readiness-item">
+              <span aria-hidden="true">📱</span>
+              <div><strong>Installable</strong><small id="installStatusText">Use it like an app on supported browsers.</small></div>
+            </div>
+            <div class="app-readiness-item">
+              <span aria-hidden="true">↯</span>
+              <div><strong>Offline-ready</strong><small id="offlineReadyText">The training app shell is available without a connection after first load.</small></div>
+            </div>
+            <div class="app-readiness-item">
+              <span aria-hidden="true">◉</span>
+              <div><strong>Private by design</strong><small>Progress remains in this browser; no account is required.</small></div>
+            </div>
           </div>
 
           <div class="dashboard-controls">
@@ -1806,9 +1836,93 @@
     </section>
   </main>
 
+
+  <div class="app-dialog-shell" id="installDialog" hidden>
+    <div class="app-dialog-backdrop" data-app-dialog-close="install"></div>
+    <section class="app-dialog" role="dialog" aria-modal="true" aria-labelledby="installDialogTitle">
+      <div class="app-dialog-head">
+        <div>
+          <p class="small-label">USE IT LIKE AN APP</p>
+          <h2 id="installDialogTitle">Install English, Back on Track</h2>
+        </div>
+        <button class="app-dialog-close" type="button" data-app-dialog-close="install" aria-label="Close install dialog">×</button>
+      </div>
+      <div class="install-dialog-content">
+        <div class="install-icon-preview" aria-hidden="true">↗</div>
+        <div>
+          <p id="installDialogMessage">Install the site for quicker access and an app-like full-screen experience.</p>
+          <div class="install-benefits">
+            <span>✓ Home-screen / desktop icon</span>
+            <span>✓ Offline access to the training app after first load</span>
+            <span>✓ Same local progress — no new account</span>
+          </div>
+          <button class="primary-button" id="confirmInstallBtn" type="button">Install app</button>
+          <p class="microcopy" id="manualInstallHelp"></p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div class="app-dialog-shell" id="accessibilityDialog" hidden>
+    <div class="app-dialog-backdrop" data-app-dialog-close="accessibility"></div>
+    <section class="app-dialog accessibility-dialog" role="dialog" aria-modal="true" aria-labelledby="accessibilityDialogTitle">
+      <div class="app-dialog-head">
+        <div>
+          <p class="small-label">DISPLAY & ACCESSIBILITY</p>
+          <h2 id="accessibilityDialogTitle">Make the interface easier to use</h2>
+          <p>These preferences affect this device only and are saved locally.</p>
+        </div>
+        <button class="app-dialog-close" type="button" data-app-dialog-close="accessibility" aria-label="Close accessibility dialog">×</button>
+      </div>
+
+      <div class="accessibility-settings">
+        <fieldset class="accessibility-setting">
+          <legend>Text size</legend>
+          <div class="segmented-control" id="textScaleControl">
+            <button type="button" data-text-scale="100">100%</button>
+            <button type="button" data-text-scale="115">115%</button>
+            <button type="button" data-text-scale="130">130%</button>
+          </div>
+        </fieldset>
+
+        <label class="accessibility-toggle">
+          <input type="checkbox" id="a11yReadableFont">
+          <span><strong>More readable system font</strong><small>Switches to Verdana / Arial with wider letterforms.</small></span>
+        </label>
+
+        <label class="accessibility-toggle">
+          <input type="checkbox" id="a11yHighContrast">
+          <span><strong>Higher contrast</strong><small>Strengthens text, borders and controls.</small></span>
+        </label>
+
+        <label class="accessibility-toggle">
+          <input type="checkbox" id="a11ySpacious">
+          <span><strong>More line & paragraph spacing</strong><small>Adds breathing room in longer instructions and exercises.</small></span>
+        </label>
+
+        <label class="accessibility-toggle">
+          <input type="checkbox" id="a11yUnderlineLinks">
+          <span><strong>Underline text links</strong><small>Makes links easier to distinguish without relying on colour.</small></span>
+        </label>
+
+        <label class="accessibility-toggle">
+          <input type="checkbox" id="a11yReduceMotion">
+          <span><strong>Reduce motion</strong><small>Removes smooth scrolling and most transitions.</small></span>
+        </label>
+      </div>
+
+      <div class="accessibility-actions">
+        <button class="secondary-button" id="resetAccessibilityBtn" type="button">Reset accessibility settings</button>
+        <button class="primary-button" type="button" data-app-dialog-close="accessibility">Done</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="app-toast" id="appToast" role="status" aria-live="polite" hidden></div>
+
   <footer>
     <p>English, Back on Track · Personal professional-English programme</p>
-    <p>No account · No tracking · Diagnostic data stays in this browser.</p>
+    <p>No account · No tracking · Local progress · Offline-capable app.</p>
   </footer>
   <script src="app.js"></script>
 </body>
