@@ -670,7 +670,7 @@ function openTrainingModule(key){
 
       <article class="interactive-stage">
         <div class="stage-heading"><div><p class="small-label">2 · NOTICE</p><h3>See how effective cyber English works</h3></div><span class="focus-pill">Diagnostic gap: ${focus.g}</span></div>
-        <div class="language-bank"><h4>Reusable language</h4>${m.language.map(x=>`<div class="language-item">${x}</div>`).join('')}</div>
+        <div class="language-bank"><h4>Reusable language</h4>${m.language.map(x=>`<div class="language-item"><span>${x}</span><button class="inline-save-btn" type="button" data-save-phrase="${encodeURIComponent(x)}" data-source-module="${key}">+ Phrasebook</button></div>`).join('')}</div>
         <p class="focus-explainer"><strong>Accuracy focus:</strong> ${m.grammar}</p>
         ${renderQuestionSet(a.notice,`notice-${key}`)}
         <button class="secondary-button" id="checkNoticeBtn" type="button">Check this stage</button>
@@ -718,6 +718,7 @@ function openTrainingModule(key){
   document.getElementById('lessonWorkspace').hidden=false; document.getElementById('personalPlanGrid').hidden=true;
   document.getElementById('completeModuleBtn').addEventListener('click',()=>completeTrainingModule(key));
   bindInteractiveModule(key);
+  bindInlinePhraseButtons();
   document.getElementById('lessonWorkspace').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function completeTrainingModule(key){
@@ -741,6 +742,305 @@ document.querySelectorAll('#my-plan [data-go="diagnostic"]').forEach(btn=>btn.ad
 
 // Upgrade saved V2 diagnostic results into the V3 roadmap without changing the diagnostic itself.
 try{const saved=JSON.parse(localStorage.getItem('ebackontrack-v2'));if(saved?.results&&saved?.details){renderTrainingPlan(saved.results,saved.details);}}catch(e){}
+
+
+
+// V6 · Phrasebook, flashcards & spaced review
+const phrasebookItems = [
+  {id:"soc-alert-triggered",category:"SOC & Alerts",phrase:"The alert was triggered by…",definition:"Use this to state the event or behaviour that caused a detection rule to fire.",fr:"L’alerte a été déclenchée par…",example:"The alert was triggered by repeated failed logins from an unfamiliar IP address."},
+  {id:"soc-at-this-stage",category:"SOC & Alerts",phrase:"At this stage, we have evidence of…, but no indication of…",definition:"Separate confirmed evidence from what has not been observed.",fr:"À ce stade, nous avons des éléments indiquant…, mais aucun signe de…",example:"At this stage, we have evidence of credential use, but no indication of lateral movement."},
+  {id:"soc-could-consistent",category:"SOC & Alerts",phrase:"This could be consistent with…",definition:"Introduce a possible interpretation without presenting it as confirmed.",fr:"Cela pourrait correspondre à…",example:"This could be consistent with credential stuffing, although we still need to verify the source."},
+  {id:"soc-rule-out",category:"SOC & Alerts",phrase:"We still need to rule out…",definition:"Say that an alternative explanation must still be eliminated.",fr:"Nous devons encore exclure…",example:"We still need to rule out legitimate administrative activity."},
+  {id:"soc-appears-unusual",category:"SOC & Alerts",phrase:"The activity appears unusual because…",definition:"Explain why behaviour looks suspicious while keeping appropriate caution.",fr:"L’activité semble inhabituelle parce que…",example:"The activity appears unusual because the account has never logged in from that region before."},
+  {id:"soc-next-step",category:"SOC & Alerts",phrase:"The next step is to verify whether…",definition:"State the next investigative check clearly.",fr:"L’étape suivante consiste à vérifier si…",example:"The next step is to verify whether the PowerShell command was authorised."},
+  {id:"soc-false-positive",category:"SOC & Alerts",phrase:"This is likely to be a false positive.",definition:"Say that a detection probably does not represent malicious activity.",fr:"Il s’agit probablement d’un faux positif.",example:"The events match the approved scanner schedule, so this is likely to be a false positive."},
+  {id:"soc-escalate",category:"SOC & Alerts",phrase:"We are escalating this due to the potential impact.",definition:"Explain why a case is being passed to a higher response level.",fr:"Nous faisons remonter cet incident en raison de son impact potentiel.",example:"We are escalating this due to the potential impact on privileged accounts."},
+
+  {id:"inc-detected",category:"Incidents",phrase:"We detected suspicious activity at approximately…",definition:"Open an incident update with a clear time reference.",fr:"Nous avons détecté une activité suspecte vers…",example:"We detected suspicious activity at approximately 09:20 UTC."},
+  {id:"inc-disabled",category:"Incidents",phrase:"The account has been temporarily disabled as a precaution.",definition:"Describe a containment action and explain that it is precautionary.",fr:"Le compte a été temporairement désactivé par mesure de précaution.",example:"The account has been temporarily disabled as a precaution while we review the sign-ins."},
+  {id:"inc-so-far",category:"Incidents",phrase:"So far, we have found no evidence of…",definition:"Report a negative finding while making clear that the investigation is still ongoing.",fr:"Jusqu’à présent, nous n’avons trouvé aucun élément indiquant…",example:"So far, we have found no evidence of data exfiltration."},
+  {id:"inc-currently-reviewing",category:"Incidents",phrase:"We are currently reviewing…",definition:"State an investigation activity that is in progress now.",fr:"Nous sommes actuellement en train d’examiner…",example:"We are currently reviewing identity and endpoint telemetry."},
+  {id:"inc-next-update",category:"Incidents",phrase:"We will provide the next update once…",definition:"Set a clear condition for the next communication.",fr:"Nous ferons un nouveau point dès que…",example:"We will provide the next update once the log review is complete."},
+  {id:"inc-isolated",category:"Incidents",phrase:"The endpoint has already been isolated.",definition:"Report a completed containment action with a current result.",fr:"Le terminal a déjà été isolé.",example:"The endpoint has already been isolated from the network."},
+  {id:"inc-outstanding",category:"Incidents",phrase:"The main outstanding point is…",definition:"Identify the most important unresolved item in a handover.",fr:"Le principal point restant à traiter est…",example:"The main outstanding point is whether the token was used on any other system."},
+  {id:"inc-keep-posted",category:"Incidents",phrase:"We’ll keep you posted.",definition:"Promise concise ongoing updates in a natural professional way.",fr:"Nous vous tiendrons informé.",example:"The investigation is still active and we’ll keep you posted as soon as we have new findings."},
+
+  {id:"ti-consistent",category:"Threat Intelligence",phrase:"The observed activity is consistent with…",definition:"Compare behaviour with known patterns without claiming attribution.",fr:"L’activité observée correspond à…",example:"The observed activity is consistent with techniques seen in previous phishing-led intrusions."},
+  {id:"ti-overlap",category:"Threat Intelligence",phrase:"The TTPs overlap with those previously associated with…",definition:"Describe similarities between techniques without overstating certainty.",fr:"Les TTP se recoupent avec ceux précédemment associés à…",example:"The TTPs overlap with those previously associated with the campaign."},
+  {id:"ti-no-attribution",category:"Threat Intelligence",phrase:"This does not by itself confirm attribution.",definition:"Warn that one piece of evidence is not sufficient to identify an actor.",fr:"Cela ne suffit pas, à lui seul, à confirmer l’attribution.",example:"The IP has been used before by the group, but this does not by itself confirm attribution."},
+  {id:"ti-indicators",category:"Threat Intelligence",phrase:"We have observed indicators including…",definition:"Introduce concrete technical indicators in a briefing.",fr:"Nous avons observé des indicateurs tels que…",example:"We have observed indicators including the domain, file hash and command-line pattern."},
+  {id:"ti-most-likely",category:"Threat Intelligence",phrase:"Based on the available evidence, the most likely explanation is…",definition:"State a current assessment while showing that it depends on evidence.",fr:"Sur la base des éléments disponibles, l’explication la plus probable est…",example:"Based on the available evidence, the most likely explanation is credential theft."},
+  {id:"ti-low-confidence",category:"Threat Intelligence",phrase:"We assess this with low confidence.",definition:"State explicitly that an intelligence judgement has limited confidence.",fr:"Nous évaluons cette hypothèse avec un faible niveau de confiance.",example:"We assess this attribution with low confidence because only one indicator overlaps."},
+
+  {id:"risk-increases",category:"Risk",phrase:"The vulnerability increases the risk because…",definition:"Connect a technical weakness to the reason it matters.",fr:"La vulnérabilité augmente le risque parce que…",example:"The vulnerability increases the risk because the service is internet-facing and remotely exploitable."},
+  {id:"risk-no-exploitation",category:"Risk",phrase:"There is currently no evidence that it has been exploited.",definition:"Distinguish the existence of a vulnerability from confirmed exploitation.",fr:"Nous n’avons actuellement aucun élément indiquant qu’elle a été exploitée.",example:"The flaw is critical, but there is currently no evidence that it has been exploited here."},
+  {id:"risk-likelihood-depends",category:"Risk",phrase:"The likelihood depends on…",definition:"Explain the factors that affect probability.",fr:"La probabilité dépend de…",example:"The likelihood depends on exposure, access controls and whether exploit code is available."},
+  {id:"risk-impact",category:"Risk",phrase:"The potential impact would be…",definition:"Describe what could happen if the risk materialised.",fr:"L’impact potentiel serait…",example:"The potential impact would be loss of administrative access and service disruption."},
+  {id:"risk-recommendation",category:"Risk",phrase:"Our recommendation is to prioritise remediation because…",definition:"Link a recommendation directly to the assessed risk.",fr:"Nous recommandons de donner la priorité à la remédiation parce que…",example:"Our recommendation is to prioritise remediation because the affected service is externally exposed."},
+  {id:"risk-immediate-reduced",category:"Risk",phrase:"The immediate risk has been reduced, but…",definition:"Reassure without implying that the incident or risk is fully resolved.",fr:"Le risque immédiat a été réduit, mais…",example:"The immediate risk has been reduced, but we still need to complete the investigation."},
+
+  {id:"client-simple-terms",category:"Clients",phrase:"In simple terms…",definition:"Signal that you are translating technical information into plain English.",fr:"En termes simples…",example:"In simple terms, the account behaved in a way we would not normally expect."},
+  {id:"client-current-assessment",category:"Clients",phrase:"Our current assessment is that…",definition:"Present a provisional conclusion that may evolve with new evidence.",fr:"Notre évaluation actuelle est que…",example:"Our current assessment is that the activity was contained before it spread."},
+  {id:"client-what-we-know",category:"Clients",phrase:"What we know at this point is…",definition:"Structure an update around confirmed facts.",fr:"Ce que nous savons à ce stade, c’est que…",example:"What we know at this point is that one privileged account was used from a new location."},
+  {id:"client-not-confirmed",category:"Clients",phrase:"We have not confirmed…",definition:"Say clearly that a suspected event or impact has not been established.",fr:"Nous n’avons pas confirmé…",example:"We have not confirmed any access to sensitive data."},
+  {id:"client-doesnt-mean",category:"Clients",phrase:"That does not necessarily mean that…",definition:"Correct an overly strong interpretation without sounding dismissive.",fr:"Cela ne signifie pas nécessairement que…",example:"A critical vulnerability does not necessarily mean that the system has been compromised."},
+  {id:"client-written-update",category:"Clients",phrase:"We’ll send you a written update by…",definition:"Close an update with a concrete communication commitment.",fr:"Nous vous enverrons un point écrit d’ici…",example:"We’ll send you a written update by 16:00 UTC."},
+
+  {id:"meet-jump-in",category:"Meetings",phrase:"Sorry to jump in, but can I clarify one point?",definition:"Interrupt politely to check an important detail.",fr:"Désolé de vous interrompre, mais puis-je clarifier un point ?",example:"Sorry to jump in, but can I clarify one point about the affected accounts?"},
+  {id:"meet-think",category:"Meetings",phrase:"Let me think that through for a second.",definition:"Buy a short amount of thinking time naturally.",fr:"Laissez-moi y réfléchir une seconde.",example:"Let me think that through for a second — there are two possible explanations."},
+  {id:"meet-follow",category:"Meetings",phrase:"I’m not sure I follow.",definition:"Signal that you need clarification without pretending to understand.",fr:"Je ne suis pas sûr de bien suivre.",example:"I’m not sure I follow. Are you referring to the production tenant or the test environment?"},
+  {id:"meet-put-another-way",category:"Meetings",phrase:"Let me put that another way.",definition:"Reformulate your own explanation when the first version was unclear.",fr:"Permettez-moi de le formuler autrement.",example:"Let me put that another way: the alert is serious, but compromise is not confirmed."},
+  {id:"meet-evidence-supports",category:"Meetings",phrase:"I’m not sure the evidence supports that conclusion yet.",definition:"Challenge an assumption diplomatically and evidence-first.",fr:"Je ne suis pas sûr que les éléments disponibles permettent encore de tirer cette conclusion.",example:"I’m not sure the evidence supports that conclusion yet; we only have one matching indicator."},
+  {id:"meet-does-make-sense",category:"Meetings",phrase:"Does that make sense so far?",definition:"Check understanding during a technical explanation.",fr:"Est-ce que c’est clair jusque-là ?",example:"That is why we isolated the host first. Does that make sense so far?"},
+  {id:"meet-say-again",category:"Meetings",phrase:"Could you say that again, please?",definition:"Ask for repetition naturally when you did not catch something.",fr:"Pourriez-vous répéter, s’il vous plaît ?",example:"Sorry, could you say that again, please? I missed the account name."},
+
+  {id:"rem-immediate",category:"Remediation",phrase:"As an immediate containment measure, we recommend…",definition:"Introduce the action that should happen first to limit harm.",fr:"Comme mesure immédiate de confinement, nous recommandons de…",example:"As an immediate containment measure, we recommend disabling the affected session."},
+  {id:"rem-short-term",category:"Remediation",phrase:"In the short term, it would be advisable to…",definition:"Make a professional near-term recommendation without sounding abrupt.",fr:"À court terme, il serait conseillé de…",example:"In the short term, it would be advisable to rotate the exposed credentials."},
+  {id:"rem-recurrence",category:"Remediation",phrase:"To reduce the likelihood of recurrence, you may also want to…",definition:"Suggest a preventive improvement after the immediate fix.",fr:"Pour réduire le risque de récurrence, vous pourriez également…",example:"To reduce the likelihood of recurrence, you may also want to expand MFA coverage."},
+  {id:"rem-fallback",category:"Remediation",phrase:"If this cannot be completed today, we recommend…",definition:"Give a fallback action when the preferred remediation cannot happen immediately.",fr:"Si cela ne peut pas être fait aujourd’hui, nous recommandons de…",example:"If this cannot be completed today, we recommend restricting external access temporarily."},
+  {id:"rem-priority",category:"Remediation",phrase:"The priority should be… because…",definition:"Rank an action and justify why it comes first.",fr:"La priorité devrait être… parce que…",example:"The priority should be credential reset because the account may still be exposed."},
+  {id:"rem-going-forward",category:"Remediation",phrase:"Going forward, we recommend…",definition:"Introduce a lesson learned or longer-term improvement.",fr:"Pour la suite, nous recommandons de…",example:"Going forward, we recommend extending logging retention to support future investigations."}
+  ,{id:"role-monitor",category:"SOC & Alerts",phrase:"We monitor your environment for signs of suspicious activity.",definition:"Explain the continuous monitoring role of the SOC in plain English.",fr:"Nous surveillons votre environnement afin de détecter tout signe d’activité suspecte.",example:"We monitor your environment for signs of suspicious activity across endpoints, identity and network data."}
+  ,{id:"role-assess-alert",category:"SOC & Alerts",phrase:"When an alert is triggered, we first assess whether it requires further investigation.",definition:"Describe the first triage step after a detection.",fr:"Lorsqu’une alerte est déclenchée, nous évaluons d’abord si elle nécessite une investigation plus poussée.",example:"When an alert is triggered, we first assess whether it requires further investigation or can be closed as benign."}
+  ,{id:"role-escalate-case",category:"SOC & Alerts",phrase:"If necessary, we escalate the case and work with the relevant teams.",definition:"Explain escalation and collaboration in a SOC workflow.",fr:"Si nécessaire, nous faisons remonter le cas et travaillons avec les équipes concernées.",example:"If necessary, we escalate the case and work with the incident-response and identity teams."}
+  ,{id:"role-reduce-time",category:"Clients",phrase:"Our role is to reduce the time between detection, investigation and response.",definition:"Summarise the operational value of SOC work for a client.",fr:"Notre rôle est de réduire le délai entre la détection, l’investigation et la réponse.",example:"Our role is to reduce the time between detection, investigation and response so that threats are contained faster."}
+  ,{id:"role-simple-terms-full",category:"Clients",phrase:"In simple terms, we help identify threats early and coordinate the right response.",definition:"Give a non-technical summary of SOC work.",fr:"En termes simples, nous aidons à identifier les menaces rapidement et à coordonner la réponse appropriée.",example:"In simple terms, we help identify threats early and coordinate the right response with your teams."}
+  ,{id:"alert-consistent-ruleout",category:"SOC & Alerts",phrase:"This could be consistent with…, although we still need to rule out…",definition:"Combine a cautious hypothesis with the alternative explanation that still needs checking.",fr:"Cela pourrait correspondre à…, même si nous devons encore exclure…",example:"This could be consistent with malicious scripting, although we still need to rule out authorised administration."}
+  ,{id:"incident-no-exfil-full",category:"Incidents",phrase:"So far, we have found no evidence of data exfiltration.",definition:"Report that exfiltration has not been observed while keeping the investigation open.",fr:"Jusqu’à présent, nous n’avons trouvé aucun élément indiquant une exfiltration de données.",example:"So far, we have found no evidence of data exfiltration, but the review is still ongoing."}
+  ,{id:"handover-came-in",category:"Incidents",phrase:"The alert came in at…",definition:"Start a handover timeline with the time the alert arrived.",fr:"L’alerte est arrivée à…",example:"The alert came in at 08:42 UTC and was assigned to the SOC five minutes later."}
+  ,{id:"handover-checked",category:"Incidents",phrase:"I checked…, which showed…",definition:"Report an investigative action and the evidence it produced.",fr:"J’ai vérifié…, ce qui a montré…",example:"I checked the identity logs, which showed three failed logins followed by one successful login."}
+  ,{id:"handover-ruled-out",category:"Incidents",phrase:"We ruled out…",definition:"State that an investigated hypothesis is no longer considered likely.",fr:"Nous avons exclu…",example:"We ruled out the vulnerability scanner as the source of the activity."}
+  ,{id:"handover-next-analyst",category:"Incidents",phrase:"The next analyst should check…",definition:"Give a precise outstanding action during a shift handover.",fr:"L’analyste suivant devrait vérifier…",example:"The next analyst should check whether the same token was used on any other endpoint."}
+  ,{id:"meeting-run-by",category:"Meetings",phrase:"Could you run that by me again?",definition:"Ask someone to repeat or explain something again in natural spoken English.",fr:"Pourriez-vous me réexpliquer cela ?",example:"Sorry, could you run that by me again? I missed the part about the service account."}
+  ,{id:"meeting-understood",category:"Meetings",phrase:"If I understood correctly, you're asking whether…",definition:"Reformulate a question to confirm that you understood it correctly.",fr:"Si j’ai bien compris, vous demandez si…",example:"If I understood correctly, you're asking whether the account is safe to re-enable."}
+  ,{id:"meeting-no-jump",category:"Meetings",phrase:"I don't want to jump to conclusions, but at this stage…",definition:"Introduce a cautious provisional assessment in a live discussion.",fr:"Je ne veux pas tirer de conclusions hâtives, mais à ce stade…",example:"I don't want to jump to conclusions, but at this stage the activity looks more likely to be legitimate."}
+  ,{id:"meeting-come-back",category:"Meetings",phrase:"Can I come back to that once we've checked the logs?",definition:"Postpone an answer responsibly until the evidence has been checked.",fr:"Puis-je revenir sur ce point une fois que nous aurons vérifié les journaux ?",example:"Can I come back to that once we've checked the logs? I don't want to give you an inaccurate answer."}
+  ,{id:"pir-began",category:"Incidents",phrase:"The incident began when…",definition:"Introduce the starting event in a post-incident timeline.",fr:"L’incident a commencé lorsque…",example:"The incident began when a privileged account authenticated from an unusual location."}
+  ,{id:"pir-factor",category:"Risk",phrase:"One contributing factor was…",definition:"Identify a factor that helped an incident happen without assigning simplistic blame.",fr:"L’un des facteurs contributifs était…",example:"One contributing factor was incomplete MFA coverage on legacy accounts."}
+  ,{id:"pir-meant",category:"Risk",phrase:"This meant that…",definition:"Explain the consequence of a condition or contributing factor.",fr:"Cela signifiait que…",example:"This meant that the attacker could reuse the credential without an additional authentication challenge."}
+  ,{id:"pir-hindsight",category:"Remediation",phrase:"In hindsight, we could have…",definition:"Discuss an improvement identified after the incident in a constructive way.",fr:"Avec le recul, nous aurions pu…",example:"In hindsight, we could have escalated the identity anomalies earlier."}
+  ,{id:"pir-lesson",category:"Remediation",phrase:"A key lesson learned is…",definition:"State a clear takeaway from a post-incident review.",fr:"L’un des principaux enseignements est…",example:"A key lesson learned is to expand MFA coverage to all privileged accounts."}
+
+];
+
+const phrasebookStateKey="ebackontrack-v6-phrasebook";
+const phrasebookDay=24*60*60*1000;
+const phrasebookStarterIds=[
+  "soc-at-this-stage","soc-rule-out","inc-so-far","inc-next-update",
+  "risk-no-exploitation","client-current-assessment","meet-think","rem-priority"
+];
+
+function loadPhraseState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(phrasebookStateKey))||{};
+    return {items:raw.items||{}};
+  }catch(e){return {items:{}};}
+}
+function savePhraseState(state){
+  localStorage.setItem(phrasebookStateKey,JSON.stringify(state));
+}
+function findPhraseItem(id){return phrasebookItems.find(x=>x.id===id);}
+function findPhraseByText(text){
+  const norm=(text||"").trim().replace(/\s+/g," ").toLowerCase();
+  return phrasebookItems.find(x=>x.phrase.trim().replace(/\s+/g," ").toLowerCase()===norm);
+}
+function addPhrase(id){
+  const item=findPhraseItem(id); if(!item)return;
+  const state=loadPhraseState();
+  if(!state.items[id]){
+    state.items[id]={addedAt:Date.now(),favorite:false,level:0,due:Date.now(),reviews:0,lastRating:null};
+  }
+  savePhraseState(state);renderPhrasebook();updateInlinePhraseButtons();
+}
+function removePhrase(id){
+  const state=loadPhraseState(); delete state.items[id]; savePhraseState(state);
+  renderPhrasebook();updateInlinePhraseButtons();
+}
+function togglePhraseFavourite(id){
+  const state=loadPhraseState();
+  if(!state.items[id])state.items[id]={addedAt:Date.now(),favorite:true,level:0,due:Date.now(),reviews:0,lastRating:null};
+  else state.items[id].favorite=!state.items[id].favorite;
+  savePhraseState(state);renderPhrasebook();updateInlinePhraseButtons();
+}
+function phraseStats(){
+  const state=loadPhraseState(),now=Date.now(),ids=Object.keys(state.items);
+  return {
+    saved:ids.length,
+    due:ids.filter(id=>(state.items[id].due||0)<=now).length,
+    active:ids.filter(id=>(state.items[id].level||0)>=3).length
+  };
+}
+function renderPhrasebookStats(){
+  const s=phraseStats();
+  const a=document.getElementById("phraseSavedCount"),b=document.getElementById("phraseDueCount"),c=document.getElementById("phraseActiveCount");
+  if(a)a.textContent=s.saved;if(b)b.textContent=s.due;if(c)c.textContent=s.active;
+}
+function phraseSpeak(text){
+  if(!("speechSynthesis" in window))return;
+  const u=new SpeechSynthesisUtterance(text);u.lang="en-GB";u.rate=.95;
+  speechSynthesis.cancel();speechSynthesis.speak(u);
+}
+function renderPhrasebook(){
+  const library=document.getElementById("phraseLibrary");if(!library)return;
+  const state=loadPhraseState();
+  const search=(document.getElementById("phraseSearch")?.value||"").toLowerCase().trim();
+  const cat=document.getElementById("phraseCategory")?.value||"all";
+  const favOnly=!!document.getElementById("phraseFavouritesOnly")?.checked;
+  const filtered=phrasebookItems.filter(item=>{
+    const saved=state.items[item.id];
+    const hay=[item.phrase,item.definition,item.fr,item.example,item.category].join(" ").toLowerCase();
+    return (!search||hay.includes(search)) && (cat==="all"||item.category===cat) && (!favOnly||saved?.favorite);
+  });
+  const count=document.getElementById("phraseResultCount");if(count)count.textContent=`${filtered.length} phrase${filtered.length===1?"":"s"}`;
+  library.innerHTML=filtered.length?filtered.map(item=>{
+    const saved=state.items[item.id],fav=!!saved?.favorite;
+    return `<article class="phrase-card ${saved?"saved":""}">
+      <div class="phrase-card-top">
+        <span class="module-tag">${item.category}</span>
+        <div class="phrase-card-actions">
+          <button class="icon-button phrase-speak" type="button" data-phrase-speak="${item.id}" aria-label="Hear phrase">🔊</button>
+          <button class="icon-button phrase-fav ${fav?"is-favourite":""}" type="button" data-phrase-fav="${item.id}" aria-label="Favourite">${fav?"★":"☆"}</button>
+        </div>
+      </div>
+      <h4>${item.phrase}</h4>
+      <div class="phrase-definition">${item.definition}</div>
+      <div class="phrase-fr">${item.fr}</div>
+      <div class="phrase-example"><strong>At work:</strong> ${item.example}</div>
+      <button class="phrase-add ${saved?"remove":""}" type="button" data-phrase-add="${item.id}">${saved?"✓ Saved · remove":"+ Add to my vocabulary"}</button>
+    </article>`;
+  }).join(""):`<div class="phrase-no-results">No phrase matches these filters.</div>`;
+  library.querySelectorAll("[data-phrase-add]").forEach(btn=>btn.addEventListener("click",()=>{
+    const id=btn.dataset.phraseAdd,state=loadPhraseState();state.items[id]?removePhrase(id):addPhrase(id);
+  }));
+  library.querySelectorAll("[data-phrase-fav]").forEach(btn=>btn.addEventListener("click",()=>togglePhraseFavourite(btn.dataset.phraseFav)));
+  library.querySelectorAll("[data-phrase-speak]").forEach(btn=>btn.addEventListener("click",()=>{const x=findPhraseItem(btn.dataset.phraseSpeak);if(x)phraseSpeak(x.phrase);}));
+  renderPhrasebookStats();renderReviewCard();
+}
+function duePhraseIds(){
+  const state=loadPhraseState(),now=Date.now();
+  return Object.keys(state.items).filter(id=>(state.items[id].due||0)<=now && findPhraseItem(id))
+    .sort((a,b)=>(state.items[a].due||0)-(state.items[b].due||0));
+}
+let currentReviewPhraseId=null;
+function renderReviewCard(){
+  const state=loadPhraseState(),due=duePhraseIds();
+  const card=document.getElementById("reviewCard"),empty=document.getElementById("reviewEmpty"),queue=document.getElementById("reviewQueueText");
+  if(!card||!empty)return;
+  if(!due.length){
+    currentReviewPhraseId=null;card.hidden=true;empty.hidden=false;
+    if(queue)queue.textContent=Object.keys(state.items).length?"Nothing is due right now. Good — come back later or add more language.":"Save a few phrases to start your review queue.";
+    return;
+  }
+  if(!currentReviewPhraseId||!due.includes(currentReviewPhraseId))currentReviewPhraseId=due[0];
+  const item=findPhraseItem(currentReviewPhraseId);
+  card.hidden=false;empty.hidden=true;
+  document.getElementById("reviewCategory").textContent=item.category;
+  document.getElementById("reviewFront").textContent=item.phrase;
+  document.getElementById("reviewBack").innerHTML=`<strong>${item.fr}</strong><span>${item.definition}</span><span><em>${item.example}</em></span>`;
+  document.getElementById("reviewBack").hidden=true;
+  document.getElementById("reviewRatings").hidden=true;
+  document.getElementById("reviewRevealBtn").hidden=false;
+  if(queue)queue.textContent=`${due.length} phrase${due.length===1?" is":"s are"} due now.`;
+}
+function reviewPhrase(id,rating){
+  const state=loadPhraseState(),entry=state.items[id];if(!entry)return;
+  const now=Date.now();
+  entry.reviews=(entry.reviews||0)+1;entry.lastRating=rating;
+  if(rating==="again"){
+    entry.level=Math.max(0,(entry.level||0)-1);
+    entry.due=now+10*60*1000;
+  }else if(rating==="difficult"){
+    entry.level=Math.max(1,entry.level||1);
+    entry.due=now+phrasebookDay;
+  }else{
+    entry.level=Math.min(5,(entry.level||0)+1);
+    const intervals=[0,2,4,7,14,30];
+    entry.due=now+(intervals[entry.level]||30)*phrasebookDay;
+  }
+  savePhraseState(state);currentReviewPhraseId=null;renderPhrasebookStats();renderReviewCard();renderPhrasebook();
+}
+function updateInlinePhraseButtons(){
+  const state=loadPhraseState();
+  document.querySelectorAll("[data-save-phrase]").forEach(btn=>{
+    const text=decodeURIComponent(btn.dataset.savePhrase||"");
+    const found=findPhraseByText(text);
+    if(found&&state.items[found.id]){
+      btn.textContent="✓ Saved";btn.disabled=true;
+    }else{
+      btn.textContent="+ Phrasebook";btn.disabled=false;
+    }
+  });
+}
+function bindInlinePhraseButtons(){
+  document.querySelectorAll("[data-save-phrase]").forEach(btn=>{
+    if(btn.dataset.phraseBound==="1")return;
+    btn.dataset.phraseBound="1";
+    btn.addEventListener("click",()=>{
+      const text=decodeURIComponent(btn.dataset.savePhrase||"");
+      const found=findPhraseByText(text);
+      if(found){addPhrase(found.id);}
+      else{
+        btn.textContent="Not in library yet";
+        setTimeout(()=>{btn.textContent="+ Phrasebook";},1600);
+      }
+    });
+  });
+  updateInlinePhraseButtons();
+}
+function renderActiveChallenge(){
+  const box=document.getElementById("activeChallenge");if(!box)return;
+  const state=loadPhraseState(),ids=Object.keys(state.items).filter(id=>findPhraseItem(id));
+  if(!ids.length){
+    box.innerHTML=`<span class="active-placeholder">Save at least one phrase first.</span>`;return;
+  }
+  const id=ids[Math.floor(Math.random()*ids.length)],item=findPhraseItem(id);
+  const scenarios={
+    "SOC & Alerts":"You are qualifying a new alert for another analyst.",
+    "Incidents":"You are giving a 60-second incident update to a client.",
+    "Threat Intelligence":"You are briefing a client without overclaiming attribution.",
+    "Risk":"A non-technical manager asks why this issue matters.",
+    "Clients":"You need to explain an uncertain situation clearly and calmly.",
+    "Meetings":"You are in a live call and need to keep the conversation moving.",
+    "Remediation":"You are recommending the next action and explaining its priority."
+  };
+  box.innerHTML=`<div class="active-task">
+    <span class="module-tag">${item.category}</span>
+    <div class="target-phrase">${item.phrase}</div>
+    <div class="active-scenario"><strong>Situation:</strong> ${scenarios[item.category]}</div>
+    <p>Speak for 30–45 seconds and use the target phrase naturally. Do not write the sentence first.</p>
+    <button class="secondary-button" type="button" id="activeSpeakModelBtn">🔊 Hear the phrase</button>
+    <label><input type="checkbox" id="activeUsedCheck"><span>I used the phrase without reading it.</span></label>
+  </div>`;
+  document.getElementById("activeSpeakModelBtn")?.addEventListener("click",()=>phraseSpeak(item.phrase));
+}
+function initPhrasebook(){
+  if(!document.getElementById("phrasebook"))return;
+  ["phraseSearch","phraseCategory","phraseFavouritesOnly"].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.addEventListener(id==="phraseSearch"?"input":"change",renderPhrasebook);
+  });
+  document.getElementById("addStarterPhrasesBtn")?.addEventListener("click",()=>{
+    const state=loadPhraseState();
+    phrasebookStarterIds.forEach(id=>{if(!state.items[id])state.items[id]={addedAt:Date.now(),favorite:false,level:0,due:Date.now(),reviews:0,lastRating:null};});
+    savePhraseState(state);renderPhrasebook();updateInlinePhraseButtons();
+  });
+  document.getElementById("reviewRevealBtn")?.addEventListener("click",()=>{
+    document.getElementById("reviewBack").hidden=false;
+    document.getElementById("reviewRatings").hidden=false;
+    document.getElementById("reviewRevealBtn").hidden=true;
+  });
+  document.getElementById("reviewSpeakBtn")?.addEventListener("click",()=>{
+    const x=findPhraseItem(currentReviewPhraseId);if(x)phraseSpeak(x.phrase);
+  });
+  document.querySelectorAll("[data-review-rating]").forEach(btn=>btn.addEventListener("click",()=>{
+    if(currentReviewPhraseId)reviewPhrase(currentReviewPhraseId,btn.dataset.reviewRating);
+  }));
+  document.getElementById("activePhraseBtn")?.addEventListener("click",renderActiveChallenge);
+  renderPhrasebook();renderActiveChallenge();
+}
+document.addEventListener("click",e=>{
+  const btn=e.target.closest?.("[data-save-phrase]");
+  if(btn)setTimeout(bindInlinePhraseButtons,0);
+});
 
 
 // V5 · Listening Lab
@@ -992,3 +1292,6 @@ document.getElementById("resetLabBtn")?.addEventListener("click",()=>{
   renderLab();
 });
 renderLab();
+
+
+initPhrasebook();

@@ -14,6 +14,7 @@
     </a>
     <div class="top-actions">
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
+      <a class="nav-pill" href="#phrasebook">Phrasebook</a>
       <span class="role-chip">Cybersecurity · SOC</span>
       <button class="ghost-button" id="resetBtn" type="button">Reset diagnostic</button>
     </div>
@@ -362,6 +363,106 @@
           <li><strong>2 min</strong> — check transcript only now.</li>
           <li><strong>3 min</strong> — retell the message aloud from your notes.</li>
         </ol>
+      </div>
+    </section>
+
+
+    <section class="section phrasebook-section" id="phrasebook">
+      <div class="section-heading phrasebook-heading">
+        <div>
+          <p class="eyebrow">MY CYBER ENGLISH PHRASEBOOK</p>
+          <h2>Save the language you want to be able to use.</h2>
+          <p>Build an active bank of useful chunks from SOC work, incident response, risk, clients and meetings. The aim is not to collect vocabulary: it is to make the right wording available when you need to speak.</p>
+        </div>
+        <div class="phrase-stats">
+          <div><strong id="phraseSavedCount">0</strong><span>saved</span></div>
+          <div><strong id="phraseDueCount">0</strong><span>to review</span></div>
+          <div><strong id="phraseActiveCount">0</strong><span>active</span></div>
+        </div>
+      </div>
+
+      <div class="phrasebook-toolbar">
+        <label class="phrase-search">
+          <span>Search</span>
+          <input type="search" id="phraseSearch" placeholder="e.g. lateral movement, risk, keep you posted">
+        </label>
+        <label>
+          <span>Category</span>
+          <select id="phraseCategory">
+            <option value="all">All categories</option>
+            <option value="SOC & Alerts">SOC & Alerts</option>
+            <option value="Incidents">Incidents</option>
+            <option value="Threat Intelligence">Threat Intelligence</option>
+            <option value="Risk">Risk</option>
+            <option value="Clients">Clients</option>
+            <option value="Meetings">Meetings</option>
+            <option value="Remediation">Remediation</option>
+          </select>
+        </label>
+        <label class="toggle-label">
+          <input type="checkbox" id="phraseFavouritesOnly">
+          <span>Favourites only</span>
+        </label>
+        <button class="secondary-button" id="addStarterPhrasesBtn" type="button">+ Add starter pack</button>
+      </div>
+
+      <div class="phrasebook-layout">
+        <div class="phrase-library-panel">
+          <div class="phrase-panel-head">
+            <div>
+              <p class="small-label">PHRASE LIBRARY</p>
+              <h3>Useful chunks, not isolated words</h3>
+            </div>
+            <span id="phraseResultCount" class="question-count">0 phrases</span>
+          </div>
+          <div id="phraseLibrary" class="phrase-library"></div>
+        </div>
+
+        <aside class="review-panel">
+          <div class="review-panel-head">
+            <p class="small-label">SPACED REVIEW</p>
+            <h3>What needs to come back today?</h3>
+            <p id="reviewQueueText">Save a few phrases to start your review queue.</p>
+          </div>
+
+          <div id="reviewEmpty" class="review-empty">
+            <strong>No phrase due right now.</strong>
+            <span>Use the library or add the starter pack.</span>
+          </div>
+
+          <div id="reviewCard" class="flashcard" hidden>
+            <div class="flashcard-meta">
+              <span id="reviewCategory" class="module-tag"></span>
+              <button class="icon-button" id="reviewSpeakBtn" type="button" aria-label="Hear this phrase">🔊</button>
+            </div>
+            <div class="flashcard-front" id="reviewFront"></div>
+            <button class="reveal-button" id="reviewRevealBtn" type="button">Reveal meaning</button>
+            <div id="reviewBack" class="flashcard-back" hidden></div>
+            <div id="reviewRatings" class="review-ratings" hidden>
+              <button type="button" data-review-rating="again">Again</button>
+              <button type="button" data-review-rating="difficult">Difficult</button>
+              <button type="button" data-review-rating="gotit">Got it</button>
+            </div>
+            <p class="microcopy">Your choice sets when this phrase comes back. Review data stays on this device.</p>
+          </div>
+        </aside>
+      </div>
+
+      <div class="active-vocab-section">
+        <div class="active-vocab-copy">
+          <p class="small-label">PASSIVE → ACTIVE</p>
+          <h3>Words I understand but never use</h3>
+          <p>Recognition is not enough. Pick one saved phrase and use it aloud in a realistic cyber situation without reading a prepared sentence.</p>
+          <button class="primary-button" id="activePhraseBtn" type="button">Give me a phrase →</button>
+        </div>
+        <div class="active-challenge" id="activeChallenge">
+          <span class="active-placeholder">Your speaking challenge will appear here.</span>
+        </div>
+      </div>
+
+      <div class="privacy-note">
+        <strong>Private by design.</strong>
+        <span>Your phrasebook, favourites and review schedule use local browser storage only. Nothing is sent to a server.</span>
       </div>
     </section>
 
