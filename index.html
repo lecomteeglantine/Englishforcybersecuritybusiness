@@ -17,6 +17,7 @@
       <a class="nav-pill" href="#progress-check">Progress</a>
       <a class="nav-pill" href="#listening-lab">Listening Lab</a>
       <a class="nav-pill" href="#speaking-lab">Speaking Lab</a>
+      <a class="nav-pill" href="#writing-lab">Writing Lab</a>
       <a class="nav-pill" href="#grammar-lab">Grammar Repair</a>
       <a class="nav-pill" href="#phrasebook">Phrasebook</a>
       <span class="role-chip">Cybersecurity · SOC</span>
@@ -27,7 +28,7 @@
   <main>
     <section class="hero first-visit-hero" id="home">
       <div class="hero-copy">
-        <p class="eyebrow">ROMAIN'S PROFESSIONAL ENGLISH PROGRAMME</p>
+        <p class="eyebrow">PERSONALISED PROFESSIONAL ENGLISH PROGRAMME</p>
         <h1>Make English a tool,<br><span>not an obstacle.</span></h1>
         <p class="lead">A diagnostic and training programme built around the English you need to monitor threats, investigate incidents, assess risk and communicate clearly with international clients and security teams.</p>
         <div class="hero-actions">
@@ -58,7 +59,7 @@
         <div class="dashboard-hero-card">
           <div class="dashboard-greeting">
             <p class="eyebrow">DAILY DASHBOARD</p>
-            <h2 id="dashboardGreeting">Good afternoon, Romain.</h2>
+            <h2 id="dashboardGreeting">Good afternoon.</h2>
             <p id="dashboardSubcopy">Today, the site will turn your priorities into a short, realistic session.</p>
           </div>
 
@@ -643,6 +644,177 @@
 
 
 
+
+    <section class="section writing-lab-section" id="writing-lab">
+      <div class="section-heading writing-lab-heading">
+        <div>
+          <p class="eyebrow">WRITING LAB</p>
+          <h2>Write clearly when the situation is technical.</h2>
+          <p>Short professional writing for the situations that actually matter: incident updates, client emails, handovers, risk explanations, remediation recommendations and meeting follow-ups.</p>
+        </div>
+        <div class="writing-lab-stats">
+          <div><strong id="writingAttemptCount">0</strong><span>attempts</span></div>
+          <div><strong id="writingTaskTypes">0 / 5</strong><span>task types</span></div>
+          <div><strong id="writingAvgLength">—</strong><span>average words</span></div>
+        </div>
+      </div>
+
+      <div class="writing-principles">
+        <article>
+          <span>01</span>
+          <strong>Lead with the message</strong>
+          <p>Do not make the client dig through technical detail to discover what matters.</p>
+        </article>
+        <article>
+          <span>02</span>
+          <strong>Separate facts from uncertainty</strong>
+          <p>Confirmed finding, current hypothesis and next step should never blur into one claim.</p>
+        </article>
+        <article>
+          <span>03</span>
+          <strong>Write for the reader</strong>
+          <p>Use the technical term only when it helps. Otherwise explain the operational meaning.</p>
+        </article>
+      </div>
+
+      <div class="writing-task-selector">
+        <div>
+          <p class="small-label">CHOOSE A REAL-WORLD TASK</p>
+          <h3>Five formats worth being able to write quickly</h3>
+        </div>
+        <button class="secondary-button" id="surpriseWritingBtn" type="button">🎲 Surprise me</button>
+      </div>
+
+      <div class="writing-mode-grid" id="writingModeGrid">
+        <button class="writing-mode-card" type="button" data-writing-mode="incidentEmail">
+          <span class="writing-mode-number">01</span>
+          <strong>Client incident email</strong>
+          <small>90–130 words</small>
+          <p>State what happened, what has been done, what remains uncertain and when the next update will come.</p>
+        </button>
+        <button class="writing-mode-card" type="button" data-writing-mode="handover">
+          <span class="writing-mode-number">02</span>
+          <strong>SOC handover</strong>
+          <small>60–100 words</small>
+          <p>Transfer the case without forcing the next analyst to reconstruct the timeline.</p>
+        </button>
+        <button class="writing-mode-card" type="button" data-writing-mode="risk">
+          <span class="writing-mode-number">03</span>
+          <strong>Risk in plain English</strong>
+          <small>70–110 words</small>
+          <p>Explain severity, likelihood and business impact to a non-technical reader.</p>
+        </button>
+        <button class="writing-mode-card" type="button" data-writing-mode="remediation">
+          <span class="writing-mode-number">04</span>
+          <strong>Remediation recommendation</strong>
+          <small>70–110 words</small>
+          <p>Prioritise actions, justify them and avoid sounding either vague or alarmist.</p>
+        </button>
+        <button class="writing-mode-card" type="button" data-writing-mode="followup">
+          <span class="writing-mode-number">05</span>
+          <strong>Meeting follow-up</strong>
+          <small>80–120 words</small>
+          <p>Summarise decisions, owners, actions and deadlines after an international call.</p>
+        </button>
+      </div>
+
+      <div class="writing-workspace" id="writingWorkspace" hidden>
+        <div class="writing-workspace-top">
+          <button class="back-link" id="closeWritingBtn" type="button">← Choose another writing task</button>
+          <span class="speaking-status-pill" id="writingStatusPill">Drafting</span>
+        </div>
+
+        <div class="writing-hero">
+          <div>
+            <p class="small-label" id="writingModeLabel">CLIENT INCIDENT EMAIL</p>
+            <h2 id="writingPromptTitle">Write the message</h2>
+            <p id="writingScenario"></p>
+          </div>
+          <div class="writing-target-box">
+            <span>Target length</span>
+            <strong id="writingTargetLength">90–130</strong>
+            <small>words</small>
+          </div>
+        </div>
+
+        <div class="writing-work-grid">
+          <article class="writing-stage">
+            <p class="small-label">1 · BUILD THE MESSAGE</p>
+            <h3>Use a structure before you write sentences</h3>
+            <div id="writingStructure" class="writing-structure"></div>
+          </article>
+
+          <article class="writing-stage">
+            <p class="small-label">2 · USEFUL LANGUAGE</p>
+            <h3>Borrow chunks, do not translate word by word</h3>
+            <div id="writingPhraseBank" class="writing-phrase-bank"></div>
+          </article>
+
+          <article class="writing-stage full writing-draft-stage">
+            <p class="small-label">3 · WRITE</p>
+            <div class="writing-draft-head">
+              <h3>Your draft</h3>
+              <div class="writing-live-metrics">
+                <span><strong id="writingWordCount">0</strong> words</span>
+                <span><strong id="writingSentenceCount">0</strong> sentences</span>
+              </div>
+            </div>
+            <textarea id="writingDraft" rows="10" placeholder="Write your message here."></textarea>
+            <div id="writingLengthFeedback" class="writing-length-feedback"></div>
+          </article>
+
+          <article class="writing-stage">
+            <p class="small-label">4 · REPAIR ONE SENTENCE</p>
+            <h3 id="writingRepairPrompt">Choose the clearest professional wording</h3>
+            <div id="writingRepairOptions" class="activity-options writing-repair-options"></div>
+            <button class="secondary-button" id="checkWritingRepairBtn" type="button">Check wording</button>
+            <div id="writingRepairFeedback" class="activity-summary" aria-live="polite"></div>
+          </article>
+
+          <article class="writing-stage">
+            <p class="small-label">5 · SELF-EDIT</p>
+            <h3>Read it once as the client</h3>
+            <div id="writingChecklist" class="writing-checklist"></div>
+          </article>
+
+          <article class="writing-stage full writing-model-stage">
+            <div class="writing-model-head">
+              <div>
+                <p class="small-label">6 · COMPARE AFTER WRITING</p>
+                <h3>Reveal a model only after you have drafted</h3>
+              </div>
+              <button class="secondary-button" id="revealWritingModelBtn" type="button">Reveal model answer</button>
+            </div>
+            <div id="writingModelAnswer" class="writing-model-answer" hidden></div>
+            <p class="microcopy">The model is one good solution, not the only correct answer. Compare structure, caution, concision and useful chunks.</p>
+          </article>
+
+          <article class="writing-stage full writing-complete-stage">
+            <p class="small-label">7 · LOG THE ATTEMPT</p>
+            <h3>Save the practice, not the text</h3>
+            <p>The site stores the task type, date, word count and self-check score locally. Your written text itself is not stored.</p>
+            <button class="primary-button" id="logWritingAttemptBtn" type="button">Log this writing attempt</button>
+            <button class="secondary-button" id="newWritingPromptBtn" type="button">New prompt, same format</button>
+            <div id="writingAttemptFeedback" class="activity-summary" aria-live="polite"></div>
+          </article>
+        </div>
+      </div>
+
+      <div class="writing-routine">
+        <div>
+          <p class="small-label">10-MINUTE WRITING ROUTINE</p>
+          <h3>Enough to build automatic professional habits</h3>
+        </div>
+        <ol>
+          <li><strong>1 min</strong> — identify the reader and the purpose.</li>
+          <li><strong>2 min</strong> — note 4–5 facts in message order.</li>
+          <li><strong>4 min</strong> — draft without polishing every sentence.</li>
+          <li><strong>2 min</strong> — self-edit for clarity, uncertainty and next steps.</li>
+          <li><strong>1 min</strong> — compare with the model and steal one useful chunk.</li>
+        </ol>
+      </div>
+    </section>
+
     <section class="section grammar-lab-section" id="grammar-lab">
       <div class="section-heading grammar-lab-heading">
         <div>
@@ -661,7 +833,7 @@
         <div>
           <p class="small-label">NO DIAGNOSTIC DATA YET</p>
           <h3>We can train grammar now, but personalisation starts after the diagnostic.</h3>
-          <p>The lab will use a sensible starter queue until Romain completes the diagnostic.</p>
+          <p>The lab will use a sensible starter queue until you complete the diagnostic.</p>
         </div>
         <a class="primary-button" href="#diagnostic">Open diagnostic →</a>
       </div>

@@ -662,3 +662,89 @@ body.returning-user .dashboard-section{padding-top:34px}
   .smart-home-row{display:block}
   .smart-home-overview{display:inline-block;margin-top:9px}
 }
+
+
+/* V12 · Writing Lab */
+.writing-lab-section{background:#f7f9f9}
+.writing-lab-heading{display:flex;justify-content:space-between;gap:34px;align-items:flex-end;max-width:none}
+.writing-lab-heading>div:first-child{max-width:880px}
+.writing-lab-stats{display:grid;grid-template-columns:repeat(3,1fr);min-width:390px;border:1px solid var(--line);border-radius:20px;overflow:hidden;background:#fff;box-shadow:var(--shadow)}
+.writing-lab-stats div{padding:18px;text-align:center;border-right:1px solid var(--line)}
+.writing-lab-stats div:last-child{border-right:0}
+.writing-lab-stats strong,.writing-lab-stats span{display:block}
+.writing-lab-stats strong{font-size:1.5rem}
+.writing-lab-stats span{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:850}
+.writing-principles{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin:28px 0 36px}
+.writing-principles article{border:1px solid var(--line);border-radius:18px;padding:18px;background:#fff}
+.writing-principles article>span{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:#e8f4f1;color:var(--accent-dark);font-weight:900;margin-bottom:11px}
+.writing-principles strong{display:block;font-size:1.04rem;margin-bottom:5px}
+.writing-principles p{margin:0;color:var(--muted);font-size:.9rem}
+.writing-task-selector{display:flex;justify-content:space-between;gap:18px;align-items:end;margin-bottom:15px}
+.writing-task-selector h3{font-size:1.45rem;margin:4px 0 0}
+.writing-mode-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.writing-mode-card{appearance:none;text-align:left;border:1px solid var(--line);background:#fff;border-radius:20px;padding:18px;min-height:225px;color:var(--ink);transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease}
+.writing-mode-card:hover{transform:translateY(-3px);border-color:#9bcfc4;box-shadow:0 12px 30px rgba(19,34,56,.07)}
+.writing-mode-card strong,.writing-mode-card small,.writing-mode-card p{display:block}
+.writing-mode-card strong{font-size:1.05rem;margin:17px 0 4px}
+.writing-mode-card small{color:var(--accent);font-weight:850}
+.writing-mode-card p{color:var(--muted);font-size:.88rem;margin-top:11px}
+.writing-mode-number{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;background:var(--ink);color:#fff;font-weight:900}
+.writing-workspace{margin-top:26px;border:1px solid var(--line);background:#fff;border-radius:28px;padding:24px;box-shadow:var(--shadow)}
+.writing-workspace-top{display:flex;justify-content:space-between;gap:15px;align-items:center;margin-bottom:17px}
+.writing-hero{display:grid;grid-template-columns:1.3fr .7fr;gap:20px;background:var(--ink);color:#fff;border-radius:22px;padding:25px}
+.writing-hero .small-label{color:#91d1c5}
+.writing-hero h2{font-size:2rem;margin:4px 0 8px}
+.writing-hero p{color:#dce4eb}
+.writing-target-box{align-self:start;border:1px solid rgba(255,255,255,.15);border-radius:17px;padding:18px;text-align:center}
+.writing-target-box span,.writing-target-box strong,.writing-target-box small{display:block}
+.writing-target-box span{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:#aec0cd;font-weight:850}
+.writing-target-box strong{font-size:2rem;margin:6px 0}
+.writing-target-box small{color:#d9e2e8}
+.writing-work-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+.writing-stage{border:1px solid var(--line);border-radius:19px;padding:20px;background:#fff}
+.writing-stage.full{grid-column:1/-1}
+.writing-stage h3{font-size:1.2rem;margin:4px 0 10px}
+.writing-structure{display:grid;gap:8px}
+.writing-structure-step{display:grid;grid-template-columns:34px 1fr;gap:10px;align-items:start;background:var(--pale);border-radius:12px;padding:10px}
+.writing-structure-step span:first-child{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#fff;color:var(--accent-dark);font-weight:900}
+.writing-structure-step strong,.writing-structure-step small{display:block}
+.writing-structure-step small{color:var(--muted);margin-top:2px}
+.writing-phrase-bank{display:grid;gap:8px}
+.writing-phrase{display:flex;justify-content:space-between;gap:10px;align-items:center;background:var(--pale);border-radius:12px;padding:10px 11px}
+.writing-phrase span{font-size:.9rem;font-weight:800}
+.writing-phrase button{border:0;background:#fff;border-radius:999px;padding:6px 9px;font-weight:850;color:var(--accent-dark)}
+.writing-draft-head{display:flex;justify-content:space-between;gap:18px;align-items:end}
+.writing-live-metrics{display:flex;gap:8px;flex-wrap:wrap}
+.writing-live-metrics span{border-radius:999px;background:var(--pale);padding:7px 10px;font-size:.78rem;color:var(--muted)}
+.writing-live-metrics strong{color:var(--ink)}
+#writingDraft{width:100%;border:1px solid var(--line);border-radius:14px;padding:14px;resize:vertical;margin-top:10px}
+.writing-length-feedback{margin-top:8px;font-size:.87rem;font-weight:800;color:var(--muted)}
+.writing-length-feedback.good{color:var(--accent-dark)}
+.writing-length-feedback.short,.writing-length-feedback.long{color:#8a651b}
+.writing-checklist{display:grid;gap:8px}
+.writing-checklist label{display:flex;gap:9px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:10px 11px;font-weight:750}
+.writing-checklist input{margin-top:4px}
+.writing-model-head{display:flex;justify-content:space-between;gap:18px;align-items:center}
+.writing-model-answer{margin-top:13px;border-left:4px solid var(--accent);background:#f4f8f7;border-radius:0 14px 14px 0;padding:16px;white-space:pre-line}
+.writing-complete-stage .secondary-button{margin-left:8px}
+.writing-routine{display:grid;grid-template-columns:.8fr 1.2fr;gap:24px;background:var(--ink);color:#fff;border-radius:24px;padding:25px;margin-top:25px}
+.writing-routine .small-label{color:#91d1c5}
+.writing-routine h3{margin:4px 0}
+.writing-routine ol{margin:0;padding-left:22px}
+.writing-routine li{padding:4px 0;color:#d8e0e9}
+@media(max-width:1100px){
+  .writing-mode-grid{grid-template-columns:repeat(3,1fr)}
+}
+@media(max-width:900px){
+  .writing-lab-heading{display:block}
+  .writing-lab-stats{min-width:0;max-width:460px;margin-top:20px}
+  .writing-principles,.writing-work-grid,.writing-hero,.writing-routine{grid-template-columns:1fr}
+  .writing-stage.full{grid-column:auto}
+}
+@media(max-width:650px){
+  .writing-mode-grid,.writing-principles{grid-template-columns:1fr}
+  .writing-task-selector,.writing-model-head,.writing-draft-head{display:block}
+  .writing-task-selector .secondary-button,.writing-model-head .secondary-button{margin-top:12px}
+  .writing-live-metrics{margin-top:10px}
+  .writing-complete-stage .secondary-button{margin:9px 0 0}
+}

@@ -487,10 +487,11 @@ function checkpointReadiness(){
   const plan=planStorage();
   const completedModules=plan.completed.length;
   const speaking=loadSpeakingState().attempts;
+  const writing=loadWritingState().attempts.length;
   const grammar=loadGrammarRepairState().completed.length;
   const listening=listeningLabCompletedCount();
-  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
-  return {completedModules,speaking,grammar,listening,evidence};
+  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
+  return {completedModules,speaking,writing,grammar,listening,evidence};
 }
 function renderProgressSkillComparison(state){
   const target=document.getElementById("progressSkillComparison");if(!target)return;
@@ -567,6 +568,7 @@ function renderProgressCheck(){
   document.getElementById("checkpointReadinessBody").innerHTML=`
     <div class="readiness-item"><span>Personalised modules completed</span><strong>${ready.completedModules}</strong></div>
     <div class="readiness-item"><span>Speaking Lab attempts</span><strong>${ready.speaking}</strong></div>
+    <div class="readiness-item"><span>Writing Lab attempts</span><strong>${ready.writing}</strong></div>
     <div class="readiness-item"><span>Grammar Repair units completed</span><strong>${ready.grammar}</strong></div>
     <div class="readiness-item"><span>Listening Lab tasks completed</span><strong>${ready.listening} / 5</strong></div>`;
 }
@@ -1248,9 +1250,9 @@ function lastSevenKeys(){
 }
 function greetingForNow(){
   const h=new Date().getHours();
-  if(h<12) return "Good morning, Romain.";
-  if(h<18) return "Good afternoon, Romain.";
-  return "Good evening, Romain.";
+  if(h<12) return "Good morning.";
+  if(h<18) return "Good afternoon.";
+  return "Good evening.";
 }
 function dashboardMessage(seed){
   const lines=[
@@ -1303,6 +1305,7 @@ function dashboardReasonCards(results,details){
     cards.push({title:`Main priority: ${weak.label}`,text:`Your diagnostic currently gives the lowest score to ${weak.label.toLowerCase()}, so today's routine gives it extra space.`});
     if(results.listening<75) cards.push({title:"Listening needs structured work",text:"That usually means gist, decoding and note-taking rather than simply 'more English audio'."});
     if(results.speaking<75) cards.push({title:"Speaking needs activation",text:"The goal is to move useful language from recognition to spontaneous use."});
+    if(results.writing<75) cards.push({title:"Writing needs consolidation",text:"Short client-facing writing is now trained through incident updates, handovers, risk explanations and follow-ups."});
     if(results.grammar<75 || results.pronunciation<75) cards.push({title:"Accuracy still matters",text:"But it is built into cyber tasks, not treated as isolated textbook drilling."});
     const detailsWeak = details?.cyber ? tagWeaknesses(details.cyber,1)[0]?.name : null;
     if(detailsWeak) cards.push({title:"Cyber focus",text:`Your current plan is also shaped by ${detailsWeak.toLowerCase()}.`});
@@ -1345,6 +1348,9 @@ function buildRoutineTasks(minutes){
   }
   if(results.speaking < 75 || loadSpeakingState().attempts < 5){
     add({id:"speaking",tag:"SPEAKING",title:"Speaking Lab",desc:`Do one ${results.speaking < 65 ? "quick response or explain-it-simply" : "incident update or client roleplay"} task.`,duration:durations[2],anchor:"#speaking-lab",cta:"Open Speaking Lab"});
+  }
+  if(results.writing < 75 || loadWritingState().attempts.length < 3){
+    add({id:"writing",tag:"WRITING",title:"Writing Lab",desc:`Do one short ${results.writing < 65 ? "client incident email or handover" : "risk explanation or meeting follow-up"} and self-edit it before comparing with the model.`,duration:durations[Math.min(tasks.length,durations.length-1)],anchor:"#writing-lab",cta:"Open Writing Lab"});
   }
   if(nextModule){
     add({id:"module",tag:"PLAN",title:`Continue: ${nextModule.module.title}`,desc:`Resume your personalised plan. Current progress: ${nextModule.stages} / 5 stages in this module.`,duration:durations[3],anchor:"#my-plan",cta:"Open my plan"});
@@ -1402,6 +1408,7 @@ function renderQuickLinks(){
     {anchor:"#my-plan", title:"My personalised plan", sub:"Resume the selected cyber modules"},
     {anchor:"#listening-lab", title:"Listening Lab", sub:"Gist, decoding, dictation and note-taking"},
     {anchor:"#speaking-lab", title:"Speaking Lab", sub:"Quick responses, client questions and roleplay"},
+    {anchor:"#writing-lab", title:"Writing Lab", sub:"Client emails, handovers, risk and remediation"},
     {anchor:"#grammar-lab", title:"Grammar Repair", sub:"Adaptive repair based on diagnostic weak points"},
     {anchor:"#progress-check", title:"Progress Check", sub:"Fresh checkpoint and baseline comparison"},
     {anchor:"#phrasebook", title:"Phrasebook", sub:"Chunks, favourites and spaced review"}
@@ -1514,6 +1521,400 @@ function initDashboard(){
 }
 
 
+
+
+
+
+// V12 · Writing Lab
+const writingStateKey="ebackontrack-v12-writing";
+
+const writingModes={
+  incidentEmail:{
+    label:"CLIENT INCIDENT EMAIL",
+    title:"Give a clear incident update without overclaiming",
+    min:90,max:130,
+    prompts:[
+      "A high-severity alert was triggered by a privileged account signing in from an unfamiliar location at 09:18 UTC. The active session has been revoked and the account password reset. So far, there is no evidence of data exfiltration. Identity and endpoint logs are still being reviewed. The client should receive the next update by 12:00 UTC.",
+      "Suspicious PowerShell activity was detected on two endpoints. Both devices have been isolated. Execution is confirmed, but persistence and lateral movement have not been confirmed. The investigation continues and the next client update is planned in two hours.",
+      "An alert identified repeated failed authentication attempts followed by one successful login. The user does not recognise the successful login. Sessions have been revoked and MFA re-registration is in progress. A wider identity review has started."
+    ],
+    structure:[
+      ["1","Lead with the event","What was detected and when?"],
+      ["2","State action already taken","Containment first, without unnecessary detail."],
+      ["3","Separate known from unknown","What have you confirmed? What are you still checking?"],
+      ["4","Set the next expectation","What happens next and when will the client hear from you?"]
+    ],
+    phrases:["We detected suspicious activity at approximately…","The account has been temporarily disabled as a precaution.","So far, we have found no evidence of…","We are currently reviewing…","We will provide the next update once…"],
+    repair:{
+      q:"Which sentence is the clearest client-facing update?",
+      a:["We have a very bad high severity thing but maybe nothing happened.","A high-severity alert was triggered, but we have not confirmed any impact at this stage.","There is definitely no compromise because we did not see data theft.","We are investigating all the cyber stuff currently."],
+      c:1,
+      explain:"It states the event and keeps the level of certainty accurate."
+    },
+    checklist:[
+      "The first sentence tells the reader why I am writing.",
+      "I clearly separated confirmed facts from what is still being investigated.",
+      "I stated what action has already been taken.",
+      "I gave a concrete next step or next update time.",
+      "I avoided unnecessary jargon or explained it."
+    ],
+    model:`Subject: Update on high-severity authentication alert
+
+We detected suspicious activity on a privileged account at approximately 09:18 UTC. The active session has been revoked and the account password has been reset as a precaution.
+
+So far, we have found no evidence of data exfiltration. We are currently reviewing identity and endpoint logs to determine whether any additional activity occurred.
+
+We will provide the next update by 12:00 UTC, or earlier if the investigation identifies any significant new findings.`
+  },
+  handover:{
+    label:"SOC HANDOVER",
+    title:"Transfer the case without losing the investigation",
+    min:60,max:100,
+    prompts:[
+      "Alert at 07:42 UTC for unusual PowerShell on workstation FIN-WS-044. User confirmed they were not running administrative scripts. Endpoint isolated at 08:03. EDR shows execution from a downloaded archive. No persistence identified yet. Next analyst must review email telemetry and check whether the attachment reached other users.",
+      "Multiple failed logins against svc-backup followed by a successful authentication from a new IP. Sessions revoked. Source IP also appears in two low-confidence threat-intelligence feeds. No endpoint activity identified yet. Outstanding: confirm with infrastructure team whether any maintenance used the account.",
+      "Possible phishing-led credential theft. User clicked a link and entered credentials. Password reset and MFA sessions revoked. Mailbox rules checked: one suspicious forwarding rule removed. Outstanding: search for the same sender and URL across the tenant."
+    ],
+    structure:[
+      ["1","Time + trigger","When did the alert arrive and why?"],
+      ["2","Evidence","What has actually been confirmed?"],
+      ["3","Actions","What has already been done?"],
+      ["4","Outstanding","What exactly should the next analyst do?"]
+    ],
+    phrases:["The alert came in at…","I checked…, which showed…","We ruled out…","The main outstanding point is…","The next analyst should check…"],
+    repair:{
+      q:"Which handover line is most operationally useful?",
+      a:["Still investigating, please continue.","The main outstanding point is whether the attachment was delivered to other users; check email telemetry next.","This alert looks interesting.","Maybe phishing. Good luck."],
+      c:1,
+      explain:"A good handover identifies the unresolved question and the next concrete action."
+    },
+    checklist:[
+      "I included the trigger and a useful time reference.",
+      "I reported evidence rather than speculation.",
+      "I listed actions already completed.",
+      "I gave the next analyst a precise outstanding task.",
+      "The handover can be scanned quickly."
+    ],
+    model:`07:42 UTC — Alert for unusual PowerShell activity on FIN-WS-044. The user confirmed they were not running administrative scripts. The endpoint was isolated at 08:03.
+
+EDR shows that the process was launched from a downloaded archive. No persistence has been identified so far.
+
+The main outstanding point is the delivery method. The next analyst should review email telemetry and check whether the same attachment was sent to other users.`
+  },
+  risk:{
+    label:"RISK IN PLAIN ENGLISH",
+    title:"Explain why something matters without turning it into a CVE lecture",
+    min:70,max:110,
+    prompts:[
+      "A critical remote-code-execution vulnerability affects software used by the client. The affected service is not internet-facing and administrative access is restricted. No exploitation has been observed. A patch is available and can be deployed tonight.",
+      "A legacy privileged account does not have MFA. It is used only by one internal automation service, but its password has not been rotated recently. Explain why the risk should still be addressed.",
+      "A vulnerability scanner reports a high-severity weakness on several endpoints, but all affected systems are isolated from the internet. Explain severity versus actual exposure."
+    ],
+    structure:[
+      ["1","Name the weakness","What is the issue in simple terms?"],
+      ["2","Explain likelihood","What makes exploitation more or less likely here?"],
+      ["3","Explain impact","What could realistically happen?"],
+      ["4","Give the practical conclusion","What should be prioritised?"]
+    ],
+    phrases:["The vulnerability increases the risk because…","There is currently no evidence that it has been exploited.","The likelihood depends on…","The potential impact would be…","Our recommendation is to prioritise remediation because…"],
+    repair:{
+      q:"Which explanation best separates severity from current exposure?",
+      a:["The CVSS score is critical, therefore compromise is certain.","The vulnerability is severe, but the current exposure is reduced because the service is not internet-facing.","The vulnerability is high so the risk is always exactly high.","There is no risk because we have not seen exploitation."],
+      c:1,
+      explain:"Technical severity and actual likelihood/exposure are related but not identical."
+    },
+    checklist:[
+      "I explained the issue without assuming technical knowledge.",
+      "I separated severity from likelihood/exposure.",
+      "I described a realistic impact rather than a dramatic worst case.",
+      "I gave a proportionate recommendation.",
+      "I avoided saying that vulnerability automatically means compromise."
+    ],
+    model:`The vulnerability is technically severe because it could allow remote code execution. However, the current likelihood of exploitation is reduced because the affected service is not internet-facing and administrative access is restricted.
+
+There is currently no evidence that the vulnerability has been exploited in this environment. The potential impact would nevertheless be significant if an attacker gained access.
+
+Our recommendation is to deploy the available patch during tonight's maintenance window and continue monitoring until remediation is complete.`
+  },
+  remediation:{
+    label:"REMEDIATION RECOMMENDATION",
+    title:"Prioritise actions and explain why",
+    min:70,max:110,
+    prompts:[
+      "A privileged account may have been exposed. Active sessions have already been revoked. Recommend immediate, short-term and longer-term actions.",
+      "A vulnerable internet-facing service cannot be patched until tomorrow. Recommend a temporary mitigation and what should happen after the patch.",
+      "An incident showed that several legacy admin accounts are outside MFA coverage. Recommend a remediation sequence without suggesting that everything must be fixed simultaneously."
+    ],
+    structure:[
+      ["1","Immediate action","What reduces the current risk now?"],
+      ["2","Priority action","What should happen next and why?"],
+      ["3","Fallback if delayed","What if the preferred fix cannot happen yet?"],
+      ["4","Longer-term improvement","What reduces recurrence?"]
+    ],
+    phrases:["As an immediate containment measure, we recommend…","In the short term, it would be advisable to…","The priority should be… because…","If this cannot be completed today, we recommend…","Going forward, we recommend…"],
+    repair:{
+      q:"Which recommendation sounds proportionate and professional?",
+      a:["You must rebuild the whole environment immediately.","The priority should be to rotate the exposed credentials because the account may still be usable by an attacker.","Maybe change something when possible.","We guarantee this action will prevent all future incidents."],
+      c:1,
+      explain:"It prioritises one action and links it to a concrete risk."
+    },
+    checklist:[
+      "I clearly ranked the actions.",
+      "I explained why the first priority comes first.",
+      "I included a fallback if the preferred action cannot happen immediately.",
+      "I separated immediate containment from longer-term improvement.",
+      "I avoided absolute guarantees."
+    ],
+    model:`As an immediate containment measure, we recommend keeping all active sessions for the affected account revoked.
+
+The priority should then be to rotate the credentials because they may still be known to an attacker. In the short term, it would also be advisable to review recent authentication activity for signs of reuse.
+
+If the credential rotation cannot be completed immediately, restrict the account's access temporarily. Going forward, we recommend reviewing privileged-account MFA coverage and rotation policies.`
+  },
+  followup:{
+    label:"MEETING FOLLOW-UP",
+    title:"Turn a call into clear actions, owners and deadlines",
+    min:80,max:120,
+    prompts:[
+      "After a client call: the SOC will send the IOC list by 15:00; the client identity team will confirm whether the unusual login was expected; the endpoint team will keep one device isolated; everyone will reconvene tomorrow at 09:30 UTC.",
+      "After an incident-review call: client will patch the exposed service tonight; SOC will maintain increased monitoring for 48 hours; cloud team will review access logs; final written summary due Friday.",
+      "After a risk meeting: infrastructure team will restrict external access today; application owner will test the patch tomorrow morning; SOC will verify whether exploitation indicators are present; decision on production deployment by 14:00."
+    ],
+    structure:[
+      ["1","One-line summary","What was agreed overall?"],
+      ["2","Action + owner","Who does what?"],
+      ["3","Deadline","When is each key action due?"],
+      ["4","Next contact","When do you reconvene or report?"]
+    ],
+    phrases:["To summarise today's call…","We agreed that…","Our team will…","Could you please confirm…","We'll send you a written update by…"],
+    repair:{
+      q:"Which follow-up line gives the clearest ownership?",
+      a:["The logs need checking soon.","The cloud team will review the access logs by 12:00 UTC tomorrow.","Someone should probably look at the logs.","Access logs are a topic."],
+      c:1,
+      explain:"Useful follow-ups make action, owner and deadline explicit."
+    },
+    checklist:[
+      "I summarised the overall outcome before the detailed actions.",
+      "Each important action has a clear owner.",
+      "I included deadlines where they matter.",
+      "I stated the next meeting or update point.",
+      "The email is easy to scan."
+    ],
+    model:`Subject: Follow-up and actions from today's incident call
+
+To summarise today's call, we agreed on the following actions:
+
+- Our SOC team will send the current IOC list by 15:00 UTC.
+- Your identity team will confirm whether the unusual login was expected.
+- The endpoint team will keep the affected device isolated while the review continues.
+
+We will reconvene tomorrow at 09:30 UTC to review the identity findings and any additional endpoint evidence.
+
+Please let us know if the identity review identifies any new activity before then.`
+  }
+};
+
+function loadWritingState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(writingStateKey))||{};
+    return {attempts:Array.isArray(raw.attempts)?raw.attempts:[]};
+  }catch(e){return {attempts:[]};}
+}
+function saveWritingState(state){
+  localStorage.setItem(writingStateKey,JSON.stringify(state));
+}
+function writingStats(){
+  const state=loadWritingState();
+  const types=new Set(state.attempts.map(x=>x.mode));
+  const avg=state.attempts.length?Math.round(state.attempts.reduce((s,x)=>s+(x.words||0),0)/state.attempts.length):null;
+  return {attempts:state.attempts.length,types:types.size,avg};
+}
+function renderWritingStats(){
+  const s=writingStats();
+  const a=document.getElementById("writingAttemptCount");
+  const b=document.getElementById("writingTaskTypes");
+  const c=document.getElementById("writingAvgLength");
+  if(a)a.textContent=s.attempts;
+  if(b)b.textContent=`${s.types} / 5`;
+  if(c)c.textContent=s.avg===null?"—":s.avg;
+}
+let currentWritingMode=null;
+let currentWritingPromptIndex=0;
+let currentWritingRepairPassed=false;
+
+function writingMetrics(text){
+  const clean=(text||"").trim();
+  const words=clean?clean.split(/\s+/).filter(Boolean).length:0;
+  const sentences=clean?(clean.match(/[.!?]+(?=\s|$)/g)||[]).length:0;
+  return {words,sentences:Math.max(sentences, clean?1:0)};
+}
+function renderWritingLiveMetrics(){
+  if(!currentWritingMode)return;
+  const mode=writingModes[currentWritingMode];
+  const metrics=writingMetrics(document.getElementById("writingDraft").value);
+  document.getElementById("writingWordCount").textContent=metrics.words;
+  document.getElementById("writingSentenceCount").textContent=metrics.sentences;
+  const fb=document.getElementById("writingLengthFeedback");
+  if(metrics.words===0){
+    fb.className="writing-length-feedback";
+    fb.textContent=`Target: ${mode.min}–${mode.max} words.`;
+  }else if(metrics.words<mode.min){
+    fb.className="writing-length-feedback short";
+    fb.textContent=`${mode.min-metrics.words} words below the suggested minimum. Make sure the message contains the operational essentials.`;
+  }else if(metrics.words>mode.max){
+    fb.className="writing-length-feedback long";
+    fb.textContent=`${metrics.words-mode.max} words above the suggested maximum. Look for detail the reader does not need.`;
+  }else{
+    fb.className="writing-length-feedback good";
+    fb.textContent="Good length for this format ✓";
+  }
+}
+function renderWritingPhrases(mode){
+  const bank=document.getElementById("writingPhraseBank");
+  bank.innerHTML=mode.phrases.map(phrase=>{
+    const found=findPhraseByText(phrase);
+    const saved=found&&loadPhraseState().items[found.id];
+    return `<div class="writing-phrase">
+      <span>${phrase}</span>
+      ${found?`<button type="button" data-writing-save-phrase="${found.id}">${saved?"✓ Saved":"+ Phrasebook"}</button>`:""}
+    </div>`;
+  }).join("");
+  bank.querySelectorAll("[data-writing-save-phrase]").forEach(btn=>btn.addEventListener("click",()=>{
+    addPhrase(btn.dataset.writingSavePhrase);
+    renderWritingPhrases(writingModes[currentWritingMode]);
+  }));
+}
+function renderWritingMode(modeId,newPrompt=false){
+  const mode=writingModes[modeId];if(!mode)return;
+  currentWritingMode=modeId;
+  if(newPrompt)currentWritingPromptIndex=(currentWritingPromptIndex+1)%mode.prompts.length;
+  else currentWritingPromptIndex=Math.floor(Math.random()*mode.prompts.length);
+  currentWritingRepairPassed=false;
+
+  document.getElementById("writingModeLabel").textContent=mode.label;
+  document.getElementById("writingPromptTitle").textContent=mode.title;
+  document.getElementById("writingScenario").textContent=mode.prompts[currentWritingPromptIndex];
+  document.getElementById("writingTargetLength").textContent=`${mode.min}–${mode.max}`;
+  document.getElementById("writingStructure").innerHTML=mode.structure.map(([n,title,sub])=>`
+    <div class="writing-structure-step"><span>${n}</span><div><strong>${title}</strong><small>${sub}</small></div></div>`).join("");
+  renderWritingPhrases(mode);
+
+  document.getElementById("writingRepairPrompt").textContent=mode.repair.q;
+  document.getElementById("writingRepairOptions").innerHTML=mode.repair.a.map((opt,i)=>`
+    <label><input type="radio" name="writing-repair-${modeId}" value="${i}"><span>${opt}</span></label>`).join("");
+  document.getElementById("writingRepairFeedback").textContent="";
+  document.getElementById("writingRepairFeedback").className="activity-summary";
+
+  document.getElementById("writingChecklist").innerHTML=mode.checklist.map((x,i)=>`
+    <label><input type="checkbox" data-writing-check="${i}"><span>${x}</span></label>`).join("");
+  document.getElementById("writingDraft").value="";
+  document.getElementById("writingModelAnswer").hidden=true;
+  document.getElementById("writingModelAnswer").textContent=mode.model;
+  document.getElementById("revealWritingModelBtn").disabled=false;
+  document.getElementById("revealWritingModelBtn").textContent="Reveal model answer";
+  document.getElementById("writingAttemptFeedback").textContent="";
+  document.getElementById("writingAttemptFeedback").className="activity-summary";
+  document.getElementById("writingStatusPill").textContent="Drafting";
+  renderWritingLiveMetrics();
+}
+function openWritingMode(modeId){
+  renderWritingMode(modeId,false);
+  document.getElementById("writingWorkspace").hidden=false;
+  document.getElementById("writingModeGrid").hidden=true;
+  document.querySelector(".writing-task-selector").hidden=true;
+  document.getElementById("writingWorkspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeWritingMode(){
+  document.getElementById("writingWorkspace").hidden=true;
+  document.getElementById("writingModeGrid").hidden=false;
+  document.querySelector(".writing-task-selector").hidden=false;
+  currentWritingMode=null;
+  document.getElementById("writing-lab").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function checkWritingRepair(){
+  if(!currentWritingMode)return;
+  const mode=writingModes[currentWritingMode];
+  const picked=document.querySelector(`input[name="writing-repair-${currentWritingMode}"]:checked`);
+  const fb=document.getElementById("writingRepairFeedback");
+  if(!picked){
+    fb.className="activity-summary neutral";
+    fb.textContent="Choose a sentence first.";
+    return;
+  }
+  const ok=Number(picked.value)===mode.repair.c;
+  currentWritingRepairPassed=ok;
+  fb.className=`activity-summary ${ok?"correct":"wrong"}`;
+  fb.textContent=ok?`Correct ✓ ${mode.repair.explain}`:`Best option: “${mode.repair.a[mode.repair.c]}” — ${mode.repair.explain}`;
+}
+function revealWritingModel(){
+  if(!currentWritingMode)return;
+  const draft=writingMetrics(document.getElementById("writingDraft").value);
+  const fb=document.getElementById("writingAttemptFeedback");
+  if(draft.words<20){
+    fb.className="activity-summary neutral";
+    fb.textContent="Write your own draft first. The model is deliberately locked until you have actually attempted the task.";
+    return;
+  }
+  document.getElementById("writingModelAnswer").hidden=false;
+  document.getElementById("revealWritingModelBtn").disabled=true;
+  document.getElementById("revealWritingModelBtn").textContent="Model revealed ✓";
+}
+function logWritingAttempt(){
+  if(!currentWritingMode)return;
+  const mode=writingModes[currentWritingMode];
+  const metrics=writingMetrics(document.getElementById("writingDraft").value);
+  const checks=[...document.querySelectorAll("[data-writing-check]")];
+  const checked=checks.filter(x=>x.checked).length;
+  const fb=document.getElementById("writingAttemptFeedback");
+
+  if(metrics.words<30){
+    fb.className="activity-summary neutral";
+    fb.textContent="Write a real draft before logging the attempt.";
+    return;
+  }
+  if(checked<3){
+    fb.className="activity-summary neutral";
+    fb.textContent="Complete the self-edit and check at least three criteria first.";
+    return;
+  }
+  if(!currentWritingRepairPassed){
+    fb.className="activity-summary neutral";
+    fb.textContent="Complete the wording repair task before logging this attempt.";
+    return;
+  }
+
+  const state=loadWritingState();
+  state.attempts.push({
+    date:Date.now(),
+    mode:currentWritingMode,
+    words:metrics.words,
+    checks:checked,
+    inRange:metrics.words>=mode.min&&metrics.words<=mode.max
+  });
+  if(state.attempts.length>100)state.attempts=state.attempts.slice(-100);
+  saveWritingState(state);
+  renderWritingStats();
+  document.getElementById("writingStatusPill").textContent="Attempt logged ✓";
+  fb.className="activity-summary correct";
+  fb.textContent=`Attempt logged ✓ ${metrics.words} words · ${checked}/${checks.length} self-edit checks. The draft text itself was not saved.`;
+  if(typeof renderDashboard==="function")renderDashboard();
+  if(typeof renderProgressCheck==="function")renderProgressCheck();
+}
+function initWritingLab(){
+  if(!document.getElementById("writing-lab"))return;
+  document.querySelectorAll("[data-writing-mode]").forEach(btn=>btn.addEventListener("click",()=>openWritingMode(btn.dataset.writingMode)));
+  document.getElementById("surpriseWritingBtn")?.addEventListener("click",()=>{
+    const keys=Object.keys(writingModes);
+    openWritingMode(keys[Math.floor(Math.random()*keys.length)]);
+  });
+  document.getElementById("closeWritingBtn")?.addEventListener("click",closeWritingMode);
+  document.getElementById("writingDraft")?.addEventListener("input",renderWritingLiveMetrics);
+  document.getElementById("checkWritingRepairBtn")?.addEventListener("click",checkWritingRepair);
+  document.getElementById("revealWritingModelBtn")?.addEventListener("click",revealWritingModel);
+  document.getElementById("logWritingAttemptBtn")?.addEventListener("click",logWritingAttempt);
+  document.getElementById("newWritingPromptBtn")?.addEventListener("click",()=>renderWritingMode(currentWritingMode,true));
+  renderWritingStats();
+}
 
 
 // V9 · Grammar Repair Lab
@@ -2860,6 +3261,7 @@ renderLab();
 
 initPhrasebook();
 initSpeakingLab();
+initWritingLab();
 initDashboard();
 initGrammarRepairLab();
 initProgressChecks();
