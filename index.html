@@ -25,25 +25,66 @@
     <button class="mobile-nav-button" id="mobileNavBtn" type="button" aria-expanded="false" aria-controls="topActions">
       <span aria-hidden="true">☰</span><span class="sr-only">Open navigation</span>
     </button>
-    <div class="top-actions" id="topActions">
-      <a class="nav-pill" href="#dashboard">Dashboard</a>
-      <a class="nav-pill" href="#progress-check">Progress</a>
-      <a class="nav-pill" href="#progress-vault">My Data</a>
-      <a class="nav-pill" href="#client-simulator">Client Simulator</a>
-      <a class="nav-pill" href="#work-english-lab">My Work English</a>
-      <a class="nav-pill" href="#resources-hub">Authentic Resources</a>
-      <a class="nav-pill" href="#listening-lab">Listening Lab</a>
-      <a class="nav-pill" href="#speaking-lab">Speaking Lab</a>
-      <a class="nav-pill" href="#pronunciation-lab">Pronunciation</a>
-      <a class="nav-pill" href="#writing-lab">Writing Lab</a>
-      <a class="nav-pill" href="#grammar-lab">Grammar Repair</a>
-      <a class="nav-pill" href="#phrasebook">Phrasebook</a>
-      <span class="role-chip">Cybersecurity · SOC</span>
-      <button class="ghost-button app-utility-button" id="installAppBtn" type="button">Install app</button>
-      <button class="ghost-button app-utility-button" id="accessibilityBtn" type="button" aria-haspopup="dialog">Accessibility</button>
-      <button class="ghost-button" id="resetBtn" type="button">Reset diagnostic</button>
+    <div class="top-actions ux-top-actions" id="topActions">
+      <nav class="ux-primary-nav" aria-label="Main training navigation">
+        <details class="nav-group" data-nav-group="today">
+          <summary><span aria-hidden="true">◉</span>Today</summary>
+          <div class="ux-nav-menu">
+            <a href="#dashboard"><strong>Today</strong><small>Routine · continue where you left off</small></a>
+            <a href="#goal-sprint"><strong>Goals & Sprint</strong><small>5-session adaptive programme</small></a>
+          </div>
+        </details>
+
+        <details class="nav-group" data-nav-group="train">
+          <summary><span aria-hidden="true">↗</span>Train</summary>
+          <div class="ux-nav-menu">
+            <a href="#listening-lab"><strong>Listening</strong><small>Gist · decoding · note-taking</small></a>
+            <a href="#speaking-lab"><strong>Speaking</strong><small>Spontaneous responses · roleplay</small></a>
+            <a href="#pronunciation-lab"><strong>Pronunciation</strong><small>Stress · chunking · intelligibility</small></a>
+            <a href="#writing-lab"><strong>Writing</strong><small>Client emails · handovers</small></a>
+            <a href="#grammar-lab"><strong>Grammar Repair</strong><small>Weak patterns only</small></a>
+            <a href="#phrasebook"><strong>Phrasebook</strong><small>Chunks · spaced review</small></a>
+          </div>
+        </details>
+
+        <details class="nav-group" data-nav-group="simulate">
+          <summary><span aria-hidden="true">◆</span>Simulate</summary>
+          <div class="ux-nav-menu">
+            <a href="#client-simulator"><strong>Client Simulator</strong><small>End-to-end incident call</small></a>
+            <a href="#work-english-lab"><strong>My Work English</strong><small>Anonymised real-work situations</small></a>
+          </div>
+        </details>
+
+        <details class="nav-group" data-nav-group="explore">
+          <summary><span aria-hidden="true">⌁</span>Explore</summary>
+          <div class="ux-nav-menu">
+            <a href="#my-plan"><strong>My personalised plan</strong><small>Operational cyber modules</small></a>
+            <a href="#resources-hub"><strong>Authentic Resources</strong><small>Recent professional cyber English</small></a>
+            <a href="#how-it-works"><strong>Programme overview</strong><small>How the training system works</small></a>
+          </div>
+        </details>
+
+        <details class="nav-group" data-nav-group="progress">
+          <summary><span aria-hidden="true">✓</span>Progress</summary>
+          <div class="ux-nav-menu">
+            <a href="#progress-check"><strong>Progress Check</strong><small>Baseline · checkpoints · re-diagnostic</small></a>
+            <a href="#progress-vault"><strong>My Data & Backup</strong><small>Export · restore · local data</small></a>
+            <a href="#diagnostic"><strong>Diagnostic</strong><small>Initial or full re-diagnostic</small></a>
+            <button class="ux-nav-menu-action" id="resetBtn" type="button"><strong>Reset diagnostic</strong><small>Erase diagnostic and linked progress</small></button>
+          </div>
+        </details>
+      </nav>
+
+      <div class="ux-nav-utilities">
+        <span class="role-chip">Cybersecurity · SOC</span>
+        <button class="ghost-button app-utility-button" id="installAppBtn" type="button" aria-label="Install app">Install</button>
+        <button class="ghost-button app-utility-button" id="accessibilityBtn" type="button" aria-haspopup="dialog">Accessibility</button>
+      </div>
     </div>
   </header>
+  <a class="back-to-today" id="backToToday" href="#dashboard" aria-label="Back to Today">
+    <span aria-hidden="true">↑</span><span>Back to Today</span>
+  </a>
 
   <main id="mainContent" tabindex="-1">
     <section class="hero first-visit-hero" id="home">
@@ -58,7 +99,7 @@
       </div>
 
       <aside class="profile-card">
-        <div class="profile-avatar" aria-hidden="true">R</div>
+        <div class="profile-avatar" aria-hidden="true">EN</div>
         <div>
           <p class="small-label">YOUR TARGET</p>
           <h2>Operational confidence</h2>
@@ -73,6 +114,128 @@
       </aside>
     </section>
 
+
+
+    <section class="section goal-sprint-section" id="goal-sprint">
+      <div class="section-heading goal-sprint-heading">
+        <div>
+          <p class="eyebrow">GOAL MODE · ADAPTIVE WEEKLY SPRINT</p>
+          <h2>Tell the programme what you need English for next.</h2>
+          <p>Choose a concrete goal, the time you can realistically give it and your deadline. The site builds a five-session sprint from your current diagnostic, recent practice and unfinished priorities.</p>
+        </div>
+        <div class="goal-sprint-stats">
+          <div><strong id="sprintSessionsDone">0 / 5</strong><span>sessions complete</span></div>
+          <div><strong id="sprintMinutesDone">0</strong><span>minutes completed</span></div>
+          <div><strong id="sprintNextPriority">—</strong><span>next priority</span></div>
+        </div>
+      </div>
+
+      <div class="goal-sprint-shell">
+        <article class="goal-builder-card" id="goalBuilderCard">
+          <div class="goal-builder-head">
+            <div>
+              <p class="small-label">BUILD A 5-SESSION SPRINT</p>
+              <h3>Start with the outcome, not the exercise type</h3>
+            </div>
+            <span class="question-count">Adaptive · local only</span>
+          </div>
+
+          <div class="goal-option-grid" id="goalOptionGrid">
+            <button class="goal-option-card active" type="button" data-goal="client-call">
+              <span>01</span><strong>I have a client call</strong><small>Listening · speaking · recovery language · client clarity</small>
+            </button>
+            <button class="goal-option-card" type="button" data-goal="incident">
+              <span>02</span><strong>I need to explain an incident</strong><small>Timeline · uncertainty · handover · follow-up</small>
+            </button>
+            <button class="goal-option-card" type="button" data-goal="listening">
+              <span>03</span><strong>I need better listening</strong><small>Gist · connected speech · notes · authentic input</small>
+            </button>
+            <button class="goal-option-card" type="button" data-goal="speaking">
+              <span>04</span><strong>I want to speak more spontaneously</strong><small>Quick response · chunks · pronunciation · recovery</small>
+            </button>
+            <button class="goal-option-card" type="button" data-goal="general">
+              <span>05</span><strong>General improvement</strong><small>Balanced programme driven by the diagnostic</small>
+            </button>
+          </div>
+
+          <div class="goal-settings-grid">
+            <fieldset>
+              <legend>Time per session</legend>
+              <div class="segmented-control goal-time-control" id="goalTimeControl">
+                <button type="button" data-goal-minutes="10">10 min</button>
+                <button type="button" data-goal-minutes="15" class="active">15 min</button>
+                <button type="button" data-goal-minutes="20">20 min</button>
+                <button type="button" data-goal-minutes="30">30 min</button>
+              </div>
+            </fieldset>
+            <label>
+              <span>Target date</span>
+              <input type="date" id="goalDeadline">
+            </label>
+          </div>
+
+          <div class="goal-adaptive-preview" id="goalAdaptivePreview">
+            <p class="small-label">WHAT THE PROGRAMME WILL PRIORITISE</p>
+            <div id="goalPriorityChips" class="goal-priority-chips"></div>
+          </div>
+
+          <div class="goal-builder-actions">
+            <button class="primary-button" id="buildSprintBtn" type="button">Build my weekly sprint →</button>
+            <button class="secondary-button" id="rebuildSprintBtn" type="button" hidden>Build a new sprint</button>
+          </div>
+          <div id="goalBuilderFeedback" class="activity-summary" aria-live="polite"></div>
+        </article>
+
+        <aside class="meeting-crash-card">
+          <p class="small-label">I HAVE A MEETING IN…</p>
+          <h3>Crash preparation plan</h3>
+          <p>Use this when you do not have time for a full session. It creates a short preparation sequence from the most useful existing tools.</p>
+          <div class="meeting-crash-buttons">
+            <button type="button" data-meeting-window="10">10 minutes</button>
+            <button type="button" data-meeting-window="tonight">Tonight</button>
+            <button type="button" data-meeting-window="tomorrow">Tomorrow</button>
+            <button type="button" data-meeting-window="week">This week</button>
+          </div>
+          <div id="meetingCrashPlan" class="meeting-crash-plan">
+            <div class="dashboard-empty">Choose a time window to build a quick preparation plan.</div>
+          </div>
+        </aside>
+      </div>
+
+      <div class="sprint-active-shell" id="activeSprintShell" hidden>
+        <div class="active-sprint-head">
+          <div>
+            <p class="small-label">CURRENT SPRINT</p>
+            <h3 id="activeSprintTitle">Client-call confidence sprint</h3>
+            <p id="activeSprintMeta"></p>
+          </div>
+          <div class="active-sprint-actions">
+            <button class="secondary-button" id="refreshSprintBtn" type="button">Adapt remaining sessions</button>
+            <button class="text-link" id="endSprintBtn" type="button">End sprint</button>
+          </div>
+        </div>
+
+        <div class="sprint-progress-overview">
+          <div>
+            <span>Progress</span>
+            <strong id="sprintProgressPct">0%</strong>
+          </div>
+          <div class="sprint-progress-track"><span id="sprintProgressBar"></span></div>
+          <p id="sprintProgressMessage">Five short sessions. Complete them in order or move one later if real life gets in the way.</p>
+        </div>
+
+        <div id="sprintSessionGrid" class="sprint-session-grid"></div>
+
+        <div class="sprint-finish-panel" id="sprintFinishPanel">
+          <div>
+            <p class="small-label">SPRINT STATUS</p>
+            <h3 id="sprintFinishTitle">Complete the five sessions</h3>
+            <p id="sprintFinishText">The programme will adapt the next sprint from what you actually completed.</p>
+          </div>
+          <a class="secondary-button" href="#progress-check" id="sprintCheckpointLink">Open Progress Check →</a>
+        </div>
+      </div>
+    </section>
 
     <section class="section dashboard-section" id="dashboard">
       <div class="dashboard-shell">
@@ -89,6 +252,14 @@
               <strong id="smartHomeSummary">Your current profile is loaded.</strong>
             </div>
             <a class="smart-home-overview" href="#how-it-works">Programme overview</a>
+          </div>
+
+          <div class="dashboard-continue-hero">
+            <div class="dashboard-continue-label">
+              <span class="ux-status recommended">Recommended</span>
+              <strong>Continue where you left off</strong>
+            </div>
+            <div id="dashboardNextStep" class="dashboard-next-step dashboard-next-step-central"></div>
           </div>
 
           <div class="app-readiness-row" id="appReadinessRow">
@@ -166,18 +337,8 @@
             <div class="dashboard-card">
               <div class="dashboard-card-head">
                 <div>
-                  <p class="small-label">RESUME WHERE YOU LEFT OFF</p>
-                  <h3>Your next useful step</h3>
-                </div>
-              </div>
-              <div id="dashboardNextStep" class="dashboard-next-step"></div>
-            </div>
-
-            <div class="dashboard-card">
-              <div class="dashboard-card-head">
-                <div>
-                  <p class="small-label">QUICK LAUNCH</p>
-                  <h3>Open the right tool quickly</h3>
+                  <p class="small-label">EXPLORE ALL TOOLS</p>
+                  <h3>Everything is still here</h3>
                 </div>
               </div>
               <div id="dashboardQuickLinks" class="dashboard-quick-links"></div>

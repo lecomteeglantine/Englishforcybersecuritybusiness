@@ -232,6 +232,11 @@ const vaultGroups=[
     keys:["ebackontrack-v15-client-simulator"]
   },
   {
+    id:"sprint",icon:"✓",title:"Goals & Weekly Sprint",
+    description:"Active sprint goal, session plan, completion state, sprint history and meeting-crash-plan metadata.",
+    keys:["ebackontrack-v19-goal-sprint"]
+  },
+  {
     id:"work",icon:"W",title:"My Work English",
     description:"Work-based mission metadata and any anonymised scenarios you explicitly chose to save. Writing drafts are not stored.",
     keys:["ebackontrack-v18-work-lab"]
@@ -400,6 +405,9 @@ function buildVaultSummary(){
   const work=typeof loadWorkEnglishState==="function"?loadWorkEnglishState():{attempts:[],saved:[]};
   lines.push(`- Work-based missions completed: ${(work.attempts||[]).length}`);
   lines.push(`- Anonymised work scenarios saved locally: ${(work.saved||[]).length}`);
+  const sprint=typeof loadGoalSprintState==="function"?loadGoalSprintState():{active:null,history:[]};
+  lines.push(`- Weekly sprint sessions completed: ${sprint.active?.sessions?.filter(s=>s.completed).length||0}`);
+  lines.push(`- Sprint history records: ${(sprint.history||[]).length}`);
   lines.push(`- Progress checkpoints/re-diagnostics: ${(progress.history||[]).length}`);
   lines.push("");
   lines.push("PRIVACY");
@@ -838,10 +846,12 @@ function checkpointReadiness(){
   const resources=loadAuthenticResourceState().completed.length;
   const simulations=loadClientSimState().completed.length;
   const workMissions=loadWorkEnglishState().attempts.length;
+  const sprintState=loadGoalSprintState();
+  const sprintSessions=sprintState.active?.sessions?.filter(s=>s.completed).length||0;
   const grammar=loadGrammarRepairState().completed.length;
   const listening=listeningLabCompletedCount();
-  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(1,Math.floor(resources/2))+Math.min(2,simulations)+Math.min(1,workMissions)+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
-  return {completedModules,speaking,writing,pronunciation,resources,simulations,workMissions,grammar,listening,evidence};
+  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(1,Math.floor(resources/2))+Math.min(2,simulations)+Math.min(1,workMissions)+Math.min(2,Math.floor(sprintSessions/2))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
+  return {completedModules,speaking,writing,pronunciation,resources,simulations,workMissions,sprintSessions,grammar,listening,evidence};
 }
 function renderProgressSkillComparison(state){
   const target=document.getElementById("progressSkillComparison");if(!target)return;
@@ -923,6 +933,7 @@ function renderProgressCheck(){
     <div class="readiness-item"><span>Authentic resources completed</span><strong>${ready.resources}</strong></div>
     <div class="readiness-item"><span>Client simulations completed</span><strong>${ready.simulations}</strong></div>
     <div class="readiness-item"><span>Work-based missions completed</span><strong>${ready.workMissions}</strong></div>
+    <div class="readiness-item"><span>Weekly sprint sessions completed</span><strong>${ready.sprintSessions}</strong></div>
     <div class="readiness-item"><span>Grammar Repair units completed</span><strong>${ready.grammar}</strong></div>
     <div class="readiness-item"><span>Listening Lab tasks completed</span><strong>${ready.listening} / 5</strong></div>`;
 }
@@ -1537,7 +1548,11 @@ function smartHomeSummaryText(saved){
   const weak=weakestSkill(saved.results);
   const next=nextIncompleteModuleData();
   const due=phraseStats().due;
-  const parts=[`Current focus: ${weak.label}`];
+  const sprint=loadGoalSprintState();
+  const activeGoal=sprint.active?sprintGoalMeta[sprint.active.goal]?.label:null;
+  const parts=[];
+  if(activeGoal)parts.push(`Current goal: ${activeGoal}`);
+  parts.push(`focus: ${weak.label}`);
   if(next&&!next.completed)parts.push(`next module: ${next.module.title}`);
   if(due)parts.push(`${due} Phrasebook review${due===1?"":"s"} due`);
   return parts.join(" · ");
@@ -1674,6 +1689,9 @@ function dashboardReasonCards(results,details){
   const vaultHasData=vaultGroups.some(vaultActiveGroup);
   const vaultAge=vaultMeta.lastBackup?Math.floor((Date.now()-vaultMeta.lastBackup)/(1000*60*60*24)):null;
   if(vaultHasData && (!vaultMeta.lastBackup || vaultAge>30)) cards.push({title:"Your progress is only on this device",text:"My Data can export a private backup before you change browser, clear site data or move to another device."});
+  const sprintState=loadGoalSprintState();
+  const sprintNext=sprintNextSession(sprintState.active);
+  if(sprintNext) cards.push({title:"Your weekly goal is active",text:`Next sprint session: ${sprintNext.title}. The remaining plan can be adapted whenever your practice profile changes.`});
   return cards.slice(0,4);
 }
 function buildRoutineTasks(minutes){
@@ -1693,6 +1711,16 @@ function buildRoutineTasks(minutes){
   };
   const durations = durationPresets[minutes] || durationPresets[15];
   const add=(task)=>{ if(!tasks.find(x=>x.id===task.id)) tasks.push(task); };
+  const sprintState=loadGoalSprintState();
+  const sprintNext=sprintNextSession(sprintState.active);
+  if(sprintNext){
+    add({
+      id:"weekly-sprint",tag:"SPRINT",title:sprintNext.title,
+      desc:`Continue your ${sprintGoalMeta[sprintState.active.goal]?.label||"weekly"} sprint: ${sprintNext.tasks.map(t=>t.title).slice(0,2).join(" + ")}.`,
+      duration:Math.min(minutes,sprintNext.tasks.reduce((sum,t)=>sum+t.minutes,0)),
+      anchor:"#goal-sprint",cta:"Open Weekly Sprint"
+    });
+  }
 
   if(!results){
     add({id:"diagnostic",tag:"START",title:"Complete the initial diagnostic",desc:"Without it, the site cannot prioritise the right skills for you.",duration:durations[0],anchor:"#diagnostic",cta:"Open diagnostic"});
@@ -1773,24 +1801,115 @@ function weekPracticeSummary(){
   const completeDays = keys.filter(k => state.days[k]?.sessionComplete).length;
   return {activeDays, completeDays};
 }
+function uxToolStatus(anchor){
+  const results=sprintCurrentResults();
+  const weak=results&&Object.keys(results).length?weakestSkill(results):{key:null};
+  const plan=planStorage();
+  const listening=listeningLabCompletedCount();
+  const speaking=loadSpeakingState();
+  const writing=writingStats();
+  const grammar=loadGrammarRepairState();
+  const pron=loadPronunciationLabState();
+  const phrase=phraseStats();
+  const sim=loadClientSimState();
+  const work=loadWorkEnglishState();
+  const resources=loadAuthenticResourceState();
+  const sprint=loadGoalSprintState();
+  const progress=ensureProgressBaseline();
+  const vault=loadVaultMeta();
+
+  const completed=(label="Completed")=>({label,className:"completed"});
+  const recommended=(label="Recommended")=>({label,className:"recommended"});
+  const optional=(label="Optional")=>({label,className:"optional"});
+
+  switch(anchor){
+    case "#goal-sprint":
+      if(sprint.active&&sprintNextSession(sprint.active)) return recommended();
+      if((sprint.history||[]).some(x=>x.status==="completed")) return completed();
+      return optional();
+    case "#my-plan":
+      if(plan.completed.length>=4) return completed();
+      return results&&Object.keys(results).length?recommended():optional();
+    case "#listening-lab":
+      if(listening>=5) return completed();
+      return results.listening<75||weak.key==="listening"?recommended():optional();
+    case "#speaking-lab":
+      if(Object.keys(speaking.modes||{}).filter(k=>speaking.modes[k]>0).length>=5) return completed();
+      return results.speaking<75||weak.key==="speaking"?recommended():optional();
+    case "#pronunciation-lab":
+      if(pron.completed.length>=7) return completed();
+      return results.pronunciation<75||weak.key==="pronunciation"?recommended():optional();
+    case "#writing-lab":
+      if(writing.types>=5) return completed();
+      return results.writing<75||weak.key==="writing"?recommended():optional();
+    case "#grammar-lab":
+      if(grammar.completed.length>=9) return completed();
+      return results.grammar<75||weak.key==="grammar"?recommended():optional();
+    case "#phrasebook":
+      return phrase.due>0?recommended():optional();
+    case "#client-simulator":
+      if(sim.completed.length>=4) return completed();
+      if(checkpointReadiness().evidence>=3) return recommended();
+      return optional();
+    case "#work-english-lab":
+      if(work.attempts.length>=3) return completed();
+      if(sim.completed.length>=1) return recommended();
+      return optional();
+    case "#resources-hub":
+      if(resources.completed.length>=6) return completed();
+      return results.listening<75?recommended():optional();
+    case "#progress-check":
+      if(checkpointReadiness().evidence>=4) return recommended();
+      return (progress.history||[]).length?completed("Used"):optional();
+    case "#progress-vault":{
+      const hasData=vaultGroups.some(vaultActiveGroup);
+      const old=!vault.lastBackup||Date.now()-vault.lastBackup>30*86400000;
+      return hasData&&old?recommended():optional();
+    }
+    default:return optional();
+  }
+}
 function renderQuickLinks(){
   const target=document.getElementById("dashboardQuickLinks"); if(!target) return;
-  const links=[
-    {anchor:"#my-plan", title:"My personalised plan", sub:"Resume the selected cyber modules"},
-    {anchor:"#client-simulator", title:"Client Call Simulator", sub:"Full incident mission from briefing to follow-up"},
-    {anchor:"#work-english-lab", title:"My Work English", sub:"Turn anonymised real situations into local practice"},
-    {anchor:"#resources-hub", title:"Authentic Resources", sub:"Recent real-world cyber English with short tasks"},
-    {anchor:"#listening-lab", title:"Listening Lab", sub:"Gist, decoding, dictation and note-taking"},
-    {anchor:"#speaking-lab", title:"Speaking Lab", sub:"Quick responses, client questions and roleplay"},
-    {anchor:"#pronunciation-lab", title:"Pronunciation Lab", sub:"Stress, endings, connected speech, chunking and shadowing"},
-    {anchor:"#writing-lab", title:"Writing Lab", sub:"Client emails, handovers, risk and remediation"},
-    {anchor:"#grammar-lab", title:"Grammar Repair", sub:"Adaptive repair based on diagnostic weak points"},
-    {anchor:"#progress-check", title:"Progress Check", sub:"Fresh checkpoint and baseline comparison"},
-    {anchor:"#progress-vault", title:"My Data & Backup", sub:"Export, restore or inspect local progress"},
-    {anchor:"#phrasebook", title:"Phrasebook", sub:"Chunks, favourites and spaced review"}
+  const groups=[
+    {title:"Today",icon:"◉",open:true,links:[
+      ["#goal-sprint","Goals & Weekly Sprint","Set the next concrete goal"]
+    ]},
+    {title:"Train",icon:"↗",links:[
+      ["#listening-lab","Listening","Gist · decoding · notes"],
+      ["#speaking-lab","Speaking","Spontaneous responses · roleplay"],
+      ["#pronunciation-lab","Pronunciation","Stress · chunking · clarity"],
+      ["#writing-lab","Writing","Client emails · handovers"],
+      ["#grammar-lab","Grammar Repair","Weak patterns in context"],
+      ["#phrasebook","Phrasebook","Chunks · spaced review"]
+    ]},
+    {title:"Simulate",icon:"◆",links:[
+      ["#client-simulator","Client Simulator","End-to-end incident call"],
+      ["#work-english-lab","My Work English","Anonymised real-work practice"]
+    ]},
+    {title:"Explore",icon:"⌁",links:[
+      ["#my-plan","My personalised plan","Operational cyber modules"],
+      ["#resources-hub","Authentic Resources","Recent professional cyber English"]
+    ]},
+    {title:"Progress",icon:"✓",links:[
+      ["#progress-check","Progress Check","Baseline · checkpoints"],
+      ["#progress-vault","My Data & Backup","Export · restore · privacy"]
+    ]}
   ];
-  target.innerHTML = `<div class="dashboard-mini-list">${
-    links.map(link=>`<a class="dashboard-mini-link" href="${link.anchor}"><span>${link.title}<small>${link.sub}</small></span><span>→</span></a>`).join("")
+
+  target.innerHTML=`<div class="dashboard-tool-groups">${
+    groups.map(group=>`<details class="dashboard-tool-group" ${group.open?"open":""}>
+      <summary><span>${group.icon} ${group.title}</span><span>+</span></summary>
+      <div class="dashboard-tool-group-list">
+        ${group.links.map(([anchor,title,sub])=>{
+          const status=uxToolStatus(anchor);
+          return `<a class="dashboard-tool-link" href="${anchor}">
+            <span><strong>${title}</strong><small>${sub}</small></span>
+            <span class="ux-status ${status.className}">${status.label}</span>
+          </a>`;
+        }).join("")}
+      </div>
+    </details>`).join("")
   }</div>`;
 }
 function renderDashboardNextStep(results){
@@ -1798,6 +1917,12 @@ function renderDashboardNextStep(results){
   const nextModule=nextIncompleteModuleData();
   if(!results){
     target.innerHTML=`<div class="next-step-box"><strong>Start with the diagnostic</strong><span>The dashboard can only personalise your work once the initial diagnostic is complete.</span><a class="primary-button" href="#diagnostic">Open diagnostic</a></div>`;
+    return;
+  }
+  const sprintState=loadGoalSprintState();
+  const sprintNext=sprintNextSession(sprintState.active);
+  if(sprintNext){
+    target.innerHTML=`<div class="next-step-box"><strong>Continue your weekly sprint</strong><span>${sprintNext.title}: ${sprintNext.tasks.map(t=>t.title).slice(0,2).join(" + ")}.</span><a class="primary-button" href="#goal-sprint">Open Weekly Sprint</a></div>`;
     return;
   }
   if(nextModule && !nextModule.completed){
@@ -1830,6 +1955,13 @@ function renderDashboard(){
   const completion = dashboardCompletionInfo(tasks);
   const week = weekPracticeSummary();
   const weak = weakestSkill(results);
+  if(smartHomeSavedProfile()){
+    const sprint=loadGoalSprintState();
+    const goal=sprint.active?sprintGoalMeta[sprint.active.goal]?.label:null;
+    const firstTwo=tasks.slice(0,2).map(t=>t.tag.charAt(0)+t.tag.slice(1).toLowerCase()).join(" + ");
+    document.getElementById("dashboardSubcopy").textContent =
+      `Today: ${completion.totalMin} minutes${firstTwo?` · ${firstTwo}`:""}${goal?` · Current goal: ${goal}`:""}.`;
+  }
 
   document.getElementById("routineTotalMinutes").textContent = `${completion.totalMin} min`;
   document.getElementById("dashboardTodayProgress").textContent = `${completion.doneCount} / ${completion.total}`;
@@ -1911,6 +2043,350 @@ function initDashboard(){
 
 
 
+
+
+
+
+// V19 · Goal Mode & Adaptive Weekly Sprint
+const goalSprintStateKey="ebackontrack-v19-goal-sprint";
+
+const sprintGoalMeta={
+  "client-call":{label:"Client call",title:"Client-call confidence sprint"},
+  incident:{label:"Incident explanation",title:"Incident communication sprint"},
+  listening:{label:"Listening",title:"Listening comprehension sprint"},
+  speaking:{label:"Spontaneous speaking",title:"Speaking activation sprint"},
+  general:{label:"General improvement",title:"Balanced professional-English sprint"}
+};
+
+const sprintTaskCatalog={
+  listening:{id:"listening",title:"Listening Lab",anchor:"#listening-lab",desc:"Gist, decoding, micro-dictation or SOC note-taking."},
+  authentic:{id:"authentic",title:"Authentic resource",anchor:"#resources-hub",desc:"Use one recent cyber source actively, then summarise it."},
+  speaking:{id:"speaking",title:"Speaking Lab",anchor:"#speaking-lab",desc:"Do one spontaneous response or client-facing speaking mission."},
+  pronunciation:{id:"pronunciation",title:"Pronunciation Lab",anchor:"#pronunciation-lab",desc:"Train the highest-priority intelligibility feature."},
+  phrasebook:{id:"phrasebook",title:"Phrasebook review",anchor:"#phrasebook",desc:"Review due chunks and activate at least two aloud."},
+  grammar:{id:"grammar",title:"Grammar Repair",anchor:"#grammar-lab",desc:"Repair the weakest accuracy pattern in context."},
+  writing:{id:"writing",title:"Writing Lab",anchor:"#writing-lab",desc:"Write one short client-facing or SOC message."},
+  simulator:{id:"simulator",title:"Client Simulator",anchor:"#client-simulator",desc:"Run an end-to-end incident communication mission."},
+  work:{id:"work",title:"My Work English",anchor:"#work-english-lab",desc:"Use one anonymised real work situation."},
+  progress:{id:"progress",title:"Progress Check",anchor:"#progress-check",desc:"Take a fresh checkpoint after enough targeted practice."}
+};
+
+function loadGoalSprintState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(goalSprintStateKey))||{};
+    return {active:raw.active||null,history:Array.isArray(raw.history)?raw.history:[],meetingPlan:raw.meetingPlan||null};
+  }catch(e){return {active:null,history:[],meetingPlan:null};}
+}
+function saveGoalSprintState(state){localStorage.setItem(goalSprintStateKey,JSON.stringify(state));}
+function sprintCurrentResults(){
+  try{return JSON.parse(localStorage.getItem("ebackontrack-v2"))?.results||{};}catch(e){return {};}
+}
+function sprintPracticeSignals(){
+  const r=sprintCurrentResults();
+  return {
+    results:r,
+    listeningDone:typeof listeningLabCompletedCount==="function"?listeningLabCompletedCount():0,
+    speakingAttempts:typeof loadSpeakingState==="function"?loadSpeakingState().attempts:0,
+    writingAttempts:typeof loadWritingState==="function"?loadWritingState().attempts.length:0,
+    grammarDone:typeof loadGrammarRepairState==="function"?loadGrammarRepairState().completed.length:0,
+    pronDone:typeof loadPronunciationLabState==="function"?loadPronunciationLabState().completed.length:0,
+    resourcesDone:typeof loadAuthenticResourceState==="function"?loadAuthenticResourceState().completed.length:0,
+    simsDone:typeof loadClientSimState==="function"?loadClientSimState().completed.length:0,
+    workDone:typeof loadWorkEnglishState==="function"?loadWorkEnglishState().attempts.length:0,
+    phraseDue:typeof phraseStats==="function"?phraseStats().due:0
+  };
+}
+function sprintWeaknessOrder(){
+  const r=sprintCurrentResults();
+  return ["listening","speaking","writing","pronunciation","grammar","cyber"]
+    .filter(k=>typeof r[k]==="number")
+    .sort((a,b)=>r[a]-r[b]);
+}
+function sprintDisplaySkill(k){
+  return ({listening:"Listening",speaking:"Speaking",writing:"Writing",pronunciation:"Pronunciation",grammar:"Grammar",cyber:"Cyber English"})[k]||k;
+}
+function adaptiveSprintPriorities(goal){
+  const s=sprintPracticeSignals(),weak=sprintWeaknessOrder(),chips=[];
+  weak.slice(0,2).forEach(k=>chips.push({text:`${sprintDisplaySkill(k)} ${s.results[k]}%`,primary:true}));
+  if(s.phraseDue>0)chips.push({text:`${s.phraseDue} Phrasebook reviews due`,primary:false});
+  if(s.listeningDone<3)chips.push({text:"Listening practice still light",primary:false});
+  if(s.speakingAttempts<3)chips.push({text:"Speaking activation needed",primary:false});
+  if(goal==="client-call"&&s.pronDone<2)chips.push({text:"Pre-call intelligibility",primary:false});
+  if(goal==="incident"&&s.writingAttempts<2)chips.push({text:"Incident writing",primary:false});
+  if(goal==="listening"&&s.resourcesDone<2)chips.push({text:"More authentic input",primary:false});
+  if(goal==="speaking"&&s.simsDone<1)chips.push({text:"Client simulation",primary:false});
+  if(!chips.length)chips.push({text:"Balanced maintenance",primary:true});
+  return chips.slice(0,5);
+}
+function renderGoalPriorityPreview(){
+  const goal=document.querySelector("[data-goal].active")?.dataset.goal||"client-call";
+  document.getElementById("goalPriorityChips").innerHTML=adaptiveSprintPriorities(goal)
+    .map(x=>`<span class="goal-priority-chip ${x.primary?"primary":""}">${x.text}</span>`).join("");
+}
+function sprintTaskScore(task,goal,s,dayIndex){
+  let score=0,r=s.results||{};
+  const weights={
+    "client-call":{listening:8,speaking:10,pronunciation:6,phrasebook:6,simulator:7,writing:4,authentic:3,grammar:2,work:4},
+    incident:{speaking:7,writing:8,grammar:4,phrasebook:5,simulator:8,listening:4,work:6,pronunciation:2,authentic:3},
+    listening:{listening:12,authentic:9,pronunciation:4,speaking:4,phrasebook:3,grammar:1,writing:1,simulator:3,work:2},
+    speaking:{speaking:12,phrasebook:7,pronunciation:7,simulator:8,listening:5,work:6,grammar:2,writing:2,authentic:2},
+    general:{listening:6,speaking:6,writing:5,grammar:5,pronunciation:5,phrasebook:5,authentic:4,simulator:4,work:4}
+  };
+  score+=weights[goal]?.[task]||0;
+  if(task==="listening"&&typeof r.listening==="number")score+=(100-r.listening)/8+(s.listeningDone<3?5:0);
+  if(task==="speaking"&&typeof r.speaking==="number")score+=(100-r.speaking)/8+(s.speakingAttempts<3?5:0);
+  if(task==="writing"&&typeof r.writing==="number")score+=(100-r.writing)/9+(s.writingAttempts<2?4:0);
+  if(task==="grammar"&&typeof r.grammar==="number")score+=(100-r.grammar)/9+(s.grammarDone<2?3:0);
+  if(task==="pronunciation"&&typeof r.pronunciation==="number")score+=(100-r.pronunciation)/9+(s.pronDone<2?3:0);
+  if(task==="phrasebook")score+=Math.min(7,s.phraseDue/2);
+  if(task==="authentic")score+=s.resourcesDone<3?4:0;
+  if(task==="simulator")score+=s.simsDone<1?4:0;
+  if(task==="work")score+=s.workDone<1&&s.simsDone>=1?5:0;
+  if(task==="progress")score=dayIndex===4?4:-20;
+  if(task==="simulator"&&dayIndex<2)score-=5;
+  if(task==="work"&&dayIndex<2)score-=4;
+  return score;
+}
+function sprintDurationForTask(task,total){
+  const base={listening:5,authentic:5,speaking:6,pronunciation:4,phrasebook:3,grammar:5,writing:6,simulator:12,work:10,progress:10}[task]||5;
+  if(total===10)return Math.min(base,6);
+  if(total===15)return Math.min(base,8);
+  if(total===20)return Math.min(base,10);
+  return Math.min(base,14);
+}
+function buildSprintSessionTasks(goal,totalMinutes,dayIndex,usedCounts){
+  const signals=sprintPracticeSignals();
+  const candidates=Object.keys(sprintTaskCatalog)
+    .filter(k=>k!=="progress"||dayIndex===4)
+    .filter(k=>!(k==="work"&&signals.simsDone===0&&signals.speakingAttempts<3))
+    .map(k=>({key:k,score:sprintTaskScore(k,goal,signals,dayIndex)-(usedCounts[k]||0)*2.2}))
+    .sort((a,b)=>b.score-a.score);
+  const tasks=[];let left=totalMinutes;
+  for(const c of candidates){
+    if(tasks.length>=4)break;
+    let dur=sprintDurationForTask(c.key,totalMinutes);
+    if(dur>left||tasks.some(t=>t.id===c.key))continue;
+    tasks.push({...sprintTaskCatalog[c.key],minutes:dur});
+    usedCounts[c.key]=(usedCounts[c.key]||0)+1;
+    left-=dur;
+    if(left<3)break;
+  }
+  if(left>0&&tasks.length)tasks[tasks.length-1].minutes+=left;
+  return tasks;
+}
+function sprintSessionTitle(goal,index){
+  const titles={
+    "client-call":["Hear the call","Build the language","Speak under pressure","Simulate the client","Rehearse and check"],
+    incident:["Frame the incident","Control uncertainty","Build the handover","Run the scenario","Close the loop"],
+    listening:["Get the gist","Decode natural speech","Take operational notes","Use authentic input","Reformulate and check"],
+    speaking:["Activate useful chunks","Respond without a script","Make the message clear","Handle pressure","Simulate and review"],
+    general:["Fix the weakest point","Build professional language","Listen and respond","Integrate the skills","Review and check"]
+  };
+  return titles[goal]?.[index]||`Session ${index+1}`;
+}
+function generateSprint(goal,minutes,deadline){
+  const usedCounts={},sessions=[];
+  for(let i=0;i<5;i++){
+    sessions.push({
+      id:`session-${Date.now()}-${i}`,index:i,title:sprintSessionTitle(goal,i),
+      tasks:buildSprintSessionTasks(goal,minutes,i,usedCounts),completed:false
+    });
+  }
+  return {id:`sprint-${Date.now()}`,goal,minutes,deadline:deadline||null,createdAt:Date.now(),sessions};
+}
+function sprintDeadlineDefault(){
+  const d=new Date();d.setDate(d.getDate()+6);return d.toISOString().slice(0,10);
+}
+function selectedSprintGoal(){return document.querySelector("[data-goal].active")?.dataset.goal||"client-call";}
+function selectedSprintMinutes(){return Number(document.querySelector("[data-goal-minutes].active")?.dataset.goalMinutes||15);}
+function buildNewSprint(){
+  const goal=selectedSprintGoal(),minutes=selectedSprintMinutes();
+  const deadline=document.getElementById("goalDeadline").value||sprintDeadlineDefault();
+  const today=new Date();today.setHours(0,0,0,0);
+  const target=new Date(deadline+"T00:00:00");
+  const fb=document.getElementById("goalBuilderFeedback");
+  if(target<today){
+    fb.className="activity-summary neutral";fb.textContent="Choose today or a future target date.";return;
+  }
+  const state=loadGoalSprintState();
+  if(state.active){
+    if(!confirm("Replace the current sprint? Its current completion state will be kept in sprint history."))return;
+    if(!state.history.some(x=>x.id===state.active.id))state.history.push({...state.active,endedAt:Date.now(),status:"replaced"});
+  }
+  state.active=generateSprint(goal,minutes,deadline);
+  saveGoalSprintState(state);
+  fb.className="activity-summary correct";
+  fb.textContent="Weekly sprint built ✓ The plan uses your current profile and recent practice.";
+  renderGoalSprint();
+  document.getElementById("activeSprintShell").scrollIntoView({behavior:"smooth",block:"start"});
+  if(typeof renderDashboard==="function")renderDashboard();
+  if(typeof renderProgressVault==="function")renderProgressVault();
+}
+function adaptRemainingSprint(){
+  const state=loadGoalSprintState(),a=state.active;if(!a)return;
+  const used={};
+  a.sessions.filter(s=>s.completed).forEach(s=>s.tasks.forEach(t=>used[t.id]=(used[t.id]||0)+1));
+  a.sessions.forEach((session,i)=>{
+    if(session.completed)return;
+    session.tasks=buildSprintSessionTasks(a.goal,a.minutes,i,used);
+    session.title=sprintSessionTitle(a.goal,i);
+  });
+  a.adaptedAt=Date.now();saveGoalSprintState(state);renderGoalSprint();
+  if(typeof showAppToast==="function")showAppToast("Remaining sprint sessions adapted to current progress.");
+}
+function endCurrentSprint(){
+  const state=loadGoalSprintState();if(!state.active)return;
+  if(!confirm("End the current sprint? Its completion history will be kept locally."))return;
+  if(!state.history.some(x=>x.id===state.active.id))state.history.push({...state.active,endedAt:Date.now(),status:"ended"});
+  state.active=null;saveGoalSprintState(state);renderGoalSprint();
+  if(typeof renderDashboard==="function")renderDashboard();
+}
+function moveSprintSession(index,direction){
+  const state=loadGoalSprintState(),a=state.active;if(!a)return;
+  const j=index+direction;
+  if(j<0||j>=a.sessions.length||a.sessions[index].completed||a.sessions[j].completed)return;
+  [a.sessions[index],a.sessions[j]]=[a.sessions[j],a.sessions[index]];
+  a.sessions.forEach((s,i)=>s.index=i);
+  saveGoalSprintState(state);renderGoalSprint();
+}
+function toggleSprintSession(index){
+  const state=loadGoalSprintState(),a=state.active;if(!a)return;
+  const session=a.sessions[index];if(!session)return;
+  session.completed=!session.completed;
+  if(session.completed)session.completedAt=Date.now();else delete session.completedAt;
+  const all=a.sessions.every(s=>s.completed);
+  if(all&&!a.completedAt){
+    a.completedAt=Date.now();
+    if(!state.history.some(x=>x.id===a.id))state.history.push({...a,status:"completed"});
+  }
+  saveGoalSprintState(state);renderGoalSprint();
+  if(typeof renderDashboard==="function")renderDashboard();
+  if(typeof renderProgressCheck==="function")renderProgressCheck();
+  if(typeof renderProgressVault==="function")renderProgressVault();
+}
+function sprintNextSession(active){return active?.sessions?.find(s=>!s.completed)||null;}
+function renderSprintStats(){
+  const a=loadGoalSprintState().active;
+  if(!a){
+    document.getElementById("sprintSessionsDone").textContent="0 / 5";
+    document.getElementById("sprintMinutesDone").textContent="0";
+    document.getElementById("sprintNextPriority").textContent="—";return;
+  }
+  const done=a.sessions.filter(s=>s.completed);
+  const doneMinutes=done.reduce((sum,s)=>sum+s.tasks.reduce((x,t)=>x+t.minutes,0),0);
+  const next=sprintNextSession(a);
+  document.getElementById("sprintSessionsDone").textContent=`${done.length} / 5`;
+  document.getElementById("sprintMinutesDone").textContent=doneMinutes;
+  document.getElementById("sprintNextPriority").textContent=next?.tasks?.[0]?.title||"Complete";
+}
+function renderActiveSprint(){
+  const a=loadGoalSprintState().active,shell=document.getElementById("activeSprintShell");
+  if(!a){shell.hidden=true;document.getElementById("rebuildSprintBtn").hidden=true;return;}
+  shell.hidden=false;document.getElementById("rebuildSprintBtn").hidden=false;
+  const meta=sprintGoalMeta[a.goal]||sprintGoalMeta.general;
+  const deadline=a.deadline?new Date(a.deadline+"T12:00:00"):null;
+  document.getElementById("activeSprintTitle").textContent=meta.title;
+  document.getElementById("activeSprintMeta").textContent=`${a.minutes} minutes per session${deadline?` · target date ${deadline.toLocaleDateString()}`:""}${a.adaptedAt?" · adapted from current progress":""}`;
+  const done=a.sessions.filter(s=>s.completed).length,pct=Math.round(done/5*100),next=sprintNextSession(a);
+  document.getElementById("sprintProgressPct").textContent=`${pct}%`;
+  document.getElementById("sprintProgressBar").style.width=`${pct}%`;
+  document.getElementById("sprintProgressMessage").textContent=done===5
+    ?"Sprint complete. A checkpoint can now show whether your priorities should change."
+    :`Next: ${next?.title||"continue the sprint"}. Complete in order, or move an unfinished session if needed.`;
+  document.getElementById("sprintSessionGrid").innerHTML=a.sessions.map((s,i)=>`
+    <article class="sprint-session-card ${s.completed?"completed":""}">
+      <div class="sprint-session-head">
+        <span class="sprint-day-label">SESSION ${i+1}</span>
+        <span class="sprint-minute-badge">${s.tasks.reduce((x,t)=>x+t.minutes,0)} min</span>
+      </div>
+      <h4>${s.title}</h4>
+      <div class="sprint-task-list">${s.tasks.map(t=>`<div class="sprint-task">
+        <div class="sprint-task-top"><strong>${t.title}</strong><span>${t.minutes} min</span></div>
+        <p>${t.desc}</p><a href="${t.anchor}">Open →</a>
+      </div>`).join("")}</div>
+      <div class="sprint-session-actions">
+        <button class="sprint-complete-btn ${s.completed?"done":""}" type="button" data-sprint-toggle="${i}">${s.completed?"✓ Done":"Mark session done"}</button>
+        <button class="sprint-move-btn" type="button" data-sprint-move-up="${i}" ${i===0||s.completed||a.sessions[i-1]?.completed?"disabled":""} aria-label="Move session earlier">↑</button>
+        <button class="sprint-move-btn" type="button" data-sprint-move-down="${i}" ${i===a.sessions.length-1||s.completed||a.sessions[i+1]?.completed?"disabled":""} aria-label="Move session later">↓</button>
+      </div>
+    </article>`).join("");
+  document.querySelectorAll("[data-sprint-toggle]").forEach(b=>b.addEventListener("click",()=>toggleSprintSession(Number(b.dataset.sprintToggle))));
+  document.querySelectorAll("[data-sprint-move-up]").forEach(b=>b.addEventListener("click",()=>moveSprintSession(Number(b.dataset.sprintMoveUp),-1)));
+  document.querySelectorAll("[data-sprint-move-down]").forEach(b=>b.addEventListener("click",()=>moveSprintSession(Number(b.dataset.sprintMoveDown),1)));
+  const finish=document.getElementById("sprintFinishPanel");
+  if(done===5){
+    finish.classList.add("complete");
+    document.getElementById("sprintFinishTitle").textContent="Sprint complete ✓";
+    document.getElementById("sprintFinishText").textContent="Take a Progress Check if you want a fresh snapshot before building the next sprint.";
+  }else{
+    finish.classList.remove("complete");
+    document.getElementById("sprintFinishTitle").textContent=`${5-done} session${5-done===1?"":"s"} remaining`;
+    document.getElementById("sprintFinishText").textContent="Adapt remaining sessions whenever your practice profile changes during the sprint.";
+  }
+}
+function crashPlanFor(windowKey){
+  const s=sprintPracticeSignals(),due=s.phraseDue;
+  const plans={
+    "10":[
+      ["2 min","Phrasebook",due?`Review ${Math.min(5,due)} due chunks and say them aloud.`:"Rehearse four recovery/client chunks aloud.","#phrasebook"],
+      ["2 min","Pronunciation","Run Client Call Rehearsal once slowly and once naturally.","#pronunciation-lab"],
+      ["3 min","Likely question","Do one Speaking Lab quick response without a script.","#speaking-lab"],
+      ["3 min","Opening update","Deliver a 60-second opening update, then repeat it more clearly.","#speaking-lab"]
+    ],
+    tonight:[
+      ["4 min","Listening","One gist + connected-speech task.","#listening-lab"],
+      ["4 min","Phrasebook",due?"Clear a few due cards and activate two chunks.":"Choose five client-call chunks.","#phrasebook"],
+      ["4 min","Speaking","One client-question response.","#speaking-lab"],
+      ["3 min","Pronunciation","Client Call Rehearsal.","#pronunciation-lab"]
+    ],
+    tomorrow:[
+      ["5 min","Authentic input","Use one recent cyber resource for gist and facts.","#resources-hub"],
+      ["5 min","Speaking","Summarise it in 60 seconds.","#speaking-lab"],
+      ["5 min","Client simulation","Run the opening + client-interruption stages.","#client-simulator"],
+      ["5 min","Writing","Draft a short follow-up or handover.","#writing-lab"]
+    ],
+    week:[
+      ["5 min","Listening","Train the weakest listening skill.","#listening-lab"],
+      ["5 min","Accuracy","Repair the weakest grammar point.","#grammar-lab"],
+      ["5 min","My Work English","Build one anonymised real-work mission.","#work-english-lab"],
+      ["5 min","Simulation","Run one full client mission.","#client-simulator"]
+    ]
+  };
+  return plans[windowKey]||plans["10"];
+}
+function renderMeetingCrashPlan(windowKey,save=true){
+  document.getElementById("meetingCrashPlan").innerHTML=crashPlanFor(windowKey).map(([time,title,desc,anchor])=>`
+    <div class="meeting-crash-step">
+      <span>${time}</span><div><strong>${title}</strong><small>${desc}</small></div><a href="${anchor}">Open →</a>
+    </div>`).join("");
+  if(save){
+    const state=loadGoalSprintState();state.meetingPlan={window:windowKey,createdAt:Date.now()};saveGoalSprintState(state);
+  }
+}
+function renderGoalSprint(){
+  if(!document.getElementById("goal-sprint"))return;
+  renderGoalPriorityPreview();renderSprintStats();renderActiveSprint();
+  const saved=loadGoalSprintState().meetingPlan;
+  if(saved?.window)renderMeetingCrashPlan(saved.window,false);
+}
+function initGoalSprint(){
+  if(!document.getElementById("goal-sprint"))return;
+  if(!document.getElementById("goalDeadline").value)document.getElementById("goalDeadline").value=sprintDeadlineDefault();
+  document.querySelectorAll("[data-goal]").forEach(btn=>btn.addEventListener("click",()=>{
+    document.querySelectorAll("[data-goal]").forEach(x=>x.classList.remove("active"));
+    btn.classList.add("active");renderGoalPriorityPreview();
+  }));
+  document.querySelectorAll("[data-goal-minutes]").forEach(btn=>btn.addEventListener("click",()=>{
+    document.querySelectorAll("[data-goal-minutes]").forEach(x=>x.classList.remove("active"));
+    btn.classList.add("active");
+  }));
+  document.getElementById("buildSprintBtn")?.addEventListener("click",buildNewSprint);
+  document.getElementById("rebuildSprintBtn")?.addEventListener("click",buildNewSprint);
+  document.getElementById("refreshSprintBtn")?.addEventListener("click",adaptRemainingSprint);
+  document.getElementById("endSprintBtn")?.addEventListener("click",endCurrentSprint);
+  document.querySelectorAll("[data-meeting-window]").forEach(btn=>btn.addEventListener("click",()=>renderMeetingCrashPlan(btn.dataset.meetingWindow)));
+  renderGoalSprint();
+}
 
 
 // V18 · My Work English Lab
@@ -6008,8 +6484,91 @@ function initV16AppExperience(){
 }
 
 
+
+
+// V20 · Navigation cleanup, breadcrumbs and returning-learner UX
+const uxSectionMap={
+  "goal-sprint":["Today","Goals & Sprint"],
+  "progress-vault":["Progress","My Data & Backup"],
+  "progress-check":["Progress","Progress Check"],
+  "how-it-works":["Explore","Programme overview"],
+  "diagnostic":["Progress","Diagnostic"],
+  "my-plan":["Explore","My personalised plan"],
+  "listening-lab":["Train","Listening"],
+  "speaking-lab":["Train","Speaking"],
+  "pronunciation-lab":["Train","Pronunciation"],
+  "writing-lab":["Train","Writing"],
+  "grammar-lab":["Train","Grammar Repair"],
+  "phrasebook":["Train","Phrasebook"],
+  "client-simulator":["Simulate","Client Simulator"],
+  "work-english-lab":["Simulate","My Work English"],
+  "resources-hub":["Explore","Authentic Resources"]
+};
+function uxStatusForSection(id){
+  const status=uxToolStatus(`#${id}`);
+  return status||{label:"Optional",className:"optional"};
+}
+function injectUxBreadcrumbs(){
+  Object.entries(uxSectionMap).forEach(([id,[group,label]])=>{
+    const section=document.getElementById(id);
+    if(!section||section.querySelector(":scope > .ux-breadcrumb"))return;
+    const status=uxStatusForSection(id);
+    const crumb=document.createElement("nav");
+    crumb.className="ux-breadcrumb";
+    crumb.setAttribute("aria-label","Breadcrumb");
+    crumb.innerHTML=`<a href="#dashboard">Today</a><span class="sep">/</span><span>${group}</span><span class="sep">/</span><strong>${label}</strong><span class="ux-status ${status.className} ux-breadcrumb-status">${status.label}</span>`;
+    section.prepend(crumb);
+  });
+}
+function closeUxNavGroups(except=null){
+  document.querySelectorAll(".nav-group[open]").forEach(group=>{
+    if(group!==except)group.removeAttribute("open");
+  });
+}
+function updateBackToTodayVisibility(){
+  const dashboard=document.getElementById("dashboard");
+  if(!dashboard)return;
+  const r=dashboard.getBoundingClientRect();
+  const visible=r.top<window.innerHeight*.65 && r.bottom>window.innerHeight*.25;
+  document.body.classList.toggle("dashboard-in-view",visible);
+}
+function initV20UX(){
+  injectUxBreadcrumbs();
+
+  document.querySelectorAll(".nav-group").forEach(group=>{
+    group.addEventListener("toggle",()=>{
+      if(group.open)closeUxNavGroups(group);
+    });
+  });
+  document.querySelectorAll(".ux-nav-menu a").forEach(link=>link.addEventListener("click",()=>{
+    closeUxNavGroups();
+    if(window.innerWidth<=820 && typeof closeMobileNav==="function")closeMobileNav();
+  }));
+  document.querySelectorAll(".ux-nav-menu-action").forEach(btn=>btn.addEventListener("click",()=>{
+    closeUxNavGroups();
+    if(window.innerWidth<=820 && typeof closeMobileNav==="function")closeMobileNav();
+  }));
+  document.addEventListener("click",e=>{
+    if(!e.target.closest(".nav-group"))closeUxNavGroups();
+  });
+
+  window.addEventListener("scroll",updateBackToTodayVisibility,{passive:true});
+  window.addEventListener("resize",updateBackToTodayVisibility);
+  updateBackToTodayVisibility();
+
+  window.addEventListener("hashchange",()=>{
+    setTimeout(()=>{
+      injectUxBreadcrumbs();
+      updateBackToTodayVisibility();
+    },40);
+  });
+}
+
+
+initV20UX();
 initPhrasebook();
 initSpeakingLab();
+initGoalSprint();
 initWorkEnglishLab();
 initClientCallSimulator();
 initAuthenticResourcesHub();

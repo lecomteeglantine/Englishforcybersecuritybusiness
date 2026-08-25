@@ -1,7 +1,7 @@
 {
   "name": "English, Back on Track",
   "short_name": "Back on Track",
-  "description": "Personalised professional English training with offline access, private local backup and work-based scenario practice.",
+  "description": "Streamlined personalised professional English training for cybersecurity with adaptive goals, grouped navigation, offline access and private local progress.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -29,29 +29,29 @@
   ],
   "shortcuts": [
     {
-      "name": "Daily Dashboard",
-      "short_name": "Dashboard",
+      "name": "Today",
+      "short_name": "Today",
       "url": "./#dashboard"
     },
     {
-      "name": "My Work English",
-      "short_name": "My Work",
-      "url": "./#work-english-lab"
+      "name": "Weekly Sprint",
+      "short_name": "Sprint",
+      "url": "./#goal-sprint"
     },
     {
-      "name": "Client Simulator",
-      "short_name": "Simulator",
-      "url": "./#client-simulator"
-    },
-    {
-      "name": "Listening Lab",
+      "name": "Listening",
       "short_name": "Listening",
       "url": "./#listening-lab"
     },
     {
-      "name": "My Data & Backup",
-      "short_name": "My Data",
-      "url": "./#progress-vault"
+      "name": "Client Simulator",
+      "short_name": "Simulate",
+      "url": "./#client-simulator"
+    },
+    {
+      "name": "Progress",
+      "short_name": "Progress",
+      "url": "./#progress-check"
     }
   ]
 }
