@@ -3,10 +3,19 @@
 <head>
   <script>
     try {
-      const saved = JSON.parse(localStorage.getItem("ebackontrack-v2"));
-      const draft = JSON.parse(localStorage.getItem("ebackontrack-v23-diagnostic-draft"));
-      if (saved && saved.results && saved.details) document.documentElement.classList.add("returning-preload");
-      else if (draft && draft.closedAnswered > 0) document.documentElement.classList.add("diagnostic-preload");
+      const requestedView = location.hash ? location.hash.slice(1) : "";
+      if (requestedView && !["home","dashboard","diagnostic"].includes(requestedView)) {
+        document.documentElement.classList.add("deep-link-preload");
+      } else if (requestedView === "dashboard") {
+        document.documentElement.classList.add("returning-preload");
+      } else if (requestedView === "diagnostic") {
+        document.documentElement.classList.add("diagnostic-preload");
+      } else {
+        const saved = JSON.parse(localStorage.getItem("ebackontrack-v2"));
+        const draft = JSON.parse(localStorage.getItem("ebackontrack-v23-diagnostic-draft"));
+        if (saved && saved.results && saved.details) document.documentElement.classList.add("returning-preload");
+        else if (draft && draft.closedAnswered > 0) document.documentElement.classList.add("diagnostic-preload");
+      }
     } catch (e) {}
   </script>
   <meta charset="UTF-8" />
@@ -259,7 +268,7 @@
 
           <div class="smart-home-row" id="smartHomeRow" hidden>
             <div>
-              <span class="smart-home-pill">WELCOME BACK MODE</span>
+              <span class="smart-home-pill">WELCOME BACK</span>
               <strong id="smartHomeSummary">Your current profile is loaded.</strong>
             </div>
             <a class="smart-home-overview" href="#how-it-works">Programme overview</a>
@@ -654,13 +663,13 @@
     <section class="section tutor-review-section" id="tutor-review">
       <div class="section-heading tutor-review-heading">
         <div>
-          <p class="eyebrow">TUTOR REVIEW MODE</p>
+          <p class="eyebrow">TUTOR REVIEW</p>
           <h2>Turn progress data into a two-minute pedagogical review.</h2>
           <p>This view summarises priorities, evidence of practice, fragile areas and next steps without exposing drafts, audio, detailed diagnostic answers or saved work scenarios.</p>
         </div>
         <div class="tutor-review-stats">
           <div><strong id="tutorReviewSnapshots">0</strong><span>saved reviews</span></div>
-          <div><strong id="tutorReviewEvidence">0</strong><span>evidence points</span></div>
+          <div><strong id="tutorReviewEvidence">0 / 9</strong><span>practice areas</span></div>
           <div><strong id="tutorReviewPriority">—</strong><span>main priority</span></div>
         </div>
       </div>
@@ -2814,7 +2823,7 @@
   <footer>
     <p>English, Back on Track · Personal professional-English programme</p>
     <p>No account · No tracking · Local progress · Offline-capable app.</p>
-    <p class="release-version">V25 · Tutor Review</p>
+    <p class="release-version">Version 1.0 · Stable release</p>
   </footer>
   <script src="app.js"></script>
 </body>

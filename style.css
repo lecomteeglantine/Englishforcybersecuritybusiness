@@ -1703,7 +1703,7 @@ body.returning-user .dashboard-kpi-grid{margin-top:14px}
 
 /* V23 · App Mode */
 html.app-mode-pending #mainContent > section{display:none!important}
-html.app-mode-pending:not(.returning-preload):not(.diagnostic-preload) #home{display:grid!important}
+html.app-mode-pending:not(.returning-preload):not(.diagnostic-preload):not(.deep-link-preload) #home{display:grid!important}
 html.app-mode-pending.returning-preload #dashboard{display:block!important}
 html.app-mode-pending.diagnostic-preload #diagnostic{display:block!important}
 
@@ -1861,3 +1861,7 @@ body.app-mode #resources-hub .resource-maintenance-workspace[hidden]{display:non
   body.printing-tutor-review .tutor-notes-shell{margin-top:7mm}.printing-tutor-review .tutor-print-notes{display:block}.printing-tutor-review.tutor-print-no-notes .tutor-print-notes{display:none!important}.printing-tutor-review .tutor-method-note{margin-top:5mm;font-size:8pt}
   body.printing-tutor-review a{text-decoration:none;color:inherit}
 }
+
+/* Version 1.0 · stable release */
+.nav-group>summary[aria-current="page"]{background:var(--pale);border-color:var(--line)}
+.release-version{text-transform:none;letter-spacing:.035em}

@@ -1,7 +1,7 @@
 {
   "name": "English, Back on Track",
   "short_name": "Back on Track",
-  "description": "Professional English training for cybersecurity with authentic listening, adaptive practice, clean tutor-review summaries, offline app tools and private local progress.",
+  "description": "Personalised professional English training for cybersecurity with diagnostic, authentic listening, speaking and writing practice, simulations, adaptive planning, tutor review, offline app tools and private local progress.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
