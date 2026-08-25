@@ -1,7 +1,7 @@
 {
   "name": "English, Back on Track",
   "short_name": "Back on Track",
-  "description": "Professional English training for cybersecurity in streamlined App Mode, with resumable diagnostics, adaptive goals, offline access and private local progress.",
+  "description": "Professional English training for cybersecurity with authentic human-voice listening, controlled difficult-call drills, adaptive goals, offline app tools and private local progress.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -34,9 +34,9 @@
       "url": "./#dashboard"
     },
     {
-      "name": "Resume Diagnostic",
-      "short_name": "Diagnostic",
-      "url": "./#diagnostic"
+      "name": "Real Listening",
+      "short_name": "Real Listen",
+      "url": "./#real-listening-lab"
     },
     {
       "name": "Weekly Sprint",

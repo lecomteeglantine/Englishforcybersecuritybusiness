@@ -46,7 +46,8 @@
         <details class="nav-group" data-nav-group="train">
           <summary><span aria-hidden="true">↗</span>Train</summary>
           <div class="ux-nav-menu">
-            <a href="#listening-lab"><strong>Listening</strong><small>Gist · decoding · note-taking</small></a>
+            <a href="#listening-lab"><strong>Listening</strong><small>Controlled decoding · note-taking</small></a>
+            <a href="#real-listening-lab"><strong>Real Listening</strong><small>Human voices · multi-region exposure · difficult calls</small></a>
             <a href="#speaking-lab"><strong>Speaking</strong><small>Spontaneous responses · roleplay</small></a>
             <a href="#pronunciation-lab"><strong>Pronunciation</strong><small>Stress · chunking · intelligibility</small></a>
             <a href="#writing-lab"><strong>Writing</strong><small>Client emails · handovers</small></a>
@@ -1004,6 +1005,160 @@
 
 
 
+
+
+    <section class="section real-listening-section" id="real-listening-lab">
+      <div class="section-heading real-listening-heading">
+        <div>
+          <p class="eyebrow">REAL LISTENING LAB</p>
+          <h2>Train with human voices, not only practice voices.</h2>
+          <p>Use short listening windows from real cybersecurity briefings, panels and podcasts. Do not chase every word: identify the message, capture evidence, notice what made the speech difficult, then respond as if you were in the meeting.</p>
+        </div>
+        <div class="real-listening-stats">
+          <div><strong id="realListeningCompleted">0 / 6</strong><span>human-voice missions</span></div>
+          <div><strong id="realListeningEnvironments">0 / 6</strong><span>voice environments</span></div>
+          <div><strong id="realListeningFrictionAccuracy">—</strong><span>call-drill accuracy</span></div>
+        </div>
+      </div>
+
+      <div class="real-listening-honesty">
+        <div aria-hidden="true">◖</div>
+        <div>
+          <strong>Two different kinds of listening — clearly separated.</strong>
+          <span><b>Authentic missions</b> open the original external publisher and use real human speech. <b>Difficult Call drills</b> use your browser's synthetic voice so the language can be controlled. The site does not download, copy or pretend to own the external recordings.</span>
+        </div>
+      </div>
+
+      <div class="real-listening-principles">
+        <article><span>1</span><strong>First listen: message</strong><p>What is the speaker actually trying to communicate?</p></article>
+        <article><span>2</span><strong>Second listen: evidence</strong><p>Capture actions, scope, uncertainty and next steps — not full sentences.</p></article>
+        <article><span>3</span><strong>Repair the gap</strong><p>When you miss something, ask for the exact information you need.</p></article>
+      </div>
+
+      <div class="real-source-header">
+        <div>
+          <p class="small-label">AUTHENTIC HUMAN VOICES · INTERNET REQUIRED</p>
+          <h3>Six professional listening environments</h3>
+        </div>
+        <span class="resource-health-badge verified">Sources checked · 25 Aug 2026</span>
+      </div>
+      <div id="realListeningSourceGrid" class="real-source-grid"></div>
+
+      <div class="real-listening-workspace" id="realListeningWorkspace" hidden>
+        <button class="back-link" id="closeRealListeningBtn" type="button">← Back to human-voice missions</button>
+
+        <div class="real-mission-hero">
+          <div>
+            <p class="small-label" id="realMissionEnvironment">VOICE ENVIRONMENT</p>
+            <h2 id="realMissionTitle">Authentic listening mission</h2>
+            <p id="realMissionSource"></p>
+          </div>
+          <div class="real-mission-source-action">
+            <span id="realMissionCue">Listening window</span>
+            <a class="primary-button" id="realMissionExternalLink" href="#" target="_blank" rel="noopener noreferrer">Open original source ↗</a>
+            <small>External publisher · no embed · Internet required</small>
+          </div>
+        </div>
+
+        <div class="real-mission-grid">
+          <article class="real-step-card">
+            <span class="real-step-number">1</span>
+            <div>
+              <p class="small-label">BEFORE</p>
+              <h3>Predict the listening job</h3>
+              <p id="realMissionBefore"></p>
+              <label class="real-keyword-field">
+                <span>Three words you expect to hear</span>
+                <input id="realBeforeKeywords" type="text" maxlength="100" placeholder="e.g. threat · response · resilience">
+              </label>
+            </div>
+          </article>
+
+          <article class="real-step-card">
+            <span class="real-step-number">2</span>
+            <div>
+              <p class="small-label">LISTEN 1 · GIST</p>
+              <h3>Choose the message, not the detail</h3>
+              <div id="realGistQuestion" class="real-gist-question"></div>
+              <div id="realGistFeedback" class="activity-summary" aria-live="polite"></div>
+            </div>
+          </article>
+
+          <article class="real-step-card">
+            <span class="real-step-number">3</span>
+            <div>
+              <p class="small-label">LISTEN 2 · EVIDENCE</p>
+              <h3>Write keywords only</h3>
+              <p id="realEvidencePrompt"></p>
+              <textarea id="realEvidenceNotes" rows="4" maxlength="260" aria-label="Authentic listening evidence notes" placeholder="fact / action / uncertainty / next step"></textarea>
+              <div class="real-note-count"><strong id="realEvidenceWords">0</strong> words · notes are not saved</div>
+            </div>
+          </article>
+
+          <article class="real-step-card">
+            <span class="real-step-number">4</span>
+            <div>
+              <p class="small-label">NOTICE THE DIFFICULTY</p>
+              <h3>What made this harder than a textbook recording?</h3>
+              <div class="real-friction-options" id="realFrictionOptions">
+                <label><input type="checkbox" value="pace"> <span>pace / reduced speech</span></label>
+                <label><input type="checkbox" value="voice"> <span>unfamiliar voice or pronunciation</span></label>
+                <label><input type="checkbox" value="turns"> <span>turn-taking / interruption</span></label>
+                <label><input type="checkbox" value="terms"> <span>technical terms / names / acronyms</span></label>
+                <label><input type="checkbox" value="numbers"> <span>numbers / dates / scope details</span></label>
+              </div>
+              <p class="microcopy">This reflection is not scored. The point is to identify the obstacle you need to train.</p>
+            </div>
+          </article>
+
+          <article class="real-step-card real-response-card">
+            <span class="real-step-number">5</span>
+            <div>
+              <p class="small-label">RESPOND</p>
+              <h3>Reply as if you were in the meeting</h3>
+              <p id="realResponsePrompt"></p>
+              <div class="real-recovery-line">
+                <span>USE IF NEEDED</span>
+                <strong id="realRecoveryPhrase"></strong>
+                <button type="button" id="hearRealRecoveryBtn" aria-label="Hear recovery phrase">🔊</button>
+              </div>
+              <div class="real-self-checks" id="realMissionChecks"></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="real-mission-finish">
+          <div>
+            <p class="small-label">MISSION COMPLETION</p>
+            <h3>Complete the full listening cycle</h3>
+            <p>Completion requires the gist task when available, evidence notes and at least three response self-checks. Your notes are never stored.</p>
+          </div>
+          <button class="primary-button" id="completeRealMissionBtn" type="button">Log this mission</button>
+        </div>
+        <div id="realMissionFinishFeedback" class="activity-summary" aria-live="polite"></div>
+      </div>
+
+      <div class="difficult-call-section">
+        <div class="difficult-call-heading">
+          <div>
+            <p class="small-label">DIFFICULT CALL DRILLS · SYNTHETIC</p>
+            <h3>Practise the moments when listening breaks down</h3>
+            <p>These controlled browser-voice drills train clarification, numbers, self-correction and uncertainty before you meet the same problems in authentic speech.</p>
+          </div>
+          <div class="difficult-call-controls">
+            <label><span>Device voice</span><select id="difficultCallVoice"><option value="">Automatic English voice</option></select></label>
+            <label><span>Pressure</span><select id="difficultCallSpeed"><option value="1">Natural</option><option value="1.08" selected>Fast · 1.08×</option><option value="1.16">Pressure · 1.16×</option></select></label>
+          </div>
+        </div>
+        <div id="difficultCallGrid" class="difficult-call-grid"></div>
+        <p class="microcopy">Exact voice and pronunciation depend on the speech voices installed on this device. These drills are never labelled as authentic speech.</p>
+      </div>
+
+      <div class="real-listening-routine">
+        <div><p class="small-label">15-MINUTE ROUTINE</p><h3>One real voice + one repair drill</h3></div>
+        <div class="real-routine-steps"><span>2 min · predict</span><b>→</b><span>5 min · listen twice</span><b>→</b><span>4 min · respond</span><b>→</b><span>4 min · difficult-call drill</span></div>
+      </div>
+    </section>
 
     <section class="section work-english-section" id="work-english-lab">
       <div class="section-heading work-english-heading">
@@ -2520,7 +2675,7 @@
   <footer>
     <p>English, Back on Track · Personal professional-English programme</p>
     <p>No account · No tracking · Local progress · Offline-capable app.</p>
-    <p class="release-version">V23 · App Mode</p>
+    <p class="release-version">V24 · Real Listening</p>
   </footer>
   <script src="app.js"></script>
 </body>

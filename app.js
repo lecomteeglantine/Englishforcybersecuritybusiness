@@ -374,7 +374,7 @@ const vaultSchemaVersion=1;
 const vaultGroups=[
   {
     id:"diagnostic",icon:"◎",title:"Diagnostic & current profile",
-    description:"Initial diagnostic answers/results, current profile and personalised module progress.",
+    description:"Diagnostic results/current profile and personalised module progress. In-progress diagnostic drafts stay on this device and are not included in backups.",
     keys:["ebackontrack-v2","ebackontrack-v3-progress","ebackontrack-v10-progress"]
   },
   {
@@ -389,8 +389,8 @@ const vaultGroups=[
   },
   {
     id:"listening",icon:"◖",title:"Listening Lab",
-    description:"Completed listening tasks and local play counters.",
-    keys:["ebackontrack-v5-listening"]
+    description:"Controlled Listening Lab progress plus Real Listening completion and closed-task metadata. Authentic-source notes are not stored.",
+    keys:["ebackontrack-v5-listening","ebackontrack-v24-real-listening"]
   },
   {
     id:"speaking",icon:"●",title:"Speaking Lab",
@@ -586,6 +586,7 @@ function buildVaultSummary(){
   lines.push("TRAINING ACTIVITY");
   lines.push(`- Personalised modules completed: ${(plan.completed||[]).length}`);
   lines.push(`- Listening Lab: ${listen}/5 tasks completed`);
+  lines.push(`- Real Listening: ${typeof realListeningStats==="function"?realListeningStats().completed:0}/6 human-voice missions completed`);
   lines.push(`- Speaking Lab: ${speak.attempts||0} attempts`);
   lines.push(`- Writing Lab: ${(writing.attempts||[]).length} attempts`);
   lines.push(`- Grammar Repair: ${(grammar.completed||[]).length} units completed`);
@@ -1052,8 +1053,9 @@ function checkpointReadiness(){
   const sprintSessions=sprintState.active?.sessions?.filter(s=>s.completed).length||0;
   const grammar=loadGrammarRepairState().completed.length;
   const listening=listeningLabCompletedCount();
-  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(1,Math.floor(resources/2))+Math.min(2,simulations)+Math.min(1,workMissions)+Math.min(2,Math.floor(sprintSessions/2))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2));
-  return {completedModules,speaking,writing,pronunciation,resources,simulations,workMissions,sprintSessions,grammar,listening,evidence};
+  const realListening=realListeningStats().completed;
+  const evidence=completedModules+Math.min(2,Math.floor(speaking/3))+Math.min(1,Math.floor(writing/2))+Math.min(1,Math.floor(pronunciation/2))+Math.min(1,Math.floor(resources/2))+Math.min(2,simulations)+Math.min(1,workMissions)+Math.min(2,Math.floor(sprintSessions/2))+Math.min(2,grammar)+Math.min(2,Math.floor(listening/2))+Math.min(2,Math.floor(realListening/2));
+  return {completedModules,speaking,writing,pronunciation,resources,simulations,workMissions,sprintSessions,grammar,listening,realListening,evidence};
 }
 function renderProgressSkillComparison(state){
   const target=document.getElementById("progressSkillComparison");if(!target)return;
@@ -1137,7 +1139,8 @@ function renderProgressCheck(){
     <div class="readiness-item"><span>Work-based missions completed</span><strong>${ready.workMissions}</strong></div>
     <div class="readiness-item"><span>Weekly sprint sessions completed</span><strong>${ready.sprintSessions}</strong></div>
     <div class="readiness-item"><span>Grammar Repair units completed</span><strong>${ready.grammar}</strong></div>
-    <div class="readiness-item"><span>Listening Lab tasks completed</span><strong>${ready.listening} / 5</strong></div>`;
+    <div class="readiness-item"><span>Listening Lab tasks completed</span><strong>${ready.listening} / 5</strong></div>
+    <div class="readiness-item"><span>Real Listening missions completed</span><strong>${ready.realListening} / 6</strong></div>`;
 }
 function startFullRediagnostic(){
   const state=ensureProgressBaseline();
@@ -1935,6 +1938,9 @@ function buildRoutineTasks(minutes){
   if(results.listening < 75 || listeningLabCompletedCount() < 3){
     add({id:"listening",tag:"LISTENING",title:"Listening Lab",desc:`Do one ${results.listening < 65 ? "gist + decoding" : "note-taking or incident-call"} task. Your listening score is ${results.listening}%.`,duration:durations[0],anchor:"#listening-lab",cta:"Open Listening Lab"});
   }
+  if(tasks.length < 4 && results.listening < 80 && listeningLabCompletedCount()>=2 && realListeningStats().completed<4){
+    add({id:"real-listen",tag:"REAL VOICE",title:"Listen to one human cyber voice",desc:"Use one short authentic briefing, panel or podcast window, then respond aloud without writing a transcript.",duration:durations[Math.min(tasks.length,durations.length-1)],anchor:"#real-listening-lab",cta:"Open Real Listening"});
+  }
   if(due.due > 0 || due.saved === 0){
     add({id:"phrasebook",tag:"PHRASEBOOK",title:due.saved===0?"Start your Phrasebook":"Review due phrases",desc:due.saved===0?"Add useful chunks and begin spaced review.":"Review a few due cards and keep the useful chunks active.",duration:durations[1],anchor:"#phrasebook",cta:"Open Phrasebook"});
   }
@@ -2035,6 +2041,12 @@ function uxToolStatus(anchor){
     case "#listening-lab":
       if(listening>=5) return completed();
       return results.listening<75||weak.key==="listening"?recommended():optional();
+    case "#real-listening-lab":{
+      const real=realListeningStats();
+      if(real.completed>=6)return completed();
+      if(results.listening<75||listening>=2)return recommended();
+      return optional();
+    }
     case "#speaking-lab":
       if(Object.keys(speaking.modes||{}).filter(k=>speaking.modes[k]>0).length>=5) return completed();
       return results.speaking<75||weak.key==="speaking"?recommended():optional();
@@ -2081,7 +2093,8 @@ function renderQuickLinks(){
       ["#goal-sprint","Goals & Weekly Sprint","Set the next concrete goal"]
     ]},
     {title:"Train",icon:"↗",links:[
-      ["#listening-lab","Listening","Gist · decoding · notes"],
+      ["#listening-lab","Listening","Controlled decoding · notes"],
+      ["#real-listening-lab","Real Listening","Human voices · difficult calls"],
       ["#speaking-lab","Speaking","Spontaneous responses · roleplay"],
       ["#pronunciation-lab","Pronunciation","Stress · chunking · clarity"],
       ["#writing-lab","Writing","Client emails · handovers"],
@@ -2271,6 +2284,7 @@ const sprintGoalMeta={
 
 const sprintTaskCatalog={
   listening:{id:"listening",title:"Listening Lab",anchor:"#listening-lab",desc:"Gist, decoding, micro-dictation or SOC note-taking."},
+  realListening:{id:"realListening",title:"Real Listening",anchor:"#real-listening-lab",desc:"Listen to one short authentic human-voice cybersecurity source and respond."},
   authentic:{id:"authentic",title:"Authentic resource",anchor:"#resources-hub",desc:"Use one recent cyber source actively, then summarise it."},
   speaking:{id:"speaking",title:"Speaking Lab",anchor:"#speaking-lab",desc:"Do one spontaneous response or client-facing speaking mission."},
   pronunciation:{id:"pronunciation",title:"Pronunciation Lab",anchor:"#pronunciation-lab",desc:"Train the highest-priority intelligibility feature."},
@@ -2297,6 +2311,7 @@ function sprintPracticeSignals(){
   return {
     results:r,
     listeningDone:typeof listeningLabCompletedCount==="function"?listeningLabCompletedCount():0,
+    realListeningDone:typeof realListeningStats==="function"?realListeningStats().completed:0,
     speakingAttempts:typeof loadSpeakingState==="function"?loadSpeakingState().attempts:0,
     writingAttempts:typeof loadWritingState==="function"?loadWritingState().attempts.length:0,
     grammarDone:typeof loadGrammarRepairState==="function"?loadGrammarRepairState().completed.length:0,
@@ -2337,14 +2352,15 @@ function renderGoalPriorityPreview(){
 function sprintTaskScore(task,goal,s,dayIndex){
   let score=0,r=s.results||{};
   const weights={
-    "client-call":{listening:8,speaking:10,pronunciation:6,phrasebook:6,simulator:7,writing:4,authentic:3,grammar:2,work:4},
-    incident:{speaking:7,writing:8,grammar:4,phrasebook:5,simulator:8,listening:4,work:6,pronunciation:2,authentic:3},
-    listening:{listening:12,authentic:9,pronunciation:4,speaking:4,phrasebook:3,grammar:1,writing:1,simulator:3,work:2},
-    speaking:{speaking:12,phrasebook:7,pronunciation:7,simulator:8,listening:5,work:6,grammar:2,writing:2,authentic:2},
-    general:{listening:6,speaking:6,writing:5,grammar:5,pronunciation:5,phrasebook:5,authentic:4,simulator:4,work:4}
+    "client-call":{listening:7,realListening:9,speaking:10,pronunciation:6,phrasebook:6,simulator:7,writing:4,authentic:3,grammar:2,work:4},
+    incident:{speaking:7,writing:8,grammar:4,phrasebook:5,simulator:8,listening:4,realListening:5,work:6,pronunciation:2,authentic:3},
+    listening:{listening:10,realListening:13,authentic:8,pronunciation:4,speaking:4,phrasebook:3,grammar:1,writing:1,simulator:3,work:2},
+    speaking:{speaking:12,phrasebook:7,pronunciation:7,simulator:8,listening:4,realListening:5,work:6,grammar:2,writing:2,authentic:2},
+    general:{listening:5,realListening:6,speaking:6,writing:5,grammar:5,pronunciation:5,phrasebook:5,authentic:4,simulator:4,work:4}
   };
   score+=weights[goal]?.[task]||0;
   if(task==="listening"&&typeof r.listening==="number")score+=(100-r.listening)/8+(s.listeningDone<3?5:0);
+  if(task==="realListening"&&typeof r.listening==="number")score+=(100-r.listening)/7+(s.realListeningDone<3?6:0)+(s.listeningDone>=2?3:0);
   if(task==="speaking"&&typeof r.speaking==="number")score+=(100-r.speaking)/8+(s.speakingAttempts<3?5:0);
   if(task==="writing"&&typeof r.writing==="number")score+=(100-r.writing)/9+(s.writingAttempts<2?4:0);
   if(task==="grammar"&&typeof r.grammar==="number")score+=(100-r.grammar)/9+(s.grammarDone<2?3:0);
@@ -2359,7 +2375,7 @@ function sprintTaskScore(task,goal,s,dayIndex){
   return score;
 }
 function sprintDurationForTask(task,total){
-  const base={listening:5,authentic:5,speaking:6,pronunciation:4,phrasebook:3,grammar:5,writing:6,simulator:12,work:10,progress:10}[task]||5;
+  const base={listening:5,realListening:7,authentic:5,speaking:6,pronunciation:4,phrasebook:3,grammar:5,writing:6,simulator:12,work:10,progress:10}[task]||5;
   if(total===10)return Math.min(base,6);
   if(total===15)return Math.min(base,8);
   if(total===20)return Math.min(base,10);
@@ -2600,6 +2616,254 @@ function initGoalSprint(){
   document.getElementById("endSprintBtn")?.addEventListener("click",endCurrentSprint);
   document.querySelectorAll("[data-meeting-window]").forEach(btn=>btn.addEventListener("click",()=>renderMeetingCrashPlan(btn.dataset.meetingWindow)));
   renderGoalSprint();
+}
+
+
+
+// V24 · Real Listening
+const realListeningStateKey="ebackontrack-v24-real-listening";
+
+const realListeningSources=[
+  {
+    id:"uk-cyberuk-2026",environment:"UK professional event",
+    title:"CYBERUK 2026 — choose one interview or panel opening",
+    publisher:"UK National Cyber Security Centre · CYBERUK",
+    url:"https://www.ncsc.gov.uk/section/keep-up-to-date/cyberuk",
+    cue:"Choose one CYBERUK 2026 video, then listen to 60–90 seconds after the introduction.",
+    length:"60–90 sec window",level:"B2+",
+    before:"Predict the speaker's communication job: defining a threat, explaining an impact, recommending action, or framing a strategic issue.",
+    gist:null,
+    evidence:"Capture one key issue, one consequence or implication, and one phrase that signals the speaker's position.",
+    response:"Summarise the speaker's main point in 30 seconds for a colleague who missed the session.",
+    recovery:"Could you clarify what you see as the main operational implication?"
+  },
+  {
+    id:"au-banks-2026",environment:"Australian panel",
+    title:"A fireside chat with Australia's big four banks",
+    publisher:"Australian Cyber Security Centre · cyber.gov.au",
+    url:"https://www.cyber.gov.au/about-us/view-all-content/news/a-fireside-chat-with-australias-big-4-banks",
+    cue:"Listen to roughly 90 seconds from the opening discussion after introductions.",
+    length:"≈90 sec window",level:"B2+",
+    before:"Predict three words connected with collective cyber resilience and responsibility.",
+    gist:{q:"What is the broad purpose of the discussion?",a:["To compare consumer banking products","To discuss shared responsibility for stronger cyber resilience","To teach malware reverse engineering","To announce a single new banking regulation"],c:1},
+    evidence:"Capture who is expected to act, one priority, and one idea about resilience or responsibility.",
+    response:"Give a 30-second internal takeaway: what should an organisation do differently after hearing this discussion?",
+    recovery:"Sorry — when you say shared responsibility, which action sits with the organisation?"
+  },
+  {
+    id:"ca-threat-2025-26",environment:"Canadian press briefing",
+    title:"Canadian officials discuss the 2025–26 cyber threat assessment",
+    publisher:"CPAC · Canadian cyber officials",
+    url:"https://www.youtube.com/watch?v=hopLNyF8UR0",
+    cue:"Listen to the opening 60–90 seconds after the speakers are introduced.",
+    length:"60–90 sec window",level:"B2+",
+    before:"Predict the difference between the language of a threat assessment and the language of an incident report.",
+    gist:{q:"What is the event primarily about?",a:["A new consumer antivirus product","Canada's National Cyber Threat Assessment for 2025–26","A live response to one ransomware incident","A recruitment campaign for cyber analysts"],c:1},
+    evidence:"Capture one threat category, one organisation or sector mentioned, and one statement about future risk.",
+    response:"Brief a manager in 30 seconds: what kind of document is being presented and why does it matter?",
+    recovery:"Could you repeat the sector you said was most exposed?"
+  },
+  {
+    id:"sg-threat-panel-2025",environment:"Singapore / global panel",
+    title:"Insights into 2025's cyber threats",
+    publisher:"Singapore International Cyber Week",
+    url:"https://www.sicw.gov.sg/resources/2025-high-level-panel-insights-into-2025-s-cyber-threats/",
+    cue:"Listen to 60–90 seconds from the first substantive panel exchange.",
+    length:"60–90 sec window",level:"B2+",
+    before:"Predict the language international speakers will use to compare threat trends across countries and sectors.",
+    gist:{q:"What is the panel designed to explore?",a:["Only password policy for home users","Current cyber threats, tactics and strategies used by threat actors","The history of computer hardware","A single vendor's quarterly earnings"],c:1},
+    evidence:"Capture one trend, one tactic or actor behaviour, and one consequence for defenders.",
+    response:"Give a 30-second threat-intelligence takeaway without overclaiming certainty.",
+    recovery:"Just to make sure I understood: are you describing a confirmed trend or an emerging possibility?"
+  },
+  {
+    id:"google-ti-2025",environment:"US vendor briefing",
+    title:"Google Threat Intelligence — overview",
+    publisher:"Google Threat Intelligence",
+    url:"https://www.youtube.com/watch?v=RsEg-D9EMdg",
+    cue:"Listen to the first 60–90 seconds of the overview.",
+    length:"60–90 sec window",level:"B2",
+    before:"Predict which verbs a threat-intelligence speaker will use: detect, investigate, enrich, attribute, prioritise, respond.",
+    gist:{q:"What communication job best fits an overview like this?",a:["Explaining how threat intelligence supports investigation and defence","Giving legal advice about employment contracts","Teaching basic spreadsheet formulas","Reporting a building-access incident"],c:0},
+    evidence:"Capture two operational verbs and one kind of information or context the speaker says defenders need.",
+    response:"Explain in plain English to a client why threat intelligence is useful before and during an investigation.",
+    recovery:"Could you give one concrete example of how that intelligence changes the investigation?"
+  },
+  {
+    id:"cyber-today-proxy-2026",environment:"Canadian tech-news podcast",
+    title:"Cybersecurity Today — Google's proxy-network takedown",
+    publisher:"Cybersecurity Today",
+    url:"https://music.youtube.com/podcast/WtryeeXjTOU",
+    cue:"Listen from 00:52 to about 02:10.",
+    length:"≈78 sec window",level:"B2+",
+    before:"Predict the difference between the language of a news host and the language of an incident responder.",
+    gist:{q:"What is the main story in this listening window?",a:["A new cloud certification","Google's disruption of a large residential proxy network","A software company's earnings","A hospital data-retention policy"],c:1},
+    evidence:"Capture what was disrupted, why the infrastructure mattered, and one consequence or risk described by the host.",
+    response:"Give a 30-second SOC-team summary of the story, keeping reported facts separate from your own interpretation.",
+    recovery:"Did you say the network was taken down, or only that part of the infrastructure was disrupted?"
+  }
+];
+
+const difficultCallDrills=[
+  {id:"numbers",tag:"NUMBERS & SCOPE",title:"Did you say fifteen or fifty?",text:"Quick update. We've seen fifty failed logins, sorry, fifteen failed logins, across three accounts since nine fifteen UTC.",q:"What is the corrected number of failed logins?",a:["50","15","3","9"],c:1,repair:"Sorry — did you say fifteen failed logins across three accounts?"},
+  {id:"self-repair",tag:"SELF-CORRECTION",title:"The speaker changes the assessment",text:"We think the account is compromised. Actually, let me correct that. Unauthorized use is confirmed, but wider compromise is not.",q:"What is confirmed?",a:["The whole environment is compromised","Unauthorized account use","Data exfiltration","Lateral movement"],c:1,repair:"Just to confirm: unauthorized use is confirmed, but wider compromise is still unconfirmed?"},
+  {id:"uncertainty",tag:"UNCERTAINTY",title:"Possible is not confirmed",text:"The traffic could indicate command and control, but at this stage we don't have enough evidence to confirm that.",q:"What is the speaker's position?",a:["Command and control is confirmed","The traffic is definitely benign","Command and control is possible but unconfirmed","The incident is closed"],c:2,repair:"What evidence would you need before you could confirm command and control?"},
+  {id:"acronym",tag:"ACRONYM & ACTION",title:"Catch the operational acronym",text:"Please check the E D R telemetry first, then compare the process tree with the identity logs before you escalate.",q:"What should be checked first?",a:["Email headers","EDR telemetry","Identity logs only","Firewall policy"],c:1,repair:"Sorry — was that EDR telemetry first, then the process tree and identity logs?"},
+  {id:"interruption",tag:"INTERRUPTED UPDATE",title:"Recover the next step",text:"We've isolated the endpoint and we're reviewing the archive. Sorry, one second. Right. The next step is to search the tenant for the same attachment.",q:"What is the next step?",a:["Reconnect the endpoint","Search the tenant for the same attachment","Close the incident","Reset every password"],c:1,repair:"Thanks — just to confirm, the next step is a tenant-wide search for the same attachment?"},
+  {id:"timeline",tag:"TIMELINE",title:"Two times, two actions",text:"The alert fired at eight forty two. The host was isolated at eight forty seven, and the wider search started at eight fifty five.",q:"When was the host isolated?",a:["08:42","08:47","08:55","08:57"],c:1,repair:"Could I confirm the timeline: alert at 08:42, isolation at 08:47, wider search at 08:55?"}
+];
+
+function loadRealListeningState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(realListeningStateKey))||{};
+    return {completed:Array.isArray(raw.completed)?raw.completed:[],frictionAttempts:Number(raw.frictionAttempts)||0,frictionCorrect:Number(raw.frictionCorrect)||0,frictionDone:Array.isArray(raw.frictionDone)?raw.frictionDone:[]};
+  }catch(e){return {completed:[],frictionAttempts:0,frictionCorrect:0,frictionDone:[]};}
+}
+function saveRealListeningState(state){localStorage.setItem(realListeningStateKey,JSON.stringify(state));}
+function realListeningById(id){return realListeningSources.find(x=>x.id===id);}
+function realListeningStats(){
+  const s=loadRealListeningState(),done=realListeningSources.filter(x=>s.completed.includes(x.id));
+  return {completed:done.length,environments:new Set(done.map(x=>x.environment)).size,frictionAttempts:s.frictionAttempts,frictionCorrect:s.frictionCorrect};
+}
+function renderRealListeningStats(){
+  const s=realListeningStats();
+  document.getElementById("realListeningCompleted").textContent=`${s.completed} / 6`;
+  document.getElementById("realListeningEnvironments").textContent=`${s.environments} / 6`;
+  document.getElementById("realListeningFrictionAccuracy").textContent=s.frictionAttempts?`${Math.round(s.frictionCorrect/s.frictionAttempts*100)}%`:"—";
+}
+function renderRealListeningSources(){
+  const target=document.getElementById("realListeningSourceGrid");if(!target)return;
+  const state=loadRealListeningState();
+  target.innerHTML=realListeningSources.map(r=>`
+    <article class="real-source-card ${state.completed.includes(r.id)?"completed":""}">
+      <div class="real-source-top"><span class="real-environment-tag">${r.environment}</span>${state.completed.includes(r.id)?'<span class="ux-status completed">Completed</span>':'<span class="ux-status optional">Authentic</span>'}</div>
+      <h4>${r.title}</h4><p>${r.publisher}</p>
+      <div class="real-source-meta"><span>${r.level}</span><span>${r.length}</span><span>Human speech</span></div>
+      <p class="real-source-cue">${r.cue}</p>
+      <button class="secondary-button" type="button" data-real-listen="${r.id}">${state.completed.includes(r.id)?"Practise again":"Start mission →"}</button>
+    </article>`).join("");
+  target.querySelectorAll("[data-real-listen]").forEach(btn=>btn.addEventListener("click",()=>openRealListeningMission(btn.dataset.realListen)));
+}
+let activeRealListening=null;
+function openRealListeningMission(id){
+  const r=realListeningById(id);if(!r)return;
+  activeRealListening=r;
+  document.getElementById("realMissionEnvironment").textContent=r.environment.toUpperCase();
+  document.getElementById("realMissionTitle").textContent=r.title;
+  document.getElementById("realMissionSource").textContent=r.publisher;
+  document.getElementById("realMissionCue").textContent=r.cue;
+  document.getElementById("realMissionExternalLink").href=r.url;
+  document.getElementById("realMissionBefore").textContent=r.before;
+  document.getElementById("realEvidencePrompt").textContent=r.evidence;
+  document.getElementById("realResponsePrompt").textContent=r.response;
+  document.getElementById("realRecoveryPhrase").textContent=r.recovery;
+  document.getElementById("realBeforeKeywords").value="";
+  document.getElementById("realEvidenceNotes").value="";
+  document.getElementById("realEvidenceWords").textContent="0";
+  document.querySelectorAll("#realFrictionOptions input").forEach(x=>x.checked=false);
+  document.getElementById("realGistFeedback").textContent="";
+  document.getElementById("realGistFeedback").className="activity-summary";
+  document.getElementById("realMissionFinishFeedback").textContent="";
+  document.getElementById("realMissionFinishFeedback").className="activity-summary";
+  document.getElementById("realMissionChecks").innerHTML=[
+    "I can state the speaker's main message without translating sentence by sentence.",
+    "I separated reported facts from my own interpretation.",
+    "I used keywords rather than writing a transcript.",
+    "I gave a short oral response or clarification question."
+  ].map((x,i)=>`<label><input type="checkbox" data-real-check="${i}"><span>${x}</span></label>`).join("");
+  document.getElementById("realGistQuestion").innerHTML=r.gist
+    ?`<p>${r.gist.q}</p>`+r.gist.a.map((a,i)=>`<label class="real-gist-option"><input type="radio" name="real-gist" value="${i}"><span>${a}</span></label>`).join("")
+    :`<div class="real-gist-open"><strong>Open source mission</strong><p>After the first listen, say the speaker's main point aloud in one sentence. This source is deliberately not reduced to a fixed answer because you choose the CYBERUK 2026 video.</p></div>`;
+  document.querySelector(".real-source-grid").hidden=true;
+  document.querySelector(".real-source-header").hidden=true;
+  document.getElementById("realListeningWorkspace").hidden=false;
+  document.getElementById("realListeningWorkspace").scrollIntoView({behavior:"smooth",block:"start"});
+}
+function closeRealListeningMission(){
+  activeRealListening=null;
+  document.getElementById("realListeningWorkspace").hidden=true;
+  document.querySelector(".real-source-grid").hidden=false;
+  document.querySelector(".real-source-header").hidden=false;
+  renderRealListeningSources();
+}
+function realGistCorrect(){
+  if(!activeRealListening?.gist)return true;
+  const selected=document.querySelector('input[name="real-gist"]:checked');
+  return !!selected&&Number(selected.value)===activeRealListening.gist.c;
+}
+function checkRealGist(){
+  if(!activeRealListening?.gist)return;
+  const selected=document.querySelector('input[name="real-gist"]:checked'),fb=document.getElementById("realGistFeedback");
+  if(!selected){fb.className="activity-summary neutral";fb.textContent="Choose the main message after your first listen.";return;}
+  const ok=Number(selected.value)===activeRealListening.gist.c;
+  fb.className=`activity-summary ${ok?"correct":"neutral"}`;
+  fb.textContent=ok?"Gist correct ✓ Listen again for evidence, not more general detail.":"Not quite. Listen again for the speaker's overall communication job rather than one isolated detail.";
+}
+function completeRealListeningMission(){
+  if(!activeRealListening)return;
+  const evidence=workWordCount(document.getElementById("realEvidenceNotes").value);
+  const checks=[...document.querySelectorAll("[data-real-check]")].filter(x=>x.checked).length;
+  const fb=document.getElementById("realMissionFinishFeedback");
+  if(activeRealListening.gist&&!realGistCorrect()){fb.className="activity-summary neutral";fb.textContent="Get the gist task right before logging the mission.";return;}
+  if(evidence<4){fb.className="activity-summary neutral";fb.textContent="Add at least four evidence keywords from the second listen.";return;}
+  if(checks<3){fb.className="activity-summary neutral";fb.textContent="Confirm at least three response self-checks before logging the mission.";return;}
+  const state=loadRealListeningState();
+  if(!state.completed.includes(activeRealListening.id))state.completed.push(activeRealListening.id);
+  saveRealListeningState(state);
+  fb.className="activity-summary correct";fb.textContent="Authentic listening mission logged ✓ Your prediction and evidence notes were not stored.";
+  renderRealListeningStats();
+  if(typeof renderDashboard==="function")renderDashboard();
+  if(typeof renderProgressCheck==="function")renderProgressCheck();
+  if(typeof renderProgressVault==="function")renderProgressVault();
+}
+function populateDifficultCallVoices(){
+  const select=document.getElementById("difficultCallVoice");if(!select||!("speechSynthesis" in window))return;
+  const voices=speechSynthesis.getVoices().filter(v=>/^en[-_]/i.test(v.lang)).slice(0,20),current=select.value;
+  select.innerHTML='<option value="">Automatic English voice</option>'+voices.map((v,i)=>`<option value="${i}">${v.name} · ${v.lang}</option>`).join("");
+  if([...select.options].some(o=>o.value===current))select.value=current;
+}
+function difficultCallSpeak(text){
+  if(!("speechSynthesis" in window))return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text),voices=speechSynthesis.getVoices().filter(v=>/^en[-_]/i.test(v.lang)).slice(0,20),choice=document.getElementById("difficultCallVoice")?.value;
+  if(choice!==""&&voices[Number(choice)])u.voice=voices[Number(choice)];else u.voice=voices.find(v=>/en-GB/i.test(v.lang))||voices[0]||null;
+  u.lang=u.voice?.lang||"en-GB";u.rate=Number(document.getElementById("difficultCallSpeed")?.value||1.08);speechSynthesis.speak(u);
+}
+function answerDifficultCall(id,index,button){
+  const d=difficultCallDrills.find(x=>x.id===id);if(!d)return;
+  const state=loadRealListeningState(),card=button.closest(".difficult-call-card");
+  card.querySelectorAll(".difficult-call-options button").forEach(b=>b.classList.remove("selected-correct","selected-wrong"));
+  const ok=index===d.c;button.classList.add(ok?"selected-correct":"selected-wrong");
+  state.frictionAttempts++;if(ok)state.frictionCorrect++;if(ok&&!state.frictionDone.includes(id))state.frictionDone.push(id);
+  saveRealListeningState(state);card.classList.toggle("correct",ok);
+  card.querySelector(".difficult-call-feedback").textContent=ok?"Correct ✓ Now say the repair line aloud.":"Not quite — replay once, then ask for the exact detail you missed.";
+  renderRealListeningStats();
+}
+function renderDifficultCalls(){
+  const target=document.getElementById("difficultCallGrid");if(!target)return;
+  const state=loadRealListeningState();
+  target.innerHTML=difficultCallDrills.map(d=>`
+    <article class="difficult-call-card ${state.frictionDone.includes(d.id)?"correct":""}">
+      <span class="difficult-call-tag">${d.tag}</span><h4>${d.title}</h4><p>Listen once before looking for the answer.</p>
+      <div class="difficult-call-actions"><button class="secondary-button" type="button" data-difficult-play="${d.id}">▶ Play synthetic call</button></div>
+      <div class="difficult-call-options"><strong>${d.q}</strong>${d.a.map((x,i)=>`<button type="button" data-difficult-answer="${d.id}" data-answer-index="${i}">${x}</button>`).join("")}</div>
+      <div class="difficult-call-feedback"></div>
+      <div class="difficult-call-repair"><strong>Repair line</strong><span>${d.repair}</span> <button class="tiny-speak-button" type="button" data-difficult-repair="${d.id}">🔊</button></div>
+    </article>`).join("");
+  target.querySelectorAll("[data-difficult-play]").forEach(b=>b.addEventListener("click",()=>{const d=difficultCallDrills.find(x=>x.id===b.dataset.difficultPlay);if(d)difficultCallSpeak(d.text);}));
+  target.querySelectorAll("[data-difficult-answer]").forEach(b=>b.addEventListener("click",()=>answerDifficultCall(b.dataset.difficultAnswer,Number(b.dataset.answerIndex),b)));
+  target.querySelectorAll("[data-difficult-repair]").forEach(b=>b.addEventListener("click",()=>{const d=difficultCallDrills.find(x=>x.id===b.dataset.difficultRepair);if(d)difficultCallSpeak(d.repair);}));
+}
+function renderRealListeningLab(){if(document.getElementById("real-listening-lab")){renderRealListeningStats();renderRealListeningSources();renderDifficultCalls();}}
+function initRealListeningLab(){
+  if(!document.getElementById("real-listening-lab"))return;
+  document.getElementById("closeRealListeningBtn")?.addEventListener("click",closeRealListeningMission);
+  document.getElementById("hearRealRecoveryBtn")?.addEventListener("click",()=>activeRealListening&&difficultCallSpeak(activeRealListening.recovery));
+  document.getElementById("completeRealMissionBtn")?.addEventListener("click",completeRealListeningMission);
+  document.getElementById("realEvidenceNotes")?.addEventListener("input",e=>document.getElementById("realEvidenceWords").textContent=workWordCount(e.target.value));
+  document.getElementById("realGistQuestion")?.addEventListener("change",checkRealGist);
+  populateDifficultCallVoices();if("speechSynthesis" in window)speechSynthesis.onvoiceschanged=populateDifficultCallVoices;
+  renderRealListeningLab();
 }
 
 
@@ -6910,6 +7174,7 @@ const appViewGroupMap={
   dashboard:"today",
   "goal-sprint":"today",
   "listening-lab":"train",
+  "real-listening-lab":"train",
   "speaking-lab":"train",
   "pronunciation-lab":"train",
   "writing-lab":"train",
@@ -7026,6 +7291,7 @@ const uxSectionMap={
   "diagnostic":["Progress","Diagnostic"],
   "my-plan":["Explore","My personalised plan"],
   "listening-lab":["Train","Listening"],
+  "real-listening-lab":["Train","Real Listening"],
   "speaking-lab":["Train","Speaking"],
   "pronunciation-lab":["Train","Pronunciation"],
   "writing-lab":["Train","Writing"],
@@ -7102,6 +7368,7 @@ initV23AppMode();
 initPhrasebook();
 initSpeakingLab();
 initGoalSprint();
+initRealListeningLab();
 initWorkEnglishLab();
 initClientCallSimulator();
 initResourceMaintenance();
