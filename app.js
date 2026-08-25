@@ -110,7 +110,8 @@ function showSection(name){
   document.querySelectorAll(".diag-tab").forEach(t=>t.classList.remove("active"));
   document.getElementById(`panel-${name}`).classList.add("active");
   document.querySelector(`.diag-tab[data-section="${name}"]`).classList.add("active");
-  document.getElementById("diagnostic").scrollIntoView({behavior:"smooth",block:"start"});
+  if(typeof updateDiagnosticProgressUI==="function")updateDiagnosticProgressUI();
+  appNavigate("diagnostic",{push:true});
 }
 document.querySelectorAll(".diag-tab").forEach(btn=>btn.addEventListener("click",()=>showSection(btn.dataset.section)));
 document.querySelectorAll(".next-section").forEach(btn=>btn.addEventListener("click",()=>showSection(btn.dataset.next)));
@@ -139,11 +140,11 @@ function classify(pct){if(pct>=85)return"Strong — maintain";if(pct>=70)return"
 function roadmapFor(key){const map={listening:["SOC listening","Short multi-accent incident updates, handovers and meetings with focused note-taking."],speaking:["Speak without a script","Timed explanations of alerts, risk and incidents with reusable speaking frames."],grammar:["Accuracy reset","Target only the grammar patterns that actually break down in professional communication."],cyber:["Cybersecurity English","Build precise SOC, incident-response, risk and threat-intelligence language in context."],pronunciation:["Technical intelligibility","Word stress, endings, connected speech and chunking using cybersecurity vocabulary."],writing:["Client-facing writing","Concise incident updates, recommendations and technical-to-plain-English explanations."]};return map[key];}
 
 function renderProfile(results,details){
-  const labels={grammar:"Grammar & accuracy",cyber:"Cybersecurity English",listening:"Listening",pronunciation:"Pronunciation",speaking:"Spoken fluency",writing:"Writing confidence"};
+  const labels={grammar:"Grammar & accuracy",cyber:"Cybersecurity English",listening:"Listening",pronunciation:"Pronunciation awareness",speaking:"Spoken fluency",writing:"Writing confidence"};
   document.getElementById("scoreGrid").innerHTML=Object.entries(results).map(([key,pct])=>`<article class="score-card"><div class="score-top"><h4>${labels[key]}</h4><span class="score-value">${pct}%</span></div><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><div class="status">${classify(pct)}</div></article>`).join("");
   const priorities=Object.entries(results).sort((a,b)=>a[1]-b[1]).slice(0,4);
   document.getElementById("priorityList").innerHTML=priorities.map(([key,pct])=>`<li><strong>${labels[key]}</strong> — ${classify(pct).toLowerCase()}</li>`).join("");
-  const weak=[...tagWeaknesses(details.grammar,3).map(x=>({...x,area:"Grammar"})),...tagWeaknesses(details.cyber,3).map(x=>({...x,area:"Cyber English"})),...tagWeaknesses(details.pronunciation,2).map(x=>({...x,area:"Pronunciation"}))].sort((a,b)=>a.pct-b.pct).slice(0,6);
+  const weak=[...tagWeaknesses(details.grammar,3).map(x=>({...x,area:"Grammar"})),...tagWeaknesses(details.cyber,3).map(x=>({...x,area:"Cyber English"})),...tagWeaknesses(details.pronunciation,2).map(x=>({...x,area:"Pronunciation awareness"}))].sort((a,b)=>a.pct-b.pct).slice(0,6);
   document.getElementById("weaknessGrid").innerHTML=weak.map(x=>`<article class="weakness-card"><span>${x.area}</span><strong>${x.name}</strong><small>${x.pct}% in this diagnostic</small></article>`).join("");
   document.getElementById("roadmapCards").innerHTML=priorities.slice(0,3).map(([key])=>{const r=roadmapFor(key);return`<article class="roadmap-card"><strong>${r[0]}</strong><span>${r[1]}</span></article>`;}).join("");
   const listenRec=document.getElementById("listeningRecommendation");
@@ -163,17 +164,207 @@ document.getElementById("calculateBtn").addEventListener("click",()=>{
   const writingWords=document.getElementById("writingTask").value.trim().split(/\s+/).filter(Boolean).length;
   const speakingPct=speakingRating?speakingRating*20:50;let writingPct=writingRating?writingRating*20:50;if(writingWords>=90&&writingWords<=140)writingPct=Math.min(100,writingPct+5);if(writingWords>0&&writingWords<60)writingPct=Math.max(20,writingPct-10);
   const results={grammar:grammar.pct,cyber:cyber.pct,listening:listening.pct,pronunciation:pronunciation.pct,speaking:speakingPct,writing:writingPct};
-  const details={grammar,cyber,listening,pronunciation}; localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details})); recordFullDiagnosticSnapshot(results,details); updateSmartHomeMode();
+  const details={grammar,cyber,listening,pronunciation};
+  localStorage.setItem("ebackontrack-v2",JSON.stringify({results,details}));
+  localStorage.removeItem(diagnosticDraftKey);
+  recordFullDiagnosticSnapshot(results,details); updateSmartHomeMode();
 initV16AppExperience(); renderProfile(results,details); renderTrainingPlan(results,details); if(typeof renderGrammarRepair==="function")renderGrammarRepair(); if(typeof renderDashboard==="function")renderDashboard(); showSection("results");
 });
 
-document.getElementById("resetBtn").addEventListener("click",()=>{if(!confirm("Reset all answers and local diagnostic results?"))return;localStorage.removeItem("ebackontrack-v2");localStorage.removeItem("ebackontrack-v3-progress");localStorage.removeItem("ebackontrack-v10-progress");document.querySelectorAll("#diagnostic input[type=radio]").forEach(i=>i.checked=false);document.querySelectorAll("#diagnostic textarea").forEach(t=>t.value="");document.querySelectorAll("#diagnostic select").forEach(s=>s.value="");document.getElementById("wordCount").textContent="0";document.getElementById("resultsEmpty").hidden=false;document.getElementById("resultsContent").hidden=true;document.getElementById("planUnlocked").hidden=true;document.getElementById("planLocked").hidden=false;updateSmartHomeMode();renderDashboard();document.getElementById("home")?.scrollIntoView({behavior:"smooth",block:"start"});});
+document.getElementById("resetBtn").addEventListener("click",()=>{if(!confirm("Reset all answers and local diagnostic results?"))return;localStorage.removeItem("ebackontrack-v2");localStorage.removeItem("ebackontrack-v3-progress");localStorage.removeItem("ebackontrack-v10-progress");localStorage.removeItem(diagnosticDraftKey);document.querySelectorAll("#diagnostic input[type=radio]").forEach(i=>i.checked=false);document.querySelectorAll("#diagnostic textarea").forEach(t=>t.value="");document.querySelectorAll("#diagnostic select").forEach(s=>s.value="");document.getElementById("wordCount").textContent="0";document.getElementById("resultsEmpty").hidden=false;document.getElementById("resultsContent").hidden=true;document.getElementById("planUnlocked").hidden=true;document.getElementById("planLocked").hidden=false;updateSmartHomeMode();renderDashboard();appNavigate("home",{push:true});});
 
 try{const saved=JSON.parse(localStorage.getItem("ebackontrack-v2"));if(saved?.results&&saved?.details)renderProfile(saved.results,saved.details);}catch(e){}
 
 
 
 
+
+
+
+
+// V23 · Diagnostic autosave, resume and progress
+const diagnosticDraftKey="ebackontrack-v23-diagnostic-draft";
+let diagnosticAutosaveTimer=null;
+
+function loadDiagnosticDraft(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(diagnosticDraftKey));
+    return raw&&typeof raw==="object"?raw:null;
+  }catch(e){return null;}
+}
+function diagnosticClosedAnsweredCount(){
+  let answered=0;
+  ["grammar","cyber","listening","pronunciation"].forEach(prefix=>{
+    document.querySelectorAll(`#diagnostic input[type="radio"][name^="${prefix}-"]:checked`).forEach(()=>answered++);
+  });
+  return answered;
+}
+function diagnosticProductionStartedCount(){
+  return ["speakingReflection","incidentReflection","writingTask","plainEnglishTask"]
+    .filter(id=>(document.getElementById(id)?.value||"").trim().length>0).length;
+}
+function currentDiagnosticSection(){
+  return document.querySelector(".diag-tab.active")?.dataset.section||"grammar";
+}
+function diagnosticEstimateText(answered){
+  const remaining=Math.max(0,75-answered);
+  const productionStarted=diagnosticProductionStartedCount();
+  const closedMinutes=Math.ceil(remaining*.28);
+  const productionMinutes=Math.max(0,8-productionStarted*2);
+  if(remaining===0 && productionMinutes===0)return "Scored items complete · finish ratings and build the profile.";
+  if(remaining===0)return `Scored items complete · about ${productionMinutes||2} min of production work left.`;
+  return `About ${closedMinutes+productionMinutes} min left including production tasks.`;
+}
+function updateDiagnosticProgressUI(){
+  const answered=diagnosticClosedAnsweredCount();
+  const pct=Math.round(answered/75*100);
+  const text=document.getElementById("diagnosticProgressText");
+  const bar=document.getElementById("diagnosticProgressBar");
+  const estimate=document.getElementById("diagnosticTimeEstimate");
+  if(text)text.textContent=`${answered} / 75 scored items`;
+  if(bar)bar.style.width=`${pct}%`;
+  if(estimate)estimate.textContent=diagnosticEstimateText(answered);
+
+  const draft=loadDiagnosticDraft();
+  const resume=document.getElementById("resumeDiagnosticBtn");
+  const clear=document.getElementById("clearDiagnosticDraftBtn");
+  if(resume){
+    resume.hidden=!(draft&&draft.closedAnswered>0);
+    if(draft?.currentSection){
+      const label={
+        grammar:"Grammar",cyber:"Cyber English",listening:"Listening",
+        pronunciation:"Pronunciation awareness",production:"Speaking & writing",results:"My profile"
+      }[draft.currentSection]||"diagnostic";
+      resume.textContent=`Resume ${label} →`;
+    }
+  }
+  if(clear)clear.hidden=!(draft&&draft.closedAnswered>0);
+}
+function collectDiagnosticDraft(){
+  const radios={};
+  document.querySelectorAll('#diagnostic input[type="radio"]:checked').forEach(input=>radios[input.name]=input.value);
+  const selects={};
+  document.querySelectorAll("#diagnostic select[id]").forEach(select=>selects[select.id]=select.value);
+  const textareas={};
+  document.querySelectorAll("#diagnostic textarea[id]").forEach(area=>textareas[area.id]=area.value);
+  return {
+    version:23,
+    updatedAt:Date.now(),
+    currentSection:currentDiagnosticSection(),
+    closedAnswered:diagnosticClosedAnsweredCount(),
+    radios,selects,textareas
+  };
+}
+function saveDiagnosticDraft(){
+  const draft=collectDiagnosticDraft();
+  const hasAnything=draft.closedAnswered>0 ||
+    Object.values(draft.selects).some(Boolean) ||
+    Object.values(draft.textareas).some(v=>(v||"").trim());
+  if(!hasAnything){
+    localStorage.removeItem(diagnosticDraftKey);
+    updateDiagnosticProgressUI();
+    return;
+  }
+  localStorage.setItem(diagnosticDraftKey,JSON.stringify(draft));
+  const status=document.getElementById("diagnosticAutosaveText");
+  if(status){
+    const now=new Date();
+    status.textContent=`Saved locally · ${now.toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"})}`;
+  }
+  updateDiagnosticProgressUI();
+}
+function queueDiagnosticAutosave(){
+  clearTimeout(diagnosticAutosaveTimer);
+  const status=document.getElementById("diagnosticAutosaveText");
+  if(status)status.textContent="Saving locally…";
+  diagnosticAutosaveTimer=setTimeout(saveDiagnosticDraft,300);
+}
+function restoreDiagnosticDraft(){
+  const draft=loadDiagnosticDraft();
+  if(!draft)return false;
+  Object.entries(draft.radios||{}).forEach(([name,value])=>{
+    const input=document.querySelector(`#diagnostic input[type="radio"][name="${CSS.escape(name)}"][value="${CSS.escape(String(value))}"]`);
+    if(input)input.checked=true;
+  });
+  Object.entries(draft.selects||{}).forEach(([id,value])=>{
+    const el=document.getElementById(id);if(el)el.value=value;
+  });
+  Object.entries(draft.textareas||{}).forEach(([id,value])=>{
+    const el=document.getElementById(id);if(el)el.value=value;
+  });
+  const writing=document.getElementById("writingTask");
+  if(writing){
+    const words=writing.value.trim()?writing.value.trim().split(/\s+/).length:0;
+    document.getElementById("wordCount").textContent=words;
+  }
+  const status=document.getElementById("diagnosticAutosaveText");
+  if(status&&draft.updatedAt){
+    status.textContent=`Saved locally · ${new Date(draft.updatedAt).toLocaleString([], {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"})}`;
+  }
+  updateDiagnosticProgressUI();
+  return true;
+}
+function firstIncompleteDiagnosticSection(){
+  const sections=[
+    ["grammar",30],["cyber",25],["listening",5],["pronunciation",15]
+  ];
+  for(const [prefix,total] of sections){
+    let count=0;
+    for(let i=0;i<total;i++){
+      if(document.querySelector(`input[name="${prefix}-${i}"]:checked`))count++;
+    }
+    if(count<total)return prefix;
+  }
+  return "production";
+}
+function resumeDiagnosticDraft(){
+  const draft=loadDiagnosticDraft();
+  const section=draft?.currentSection&&draft.currentSection!=="results"
+    ?draft.currentSection:firstIncompleteDiagnosticSection();
+  if(typeof appNavigate==="function")appNavigate("diagnostic",{push:true,focus:false});
+  showSection(section);
+}
+function clearDiagnosticDraft(){
+  if(!confirm("Clear the saved in-progress diagnostic on this device? Your completed profile, if any, will not be affected."))return;
+  localStorage.removeItem(diagnosticDraftKey);
+  document.querySelectorAll("#diagnostic input[type=radio]").forEach(i=>i.checked=false);
+  document.querySelectorAll("#diagnostic textarea").forEach(t=>t.value="");
+  document.querySelectorAll("#diagnostic select").forEach(s=>s.value="");
+  document.getElementById("wordCount").textContent="0";
+  showSection("grammar");
+  updateDiagnosticProgressUI();
+  const status=document.getElementById("diagnosticAutosaveText");
+  if(status)status.textContent="Autosave ready · this device only";
+}
+function guardDiagnosticBuild(event){
+  const answered=diagnosticClosedAnsweredCount();
+  const speaking=document.getElementById("speakingRating").value;
+  const writing=document.getElementById("writingRating").value;
+  if(answered===75 && speaking && writing)return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const feedback=document.getElementById("diagnosticCompletionFeedback");
+  const missing=75-answered;
+  const parts=[];
+  if(missing>0)parts.push(`${missing} scored item${missing===1?" is":"s are"} still unanswered`);
+  if(!speaking||!writing)parts.push("both confidence ratings are required");
+  feedback.className="activity-summary neutral";
+  feedback.textContent=`Complete the diagnostic before building the profile: ${parts.join(" · ")}.`;
+  if(missing>0)showSection(firstIncompleteDiagnosticSection());
+  else showSection("production");
+}
+function initDiagnosticAutosave(){
+  const diagnostic=document.getElementById("diagnostic");if(!diagnostic)return;
+  restoreDiagnosticDraft();
+
+  diagnostic.addEventListener("change",queueDiagnosticAutosave);
+  diagnostic.addEventListener("input",queueDiagnosticAutosave);
+  document.querySelectorAll(".diag-tab,.next-section").forEach(btn=>btn.addEventListener("click",queueDiagnosticAutosave));
+  document.getElementById("resumeDiagnosticBtn")?.addEventListener("click",resumeDiagnosticDraft);
+  document.getElementById("clearDiagnosticDraftBtn")?.addEventListener("click",clearDiagnosticDraft);
+  document.getElementById("calculateBtn")?.addEventListener("click",guardDiagnosticBuild,true);
+  updateDiagnosticProgressUI();
+}
 
 
 // V17 · My Data & Progress Vault
@@ -611,7 +802,7 @@ function weakestProgressSkill(results){
   return Object.entries(results).sort((a,b)=>a[1]-b[1])[0]?.[0]||null;
 }
 function progressSkillLabel(key){
-  const labels={grammar:"Grammar",cyber:"Cyber English",listening:"Listening",pronunciation:"Pronunciation",speaking:"Speaking",writing:"Writing"};
+  const labels={grammar:"Grammar",cyber:"Cyber English",listening:"Listening",pronunciation:"Pronunciation awareness",speaking:"Speaking",writing:"Writing"};
   return labels[key]||key;
 }
 function loadProgressCheckState(){
@@ -732,7 +923,7 @@ function startQuickCheckpoint(){
   const state=ensureProgressBaseline();
   if(!state.baseline){
     document.getElementById("progressNoBaseline").hidden=false;
-    document.getElementById("diagnostic").scrollIntoView({behavior:"smooth"});
+    appNavigate("diagnostic",{push:true});
     return;
   }
   const attemptIndex=state.history.filter(x=>x.type==="quick").length;
@@ -951,7 +1142,7 @@ function renderProgressCheck(){
 function startFullRediagnostic(){
   const state=ensureProgressBaseline();
   if(!state.baseline){
-    document.getElementById("diagnostic").scrollIntoView({behavior:"smooth"});
+    appNavigate("diagnostic",{push:true});
     return;
   }
   document.getElementById("diagnostic").scrollIntoView({behavior:"smooth",block:"start"});
@@ -1533,7 +1724,7 @@ function completeTrainingModule(key){
 }
 
 document.getElementById('closeLessonBtn').addEventListener('click',()=>{document.getElementById('lessonWorkspace').hidden=true;document.getElementById('personalPlanGrid').hidden=false; if(currentResults&&currentDetails)renderTrainingPlan(currentResults,currentDetails); document.getElementById('my-plan').scrollIntoView({behavior:'smooth',block:'start'});});
-document.addEventListener('click',e=>{if(e.target?.id==='openPlanBtn'){if(currentResults&&currentDetails){renderTrainingPlan(currentResults,currentDetails);document.getElementById('my-plan').scrollIntoView({behavior:'smooth'});}}});
+document.addEventListener('click',e=>{if(e.target?.id==='openPlanBtn'){if(currentResults&&currentDetails){renderTrainingPlan(currentResults,currentDetails);appNavigate('my-plan',{push:true});}}});
 
 // Keep plan links working even though they are inserted below the original event-binding code.
 document.querySelectorAll('#my-plan [data-go="diagnostic"]').forEach(btn=>btn.addEventListener('click',()=>document.getElementById('diagnostic').scrollIntoView({behavior:'smooth'})));
@@ -1596,7 +1787,7 @@ function bindDashboardDirectResume(){
     btn.addEventListener("click",()=>{
       const key=btn.dataset.dashboardResumeModule;
       if(!key)return;
-      document.getElementById("my-plan")?.scrollIntoView({behavior:"smooth",block:"start"});
+      appNavigate("my-plan",{push:true});
       setTimeout(()=>openTrainingModule(key),180);
     });
   });
@@ -1646,7 +1837,7 @@ function dashboardMessage(seed){
 }
 function weakestSkill(results){
   if(!results) return {key:"diagnostic", label:"Diagnostic"};
-  const labels={grammar:"Grammar",cyber:"Cyber English",listening:"Listening",pronunciation:"Pronunciation",speaking:"Speaking",writing:"Writing"};
+  const labels={grammar:"Grammar",cyber:"Cyber English",listening:"Listening",pronunciation:"Pronunciation awareness",speaking:"Speaking",writing:"Writing"};
   const sorted=Object.entries(results).sort((a,b)=>a[1]-b[1]);
   return {key:sorted[0][0], label:labels[sorted[0][0]]};
 }
@@ -1903,7 +2094,8 @@ function renderQuickLinks(){
     ]},
     {title:"Explore",icon:"⌁",links:[
       ["#my-plan","My personalised plan","Operational cyber modules"],
-      ["#resources-hub","Authentic Resources","Recent professional cyber English"]
+      ["#resources-hub","Authentic Resources","Recent professional cyber English"],
+      ["#programme","Job-specific roadmap","The 9 communication modules"]
     ]},
     {title:"Progress",icon:"✓",links:[
       ["#progress-check","Progress Check","Baseline · checkpoints"],
@@ -1928,6 +2120,11 @@ function renderQuickLinks(){
 }
 function renderDashboardNextStep(results){
   const target=document.getElementById("dashboardNextStep"); if(!target) return;
+  const draft=loadDiagnosticDraft();
+  if(draft?.closedAnswered>0){
+    target.innerHTML=`<div class="next-step-box"><strong>Resume your diagnostic</strong><span>${draft.closedAnswered} / 75 scored items are already saved locally. Continue from where you stopped.</span><a class="primary-button" href="#diagnostic">Resume diagnostic</a></div>`;
+    return;
+  }
   const nextModule=nextIncompleteModuleData();
   if(!results){
     target.innerHTML=`<div class="next-step-box"><strong>Start with the diagnostic</strong><span>The dashboard can only personalise your work once the initial diagnostic is complete.</span><a class="primary-button" href="#diagnostic">Open diagnostic</a></div>`;
@@ -2117,7 +2314,7 @@ function sprintWeaknessOrder(){
     .sort((a,b)=>r[a]-r[b]);
 }
 function sprintDisplaySkill(k){
-  return ({listening:"Listening",speaking:"Speaking",writing:"Writing",pronunciation:"Pronunciation",grammar:"Grammar",cyber:"Cyber English"})[k]||k;
+  return ({listening:"Listening",speaking:"Speaking",writing:"Writing",pronunciation:"Pronunciation awareness",grammar:"Grammar",cyber:"Cyber English"})[k]||k;
 }
 function adaptiveSprintPriorities(goal){
   const s=sprintPracticeSignals(),weak=sprintWeaknessOrder(),chips=[];
@@ -6705,12 +6902,127 @@ function initV16AppExperience(){
 
 
 
+
+
+// V23 · Single-view App Mode
+const appViewGroupMap={
+  home:"today",
+  dashboard:"today",
+  "goal-sprint":"today",
+  "listening-lab":"train",
+  "speaking-lab":"train",
+  "pronunciation-lab":"train",
+  "writing-lab":"train",
+  "grammar-lab":"train",
+  phrasebook:"train",
+  "client-simulator":"simulate",
+  "work-english-lab":"simulate",
+  "my-plan":"explore",
+  "resources-hub":"explore",
+  programme:"explore",
+  "how-it-works":"explore",
+  "progress-check":"progress",
+  "progress-vault":"progress",
+  diagnostic:"progress"
+};
+function appRootSections(){
+  return [...document.querySelectorAll("#mainContent > section[id]")];
+}
+function appRootForTarget(target){
+  if(!target)return null;
+  if(target.matches?.("#mainContent > section[id]"))return target;
+  return target.closest?.("#mainContent > section[id]")||null;
+}
+function setAppNavCurrent(id){
+  const group=appViewGroupMap[id];
+  document.querySelectorAll(".nav-group").forEach(el=>el.classList.toggle("current",el.dataset.navGroup===group));
+}
+function appDefaultView(){
+  if(smartHomeSavedProfile())return "dashboard";
+  const draft=loadDiagnosticDraft();
+  if(draft?.closedAnswered>0)return "diagnostic";
+  return "home";
+}
+function appNavigate(id,{push=true,focus=true,scroll=true}={}){
+  let target=document.getElementById(id);
+  let root=appRootForTarget(target);
+  if(!root){
+    id=appDefaultView();
+    target=document.getElementById(id);
+    root=appRootForTarget(target);
+  }
+  if(!root)return;
+
+  // Goal Mode only becomes truly adaptive after the initial diagnostic.
+  if(root.id==="goal-sprint"&&!smartHomeSavedProfile()){
+    if(typeof showAppToast==="function")showAppToast("Complete the initial diagnostic first so the sprint can be genuinely adaptive.");
+    root=document.getElementById("diagnostic");
+    target=root;
+    id="diagnostic";
+  }
+
+  appRootSections().forEach(section=>{
+    const active=section===root;
+    section.classList.toggle("app-view-active",active);
+    section.setAttribute("aria-hidden",active?"false":"true");
+  });
+  document.body.dataset.currentView=root.id;
+  setAppNavCurrent(root.id);
+  document.body.classList.toggle("first-visit-mode",!smartHomeSavedProfile());
+
+  if(push && location.hash!==`#${id}`)history.pushState({appView:id},"",`#${id}`);
+  if(scroll)window.scrollTo({top:0,behavior:document.body.classList.contains("a11y-reduce-motion")?"auto":"smooth"});
+  if(focus){
+    const heading=root.querySelector("h1,h2");
+    if(heading){
+      heading.setAttribute("tabindex","-1");
+      setTimeout(()=>heading.focus({preventScroll:true}),80);
+    }
+  }
+  if(typeof closeUxNavGroups==="function")closeUxNavGroups();
+  if(window.innerWidth<=820&&typeof closeMobileNav==="function")closeMobileNav();
+}
+function appRouteFromLocation(){
+  const id=location.hash&&location.hash.length>1?location.hash.slice(1):appDefaultView();
+  appNavigate(id,{push:false,focus:false,scroll:false});
+}
+function initV23AppMode(){
+  document.body.classList.add("app-mode");
+  appRootSections().forEach(section=>section.classList.add("app-view"));
+  document.documentElement.classList.remove("app-mode-pending","returning-preload","diagnostic-preload");
+
+  document.addEventListener("click",event=>{
+    const link=event.target.closest('a[href^="#"]');
+    if(link){
+      const href=link.getAttribute("href");
+      if(href&&href!=="#"&&href!=="#mainContent"){
+        const target=document.getElementById(href.slice(1));
+        if(appRootForTarget(target)){
+          event.preventDefault();
+          appNavigate(href.slice(1),{push:true});
+          return;
+        }
+      }
+    }
+    const go=event.target.closest('[data-go="diagnostic"]');
+    if(go){
+      event.preventDefault();
+      appNavigate("diagnostic",{push:true});
+    }
+  },true);
+
+  window.addEventListener("popstate",appRouteFromLocation);
+  appRouteFromLocation();
+}
+
+
 // V20 · Navigation cleanup, breadcrumbs and returning-learner UX
 const uxSectionMap={
   "goal-sprint":["Today","Goals & Sprint"],
   "progress-vault":["Progress","My Data & Backup"],
   "progress-check":["Progress","Progress Check"],
   "how-it-works":["Explore","Programme overview"],
+  "programme":["Explore","Job-specific roadmap"],
   "diagnostic":["Progress","Diagnostic"],
   "my-plan":["Explore","My personalised plan"],
   "listening-lab":["Train","Listening"],
@@ -6784,7 +7096,9 @@ function initV20UX(){
 }
 
 
+initDiagnosticAutosave();
 initV20UX();
+initV23AppMode();
 initPhrasebook();
 initSpeakingLab();
 initGoalSprint();

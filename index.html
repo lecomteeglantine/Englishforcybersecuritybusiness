@@ -1,6 +1,14 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="app-mode-pending">
 <head>
+  <script>
+    try {
+      const saved = JSON.parse(localStorage.getItem("ebackontrack-v2"));
+      const draft = JSON.parse(localStorage.getItem("ebackontrack-v23-diagnostic-draft"));
+      if (saved && saved.results && saved.details) document.documentElement.classList.add("returning-preload");
+      else if (draft && draft.closedAnswered > 0) document.documentElement.classList.add("diagnostic-preload");
+    } catch (e) {}
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="A personalised professional English diagnostic and training app for cybersecurity and SOC communication." />
@@ -60,6 +68,7 @@
           <div class="ux-nav-menu">
             <a href="#my-plan"><strong>My personalised plan</strong><small>Operational cyber modules</small></a>
             <a href="#resources-hub"><strong>Authentic Resources</strong><small>Recent professional cyber English</small></a>
+            <a href="#programme"><strong>Job-specific roadmap</strong><small>The 9 professional communication modules</small></a>
             <a href="#how-it-works"><strong>Programme overview</strong><small>How the training system works</small></a>
           </div>
         </details>
@@ -651,6 +660,13 @@
         <article class="step-card"><span>03</span><h3>Train</h3><p>Practise through alerts, incidents, handovers, risk explanations and client updates.</p></article>
         <article class="step-card"><span>04</span><h3>Re-test</h3><p>Use short checkpoints to make the learning plan evolve with your progress.</p></article>
       </div>
+      <div class="onboarding-next">
+        <div>
+          <strong>Ready to stop guessing?</strong>
+          <span>The initial diagnostic is the only thing you need to do before the programme becomes personalised.</span>
+        </div>
+        <a class="primary-button" href="#diagnostic">Start the diagnostic →</a>
+      </div>
     </section>
 
     <section class="section" id="diagnostic">
@@ -660,12 +676,33 @@
         <p>Five diagnostic sections separate language knowledge from the ability to use English under professional pressure. Your answers and results stay in this browser only.</p>
       </div>
 
+      <div class="diagnostic-resume-panel" id="diagnosticResumePanel">
+        <div class="diagnostic-progress-copy">
+          <div>
+            <p class="small-label">DIAGNOSTIC PROGRESS</p>
+            <strong id="diagnosticProgressText">0 / 75 scored items</strong>
+            <span id="diagnosticTimeEstimate">About 25–30 minutes plus the production tasks.</span>
+          </div>
+          <div class="diagnostic-autosave-state">
+            <span class="autosave-dot" aria-hidden="true"></span>
+            <span id="diagnosticAutosaveText">Autosave ready · this device only</span>
+          </div>
+        </div>
+        <div class="diagnostic-progress-track" aria-hidden="true"><span id="diagnosticProgressBar"></span></div>
+        <div class="diagnostic-resume-actions">
+          <button class="secondary-button" id="resumeDiagnosticBtn" type="button" hidden>Resume saved diagnostic →</button>
+          <button class="text-link diagnostic-clear-draft" id="clearDiagnosticDraftBtn" type="button" hidden>Clear saved draft</button>
+        </div>
+        <p class="microcopy">The in-progress diagnostic is saved locally so you can close the tab and return later. This temporary draft is deleted when you build the profile and is not included in Progress Vault backups.</p>
+        <div id="diagnosticCompletionFeedback" class="activity-summary" aria-live="polite"></div>
+      </div>
+
       <div class="diagnostic-shell">
         <nav class="diagnostic-nav" aria-label="Diagnostic sections">
           <button type="button" class="diag-tab active" data-section="grammar"><span>1</span> Grammar</button>
           <button type="button" class="diag-tab" data-section="cyber"><span>2</span> Cyber English</button>
           <button type="button" class="diag-tab" data-section="listening"><span>3</span> Listening</button>
-          <button type="button" class="diag-tab" data-section="pronunciation"><span>4</span> Pronunciation</button>
+          <button type="button" class="diag-tab" data-section="pronunciation"><span>4</span> Pronunciation awareness</button>
           <button type="button" class="diag-tab" data-section="production"><span>5</span> Speaking & writing</button>
           <button type="button" class="diag-tab" data-section="results"><span>6</span> My profile</button>
         </nav>
@@ -696,15 +733,15 @@
               <div><p class="small-label">SECTION 3</p><h3>Listening under SOC pressure</h3></div>
               <span class="question-count">5 mini tasks</span>
             </div>
-            <p class="section-note">Use headphones if possible. Each item can be played twice. This prototype uses your browser's English voice; authentic multi-accent recordings can replace these later.</p>
+            <p class="section-note">Use headphones if possible. Each item can be played twice. This version uses your browser's synthetic English voice for controlled diagnostic tasks. The Listening Lab and Authentic Resources provide additional listening practice.</p>
             <div id="listeningQuestions"></div>
             <button type="button" class="primary-button next-section" data-next="pronunciation">Continue →</button>
           </section>
 
           <section class="diag-panel" id="panel-pronunciation">
             <div class="panel-head">
-              <div><p class="small-label">SECTION 4</p><h3>Pronunciation for intelligibility</h3></div>
-              <span class="question-count">15 questions + recording</span>
+              <div><p class="small-label">SECTION 4</p><h3>Pronunciation awareness & intelligibility knowledge</h3></div>
+              <span class="question-count">15 awareness questions + recording</span>
             </div>
             <div id="pronunciationQuestions"></div>
 
@@ -791,14 +828,17 @@
               <div class="priority-box"><p class="small-label">YOUR PRIORITIES</p><ol id="priorityList"></ol></div>
               <div class="roadmap-preview"><p class="small-label">FIRST TRAINING BLOCK</p><h4>Your programme starts here</h4><div id="roadmapCards" class="roadmap-grid"></div></div>
               <div class="plan-launch">
-                <div><p class="small-label">PERSONALISED ROADMAP</p><h4>Turn these results into a training plan.</h4><p>The site will select four starting modules and adapt the language focus to the gaps identified above.</p></div>
-                <button class="primary-button" id="openPlanBtn" type="button">Open my training plan →</button>
+                <div><p class="small-label">PERSONALISED ROADMAP</p><h4>Your personalised programme is ready.</h4><p>Today can now prioritise your work automatically, or you can open the four-block starter roadmap directly.</p></div>
+                <div class="profile-result-actions">
+                  <a class="primary-button" href="#dashboard">Go to Today →</a>
+                  <button class="secondary-button" id="openPlanBtn" type="button">Open training plan</button>
+                </div>
               </div>
               <div class="listening-recommendation" id="listeningRecommendation" hidden>
                 <div><p class="small-label">LISTENING PRIORITY</p><h4>Your diagnostic says this deserves extra training.</h4><p id="listeningRecommendationText">Use the Listening Lab alongside your first four modules.</p></div>
                 <a class="primary-button" href="#listening-lab">Open Listening Lab →</a>
               </div>
-              <p class="microcopy">This profile is an orientation tool, not a CEFR certification. Speaking and writing are self-rated in this prototype and should later be reviewed by a teacher.</p>
+              <p class="microcopy">This profile is an orientation tool, not a CEFR certification. Speaking and writing are currently self-rated and should be reviewed by a teacher or tutor when possible.</p>
             </div>
           </section>
         </div>
@@ -2480,7 +2520,7 @@
   <footer>
     <p>English, Back on Track · Personal professional-English programme</p>
     <p>No account · No tracking · Local progress · Offline-capable app.</p>
-    <p class="release-version">V22 · Release Candidate</p>
+    <p class="release-version">V23 · App Mode</p>
   </footer>
   <script src="app.js"></script>
 </body>

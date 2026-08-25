@@ -1,7 +1,7 @@
 {
   "name": "English, Back on Track",
   "short_name": "Back on Track",
-  "description": "Release-candidate professional English training for cybersecurity with adaptive goals, maintained resources, offline access and private local progress.",
+  "description": "Professional English training for cybersecurity in streamlined App Mode, with resumable diagnostics, adaptive goals, offline access and private local progress.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -34,14 +34,14 @@
       "url": "./#dashboard"
     },
     {
+      "name": "Resume Diagnostic",
+      "short_name": "Diagnostic",
+      "url": "./#diagnostic"
+    },
+    {
       "name": "Weekly Sprint",
       "short_name": "Sprint",
       "url": "./#goal-sprint"
-    },
-    {
-      "name": "Listening",
-      "short_name": "Listening",
-      "url": "./#listening-lab"
     },
     {
       "name": "Client Simulator",

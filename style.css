@@ -1699,3 +1699,67 @@ body.returning-user .dashboard-kpi-grid{margin-top:14px}
   margin-top:6px!important;font-size:.72rem!important;letter-spacing:.06em;
   text-transform:uppercase;color:var(--muted)!important;font-weight:800
 }
+
+
+/* V23 · App Mode */
+html.app-mode-pending #mainContent > section{display:none!important}
+html.app-mode-pending:not(.returning-preload):not(.diagnostic-preload) #home{display:grid!important}
+html.app-mode-pending.returning-preload #dashboard{display:block!important}
+html.app-mode-pending.diagnostic-preload #diagnostic{display:block!important}
+
+body.app-mode #mainContent > section[id]:not(.app-view-active){display:none!important}
+body.app-mode #mainContent > section[id].app-view-active{animation:appViewIn .16s ease both}
+body.app-mode.returning-user #home.app-view-active{display:grid!important}
+@keyframes appViewIn{from{opacity:.55;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+body.app-mode .back-to-today{display:flex}
+body.app-mode[data-current-view="dashboard"] .back-to-today,
+body.app-mode[data-current-view="home"] .back-to-today{display:none}
+
+.nav-group.current>summary{background:var(--pale);border-color:var(--line)}
+body.app-mode #mainContent{min-height:calc(100vh - 160px)}
+body.app-mode #mainContent > section[id]{scroll-margin-top:86px}
+
+.onboarding-next{
+  display:flex;justify-content:space-between;gap:20px;align-items:center;
+  border:1px solid var(--line);border-radius:18px;background:#fff;padding:17px 18px;margin-top:20px
+}
+.onboarding-next strong,.onboarding-next span{display:block}
+.onboarding-next span{color:var(--muted);font-size:.88rem;margin-top:4px}
+
+/* Diagnostic autosave / resume */
+.diagnostic-resume-panel{
+  border:1px solid var(--line);border-radius:20px;background:#f9fbfb;padding:16px 18px;margin:0 0 18px
+}
+.diagnostic-progress-copy{display:flex;justify-content:space-between;gap:20px;align-items:center}
+.diagnostic-progress-copy strong,.diagnostic-progress-copy span{display:block}
+.diagnostic-progress-copy strong{font-size:1.06rem}
+.diagnostic-progress-copy>div:first-child>span{color:var(--muted);font-size:.82rem;margin-top:3px}
+.diagnostic-autosave-state{
+  display:flex;gap:7px;align-items:center;color:var(--accent-dark);font-size:.78rem;font-weight:850
+}
+.autosave-dot{width:8px;height:8px;border-radius:50%;background:#43a78d;box-shadow:0 0 0 4px rgba(67,167,141,.12)}
+.diagnostic-progress-track{height:8px;border-radius:999px;background:#e5ebec;overflow:hidden;margin:12px 0}
+.diagnostic-progress-track span{display:block;width:0;height:100%;background:var(--accent);transition:width .18s ease}
+.diagnostic-resume-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.diagnostic-clear-draft{border:0;background:transparent;color:#934040;padding:7px 0;font:inherit;font-weight:850;cursor:pointer}
+.profile-result-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+body.app-mode.first-visit-mode .nav-group[data-nav-group="today"] .ux-nav-menu a[href="#goal-sprint"]{
+  opacity:.55
+}
+body.app-mode.first-visit-mode .dashboard-section .dashboard-continue-hero{
+  display:none
+}
+
+/* Less visual noise: secondary administrative panels stay collapsed/quiet */
+body.app-mode #progress-vault .vault-transfer-guide{margin-top:16px}
+body.app-mode #resources-hub .resource-health-panel{margin-top:4px}
+body.app-mode #resources-hub .resource-maintenance-workspace[hidden]{display:none!important}
+
+@media(max-width:700px){
+  .onboarding-next,.diagnostic-progress-copy{display:block}
+  .onboarding-next .primary-button{display:inline-flex;margin-top:12px}
+  .diagnostic-autosave-state{margin-top:10px}
+  .profile-result-actions{display:grid;grid-template-columns:1fr}
+}
