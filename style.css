@@ -1692,3 +1692,10 @@ body.returning-user .dashboard-kpi-grid{margin-top:14px}
   .resource-maintenance-note{display:block}
   .resource-maintenance-note strong{display:block;margin-bottom:3px}
 }
+
+
+/* V22 · Release candidate QA */
+.release-version{
+  margin-top:6px!important;font-size:.72rem!important;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted)!important;font-weight:800
+}

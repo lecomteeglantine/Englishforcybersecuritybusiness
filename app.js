@@ -438,10 +438,17 @@ async function copyVaultSummary(){
 function validateVaultPayload(payload){
   if(!payload || typeof payload!=="object")return {ok:false,error:"This file is not a valid backup object."};
   if(payload.app!=="English, Back on Track")return {ok:false,error:"This file was not created by English, Back on Track."};
-  if(!payload.data || typeof payload.data!=="object")return {ok:false,error:"The backup contains no readable data section."};
+  if(!payload.data || typeof payload.data!=="object" || Array.isArray(payload.data))return {ok:false,error:"The backup contains no readable data section."};
   const allowed=new Set(vaultKnownKeys());
   const accepted=Object.keys(payload.data).filter(key=>allowed.has(key)&&typeof payload.data[key]==="string");
   if(!accepted.length)return {ok:false,error:"No compatible progress categories were found in this backup."};
+  const malformed=accepted.filter(key=>{
+    try{
+      const parsed=JSON.parse(payload.data[key]);
+      return parsed===null || typeof parsed!=="object";
+    }catch(e){return true;}
+  });
+  if(malformed.length)return {ok:false,error:"The backup contains malformed progress data and was not restored."};
   return {ok:true,accepted};
 }
 function vaultGroupsInBackup(keys){
@@ -2265,6 +2272,9 @@ function toggleSprintSession(index){
   if(all&&!a.completedAt){
     a.completedAt=Date.now();
     if(!state.history.some(x=>x.id===a.id))state.history.push({...a,status:"completed"});
+  }else if(!all&&a.completedAt){
+    delete a.completedAt;
+    state.history=state.history.filter(x=>!(x.id===a.id&&x.status==="completed"));
   }
   saveGoalSprintState(state);renderGoalSprint();
   if(typeof renderDashboard==="function")renderDashboard();
@@ -3622,7 +3632,7 @@ function initClientCallSimulator(){
 // V21 · Resource maintenance & freshness
 const resourceMaintenanceStateKey="ebackontrack-v21-resource-maintenance";
 const resourceVerifiedBaseline={
-  "orange-navigator-2026":"2026-08-25",
+  "cisa-play-ransomware-2025":"2026-08-25",
   "ncsc-recovery-2026":"2026-08-25",
   "australia-zimbra-2026":"2026-08-25",
   "reuters-ai-incidents-2026":"2026-08-25",
@@ -3634,7 +3644,7 @@ const resourceVerifiedBaseline={
   "google-ti-overview-2025":"2026-08-25"
 };
 const resourceVerificationNotes={
-  "orange-navigator-2026":"Publisher page checked",
+  "cisa-play-ransomware-2025":"Government advisory checked",
   "ncsc-recovery-2026":"Publisher page checked",
   "australia-zimbra-2026":"Government advisory checked",
   "reuters-ai-incidents-2026":"Reuters result confirmed",
@@ -3814,21 +3824,21 @@ const authenticResourceStateKey="ebackontrack-v14-resources";
 
 const authenticResources=[
   {
-    id:"orange-navigator-2026",
-    format:"report",year:2026,date:"04 Dec 2025",publisher:"Orange Cyberdefense",
-    title:"Security Navigator 2026 — key findings",
-    topic:"Threat intelligence",level:"B2+",time:"6–8 min",
-    url:"https://newsroom.orange.com/securitynavigator2026-413193/?lang=eng",
-    why:"Highly relevant operational threat intelligence: incident volume, cyber extortion, supply-chain exposure and the industrialisation of cybercrime.",
-    before:"From the title alone, predict three trends you expect a European cyberdefence provider to highlight.",
-    gist:{q:"Which idea best captures the report's overall message?",a:["Cybercrime is becoming less organised and less scalable.","Cybercrime is increasingly industrialised, interconnected and strategically significant.","Most modern cyber incidents are purely accidental.","Threat intelligence is becoming unnecessary because automation solves attribution."],c:1},
+    id:"cisa-play-ransomware-2025",
+    format:"article",year:2025,date:"04 Jun 2025",publisher:"CISA / FBI / ASD",
+    title:"#StopRansomware: Play Ransomware — updated advisory",
+    topic:"Ransomware",level:"B2+",time:"7–9 min",
+    url:"https://www.cisa.gov/news-events/cybersecurity-advisories/aa23-352a",
+    why:"A practical joint advisory updated in 2025 with current indicators, tactics and defensive actions for a major ransomware operation.",
+    before:"Before reading, predict three actions a government ransomware advisory is likely to recommend to network defenders.",
+    gist:{q:"Which defensive approach is explicitly prioritised in the updated advisory?",a:["Delay remediation until attribution is complete.","Prioritise known exploited vulnerabilities, use MFA and keep software patched.","Disable all remote access permanently.","Focus only on restoring backups after an attack."],c:1},
     language:[
-      ["threat landscape","the overall environment of current and emerging threats"],
-      ["cyber extortion","using disruption or stolen data to pressure a victim into paying"],
-      ["supply chain","the network of suppliers and partners that can create indirect exposure"]
+      ["known exploited vulnerability","a vulnerability confirmed to be used in real attacks"],
+      ["multifactor authentication","authentication requiring more than one verification factor"],
+      ["indicators of compromise","technical signs that may show malicious activity or intrusion"]
     ],
-    languagePrompt:"Notice how professional reports describe trends without claiming that every organisation faces exactly the same risk.",
-    after:"Give a 60-second briefing to a manager: identify one trend, one piece of evidence and one practical implication.",
+    languagePrompt:"Notice how the advisory turns threat intelligence into direct, operational mitigation language.",
+    after:"Give a 60-second client briefing: explain the threat, name two priority mitigations and avoid claiming that exposure automatically means compromise.",
     afterLinks:["speaking","phrasebook"]
   },
   {

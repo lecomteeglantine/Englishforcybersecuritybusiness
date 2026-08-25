@@ -1,7 +1,7 @@
 {
   "name": "English, Back on Track",
   "short_name": "Back on Track",
-  "description": "Streamlined professional English training for cybersecurity with maintained authentic resources, adaptive goals, offline access and private local progress.",
+  "description": "Release-candidate professional English training for cybersecurity with adaptive goals, maintained resources, offline access and private local progress.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
