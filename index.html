@@ -78,6 +78,7 @@
           <summary><span aria-hidden="true">✓</span>Progress</summary>
           <div class="ux-nav-menu">
             <a href="#progress-check"><strong>Progress Check</strong><small>Baseline · checkpoints · re-diagnostic</small></a>
+            <a href="#tutor-review"><strong>Tutor Review</strong><small>Clean pedagogical snapshot · print · compare</small></a>
             <a href="#progress-vault"><strong>My Data & Backup</strong><small>Export · restore · local data</small></a>
             <a href="#diagnostic"><strong>Diagnostic</strong><small>Initial or full re-diagnostic</small></a>
             <button class="ux-nav-menu-action" id="resetBtn" type="button"><strong>Reset diagnostic</strong><small>Erase diagnostic and linked progress</small></button>
@@ -646,6 +647,144 @@
         </div>
         <div id="checkpointResultCards" class="checkpoint-result-cards"></div>
         <div class="checkpoint-change-summary" id="checkpointChangeSummary"></div>
+      </div>
+    </section>
+
+
+    <section class="section tutor-review-section" id="tutor-review">
+      <div class="section-heading tutor-review-heading">
+        <div>
+          <p class="eyebrow">TUTOR REVIEW MODE</p>
+          <h2>Turn progress data into a two-minute pedagogical review.</h2>
+          <p>This view summarises priorities, evidence of practice, fragile areas and next steps without exposing drafts, audio, detailed diagnostic answers or saved work scenarios.</p>
+        </div>
+        <div class="tutor-review-stats">
+          <div><strong id="tutorReviewSnapshots">0</strong><span>saved reviews</span></div>
+          <div><strong id="tutorReviewEvidence">0</strong><span>evidence points</span></div>
+          <div><strong id="tutorReviewPriority">—</strong><span>main priority</span></div>
+        </div>
+      </div>
+
+      <div class="tutor-privacy-banner">
+        <div aria-hidden="true">✓</div>
+        <div>
+          <strong>Review the learning — not the confidential work.</strong>
+          <span>This summary uses scores and activity metadata only. It excludes audio, writing drafts, diagnostic answer-by-answer data and the content of saved My Work English scenarios.</span>
+        </div>
+      </div>
+
+      <div id="tutorNoProfile" class="progress-baseline-callout" hidden>
+        <div>
+          <p class="small-label">FIRST STEP</p>
+          <h3>Complete the initial diagnostic first.</h3>
+          <p>A tutor review needs a current profile before it can identify meaningful priorities or progress.</p>
+        </div>
+        <a class="primary-button" href="#diagnostic">Open diagnostic →</a>
+      </div>
+
+      <div id="tutorReviewContent">
+        <div class="tutor-review-toolbar no-print">
+          <div>
+            <p class="small-label">CURRENT REVIEW</p>
+            <strong id="tutorReviewGeneratedLabel">Generated from current local progress</strong>
+          </div>
+          <div class="tutor-review-actions">
+            <button class="secondary-button" id="saveTutorSnapshotBtn" type="button">Save review snapshot</button>
+            <button class="secondary-button" id="copyTutorReviewBtn" type="button">Copy summary</button>
+            <button class="secondary-button" id="downloadTutorReviewBtn" type="button">Download text</button>
+            <button class="primary-button" id="printTutorReviewBtn" type="button">Print / save as PDF</button>
+          </div>
+        </div>
+
+        <div class="tutor-print-header">
+          <div>
+            <p class="small-label">ENGLISH, BACK ON TRACK · PROFESSIONAL CYBERSECURITY ENGLISH</p>
+            <h2>Pedagogical Progress Review</h2>
+          </div>
+          <div class="tutor-print-meta">
+            <span>Generated</span>
+            <strong id="tutorPrintDate">—</strong>
+          </div>
+        </div>
+
+        <div class="tutor-review-grid">
+          <article class="tutor-review-card tutor-priority-card">
+            <div class="tutor-card-head">
+              <div><p class="small-label">CURRENT PRIORITIES</p><h3>What deserves attention now</h3></div>
+              <span class="ux-status recommended">Priority</span>
+            </div>
+            <div id="tutorPriorityList" class="tutor-priority-list"></div>
+          </article>
+
+          <article class="tutor-review-card">
+            <div class="tutor-card-head">
+              <div><p class="small-label">EVIDENCE OF PRACTICE</p><h3>What has actually been done</h3></div>
+              <span class="ux-status completed">Evidence</span>
+            </div>
+            <div id="tutorEvidenceGrid" class="tutor-evidence-grid"></div>
+          </article>
+
+          <article class="tutor-review-card">
+            <div class="tutor-card-head">
+              <div><p class="small-label">STILL FRAGILE</p><h3>Areas not yet secure</h3></div>
+              <span class="ux-status optional">Watch</span>
+            </div>
+            <div id="tutorFragileList" class="tutor-fragile-list"></div>
+          </article>
+
+          <article class="tutor-review-card">
+            <div class="tutor-card-head">
+              <div><p class="small-label">RECENT WORK</p><h3>Latest useful signals</h3></div>
+              <span class="question-count">Metadata only</span>
+            </div>
+            <div id="tutorRecentWork" class="tutor-recent-list"></div>
+          </article>
+
+          <article class="tutor-review-card tutor-next-focus-card">
+            <div class="tutor-card-head">
+              <div><p class="small-label">RECOMMENDED NEXT FOCUS</p><h3>What to do next</h3></div>
+              <span class="ux-status recommended">Next</span>
+            </div>
+            <div id="tutorNextFocus" class="tutor-next-focus"></div>
+          </article>
+
+          <article class="tutor-review-card tutor-comparison-card">
+            <div class="tutor-card-head">
+              <div><p class="small-label">REVIEW-TO-REVIEW</p><h3>Change since the previous saved review</h3></div>
+              <span class="question-count" id="tutorComparisonLabel">No saved review yet</span>
+            </div>
+            <div id="tutorComparison" class="tutor-comparison"></div>
+          </article>
+        </div>
+
+        <div class="tutor-notes-shell">
+          <div class="tutor-notes-head">
+            <div>
+              <p class="small-label">TUTOR / COACH NOTES · LOCAL ONLY</p>
+              <h3>Keep the next review focused</h3>
+              <p>Use short pedagogical notes. Do not enter client names, company names, ticket numbers, credentials or confidential incident details.</p>
+            </div>
+            <span class="question-count" id="tutorNotesSaved">Not saved yet</span>
+          </div>
+          <div class="tutor-notes-edit no-print">
+            <textarea id="tutorNotes" rows="5" maxlength="1200" aria-label="Tutor or coach notes" placeholder="Example: Next week, focus on clarification questions and 60-second incident summaries. Avoid scripting full answers before speaking."></textarea>
+            <label class="tutor-export-notes-option">
+              <input type="checkbox" id="includeTutorNotesExport">
+              <span>Include these notes in print / text export</span>
+            </label>
+          </div>
+          <div class="tutor-print-notes" id="tutorPrintNotes" hidden>
+            <strong>Tutor / coach notes</strong>
+            <p id="tutorPrintNotesText"></p>
+          </div>
+        </div>
+
+        <div class="tutor-method-note">
+          <strong>How to read this review.</strong>
+          <span>Diagnostic and checkpoint percentages are evidence for closed tasks. Speaking and writing production remain self-assessed unless reviewed by a human tutor. Activity counts show practice coverage, not automatic proof of language mastery.</span>
+        </div>
+
+        <div id="tutorReviewFeedback" class="activity-summary no-print" aria-live="polite"></div>
       </div>
     </section>
 
@@ -2675,7 +2814,7 @@
   <footer>
     <p>English, Back on Track · Personal professional-English programme</p>
     <p>No account · No tracking · Local progress · Offline-capable app.</p>
-    <p class="release-version">V24 · Real Listening</p>
+    <p class="release-version">V25 · Tutor Review</p>
   </footer>
   <script src="app.js"></script>
 </body>

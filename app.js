@@ -367,6 +367,33 @@ function initDiagnosticAutosave(){
 }
 
 
+
+// V25 · Tutor / Coach Review Mode
+const tutorReviewStateKey="ebackontrack-v25-tutor-review";
+let tutorNotesSaveTimer=null;
+function loadTutorReviewState(){try{const r=JSON.parse(localStorage.getItem(tutorReviewStateKey))||{};return{notes:typeof r.notes==="string"?r.notes:"",notesUpdated:Number(r.notesUpdated)||null,snapshots:Array.isArray(r.snapshots)?r.snapshots:[]};}catch(e){return{notes:"",notesUpdated:null,snapshots:[]};}}
+function saveTutorReviewState(s){localStorage.setItem(tutorReviewStateKey,JSON.stringify(s));}
+function tutorSkillLabels(){return{grammar:"Grammar",cyber:"Cyber English",listening:"Listening",pronunciation:"Pronunciation awareness",speaking:"Speaking",writing:"Writing"};}
+function tutorCurrentProfile(){const p=ensureProgressBaseline();try{const s=JSON.parse(localStorage.getItem("ebackontrack-v2"));return{results:p.current?.results||s?.results||null,baseline:p.baseline?.results||s?.results||null,progress:p};}catch(e){return{results:p.current?.results||null,baseline:p.baseline?.results||null,progress:p};}}
+function tutorMetrics(){const plan=planStorage(),sp=loadSpeakingState(),wr=loadWritingState(),gr=loadGrammarRepairState(),pr=loadPronunciationLabState(),rs=loadAuthenticResourceState(),sim=loadClientSimState(),work=loadWorkEnglishState(),sprint=loadGoalSprintState(),real=realListeningStats(),phr=phraseStats();return{modules:plan.completed.length,speakingAttempts:sp.attempts,speakingMinutes:Math.round((sp.seconds||0)/60),writingAttempts:wr.attempts.length,grammarUnits:gr.completed.length,grammarAccuracy:gr.closedTotal?Math.round(gr.closedCorrect/gr.closedTotal*100):null,pronunciationUnits:pr.completed.length,pronunciationAccuracy:pr.closedTotal?Math.round(pr.closedCorrect/pr.closedTotal*100):null,listeningTasks:listeningLabCompletedCount(),realListening:real.completed,realListeningEnvironments:real.environments,resources:rs.completed.length,simulations:sim.completed.length,simulationAttempts:sim.attempts.length,workMissions:work.attempts.length,phraseDue:phr.due,sprintSessions:sprint.active?.sessions?.filter(x=>x.completed).length||0,sprintGoal:sprint.active?.goal||null};}
+function tutorSortedSkills(r){const l=tutorSkillLabels();return r?Object.entries(r).filter(([,v])=>typeof v==="number").sort((a,b)=>a[1]-b[1]).map(([key,score])=>({key,label:l[key]||key,score})):[];}
+function tutorEvidencePoints(m){return m.modules+Math.min(3,m.listeningTasks)+Math.min(4,m.realListening)+Math.min(3,m.speakingAttempts)+Math.min(3,m.writingAttempts)+Math.min(3,m.grammarUnits)+Math.min(3,m.pronunciationUnits)+Math.min(3,m.simulations)+Math.min(2,m.workMissions);}
+function tutorFragile(r,m){const x=tutorSortedSkills(r).filter(s=>s.score<75).map(s=>({label:s.label,detail:`Current closed-task/profile score: ${s.score}%`}));if(m.grammarAccuracy!==null&&m.grammarAccuracy<75)x.push({label:"Grammar accuracy in Repair Lab",detail:`${m.grammarAccuracy}% on closed repair tasks`});if(m.pronunciationAccuracy!==null&&m.pronunciationAccuracy<75)x.push({label:"Pronunciation awareness checks",detail:`${m.pronunciationAccuracy}% on closed lab tasks`});if(m.realListening<2)x.push({label:"Authentic listening exposure",detail:`${m.realListening}/6 human-voice missions completed`});if(m.simulations<1)x.push({label:"Integrated client communication",detail:"No complete client simulation logged yet"});if(!x.length)x.push({label:"No single red flag",detail:"Use the next checkpoint to confirm that current performance is stable."});return x.slice(0,6);}
+function tutorRecs(r,m){const out=[],add=(tag,title,text)=>{if(!out.some(x=>x.title===title))out.push({tag,title,text});};tutorSortedSkills(r).slice(0,3).forEach(s=>{if(s.key==="listening")add("Listening","Human-voice listening",m.realListening<4?"Complete one Real Listening mission and one Difficult Call clarification drill.":"Use one Real Listening source, capture evidence keywords and give a 30-second summary.");if(s.key==="speaking")add("Speaking","Spontaneous response","Use Quick Response or Client Simulator with keywords only — no full script.");if(s.key==="writing")add("Writing","Operational writing","Complete one short handover or client follow-up and self-edit for clarity.");if(s.key==="grammar")add("Accuracy","Grammar Repair","Repair the weakest unit, then reuse the target in one spoken client line.");if(s.key==="cyber")add("Cyber English","Active professional language","Review Phrasebook chunks, then reuse them in one incident or risk explanation.");if(s.key==="pronunciation")add("Intelligibility","Pronunciation Lab","Train the current priority unit and repeat one Client Call Rehearsal line.");});if(m.simulations<2)add("Integration","Client simulation","Complete an end-to-end client incident mission to integrate listening, speaking and writing.");if(m.workMissions<1&&m.simulations>=1)add("Transfer","My Work English","Convert one anonymised real work situation into an English mission.");return out.slice(0,3);}
+function tutorRecent(p,m){const a=[],h=p.progress?.history||[];if(h.length)a.push({label:"Latest progress snapshot",detail:new Date(h[h.length-1].date).toLocaleDateString()});else if(p.progress?.baseline)a.push({label:"Progress checkpoints",detail:"No follow-up checkpoint yet"});if(m.sprintGoal){const l=sprintGoalMeta[m.sprintGoal]?.label||"Active goal";a.push({label:"Current weekly goal",detail:`${l} · ${m.sprintSessions}/5 sessions completed`});}else a.push({label:"Weekly sprint",detail:"No active sprint"});a.push({label:"Real Listening",detail:`${m.realListening}/6 missions · ${m.realListeningEnvironments}/6 environments`},{label:"Client simulations",detail:`${m.simulations} completed · ${m.simulationAttempts} logged attempts`},{label:"Work-based transfer",detail:`${m.workMissions} anonymised mission${m.workMissions===1?"":"s"} completed`});if(m.phraseDue>0)a.push({label:"Phrasebook review",detail:`${m.phraseDue} item${m.phraseDue===1?"":"s"} currently due`});return a.slice(0,6);}
+function tutorCompare(){const s=loadTutorReviewState().snapshots;if(s.length<2)return{mode:s.length,label:s.length?"One saved review":"No saved review yet",rows:[]};const a=s[s.length-2],b=s[s.length-1],labels=tutorSkillLabels(),rows=[];Object.keys(b.results||{}).forEach(k=>{const x=a.results?.[k],y=b.results?.[k];if(typeof x==="number"&&typeof y==="number"&&x!==y)rows.push({label:labels[k]||k,from:`${x}%`,to:`${y}%`,delta:y-x});});[["Real Listening missions","realListening"],["Client simulations","simulations"],["Grammar units","grammarUnits"],["Pronunciation units","pronunciationUnits"],["Speaking attempts","speakingAttempts"],["Writing attempts","writingAttempts"],["Work-based missions","workMissions"]].forEach(([label,k])=>{const x=a.metrics?.[k]||0,y=b.metrics?.[k]||0;if(x!==y)rows.push({label,from:String(x),to:String(y),delta:y-x});});return{mode:2,label:`${new Date(a.date).toLocaleDateString()} → ${new Date(b.date).toLocaleDateString()}`,rows:rows.slice(0,10)};}
+function renderTutorReview(){if(!document.getElementById("tutor-review"))return;const p=tutorCurrentProfile(),state=loadTutorReviewState(),ok=!!p.results;document.getElementById("tutorNoProfile").hidden=ok;document.getElementById("tutorReviewContent").hidden=!ok;document.getElementById("tutorReviewSnapshots").textContent=state.snapshots.length;if(!ok){document.getElementById("tutorReviewEvidence").textContent="0";document.getElementById("tutorReviewPriority").textContent="Diagnostic";return;}const m=tutorMetrics(),skills=tutorSortedSkills(p.results);document.getElementById("tutorReviewEvidence").textContent=tutorEvidencePoints(m);document.getElementById("tutorReviewPriority").textContent=skills[0]?.label||"—";document.getElementById("tutorReviewGeneratedLabel").textContent=`Current local progress · ${new Date().toLocaleDateString()}`;document.getElementById("tutorPrintDate").textContent=new Date().toLocaleDateString(undefined,{day:"2-digit",month:"long",year:"numeric"});document.getElementById("tutorPriorityList").innerHTML=skills.slice(0,3).map((s,i)=>{const b=p.baseline?.[s.key],d=typeof b==="number"?s.score-b:null;return`<div class="tutor-priority-item"><span class="tutor-priority-rank">${i+1}</span><div><strong>${s.label}</strong><small>${d===null?"Current profile":d===0?"No change from baseline":`${d>0?"+":""}${d} points from baseline`}</small></div><span class="tutor-score-badge">${s.score}%</span></div>`;}).join("");const ev=[[`${m.realListening}/6`,"Real Listening"],[m.simulations,"client simulations"],[m.workMissions,"work-based missions"],[`${m.grammarUnits}/9`,"Grammar units"],[`${m.pronunciationUnits}/7`,"Pronunciation units"],[`${m.listeningTasks}/5`,"Listening tasks"],[m.speakingAttempts,"speaking attempts"],[m.writingAttempts,"writing attempts"]];document.getElementById("tutorEvidenceGrid").innerHTML=ev.map(([v,l])=>`<div class="tutor-evidence-item"><strong>${v}</strong><span>${l}</span></div>`).join("");document.getElementById("tutorFragileList").innerHTML=tutorFragile(p.results,m).map(x=>`<div class="tutor-fragile-item"><strong>${x.label}</strong><span>${x.detail}</span></div>`).join("");document.getElementById("tutorRecentWork").innerHTML=tutorRecent(p,m).map(x=>`<div class="tutor-recent-item"><strong>${x.label}</strong><span>${x.detail}</span></div>`).join("");document.getElementById("tutorNextFocus").innerHTML=tutorRecs(p.results,m).map(x=>`<div class="tutor-next-item"><span>${x.tag}</span><strong>${x.title}</strong><p>${x.text}</p></div>`).join("");const c=tutorCompare();document.getElementById("tutorComparisonLabel").textContent=c.label;const box=document.getElementById("tutorComparison");box.innerHTML=c.mode===0?'<div class="tutor-comparison-empty">Save today’s review snapshot. A later review can then compare progress against it without storing drafts or audio.</div>':c.mode===1?'<div class="tutor-comparison-empty">One review snapshot is saved. Save a future review to generate a review-to-review comparison.</div>':!c.rows.length?'<div class="tutor-comparison-empty">The two latest saved reviews contain no measurable score or practice-count changes.</div>':c.rows.map(x=>{const cl=x.delta>0?"up":x.delta<0?"down":"flat";return`<div class="tutor-comparison-row"><strong>${x.label}</strong><span>${x.from} → ${x.to}</span><span class="tutor-delta ${cl}">${x.delta>0?"+":""}${x.delta}</span></div>`;}).join("");const notes=document.getElementById("tutorNotes");if(document.activeElement!==notes)notes.value=state.notes||"";document.getElementById("tutorNotesSaved").textContent=state.notesUpdated?`Saved ${new Date(state.notesUpdated).toLocaleDateString()}`:"Not saved yet";refreshTutorPrintNotes();}
+function saveTutorNotes(){const s=loadTutorReviewState();s.notes=document.getElementById("tutorNotes").value.slice(0,1200);s.notesUpdated=Date.now();saveTutorReviewState(s);document.getElementById("tutorNotesSaved").textContent="Saved locally";if(typeof renderProgressVault==="function")renderProgressVault();}
+function queueTutorNotesSave(){clearTimeout(tutorNotesSaveTimer);document.getElementById("tutorNotesSaved").textContent="Saving…";tutorNotesSaveTimer=setTimeout(saveTutorNotes,350);}
+function refreshTutorPrintNotes(){const s=loadTutorReviewState(),include=document.getElementById("includeTutorNotesExport")?.checked,b=document.getElementById("tutorPrintNotes"),t=document.getElementById("tutorPrintNotesText");if(!b||!t)return;t.textContent=s.notes||"";b.hidden=!(include&&s.notes.trim());}
+function saveTutorReviewSnapshot(){const p=tutorCurrentProfile();if(!p.results)return;const s=loadTutorReviewState(),snap={date:Date.now(),results:JSON.parse(JSON.stringify(p.results)),metrics:tutorMetrics()},last=s.snapshots[s.snapshots.length-1],same=last&&JSON.stringify(last.results)===JSON.stringify(snap.results)&&JSON.stringify(last.metrics)===JSON.stringify(snap.metrics),fb=document.getElementById("tutorReviewFeedback");if(same){fb.className="activity-summary neutral";fb.textContent="Nothing measurable has changed since the last saved review snapshot.";return;}s.snapshots.push(snap);if(s.snapshots.length>20)s.snapshots=s.snapshots.slice(-20);saveTutorReviewState(s);renderTutorReview();fb.className="activity-summary correct";fb.textContent="Review snapshot saved locally ✓ Future reviews can compare against it.";if(typeof renderProgressVault==="function")renderProgressVault();}
+function tutorReviewPlainText(){const p=tutorCurrentProfile();if(!p.results)return"Complete the diagnostic before creating a tutor review.";const m=tutorMetrics(),skills=tutorSortedSkills(p.results),s=loadTutorReviewState(),lines=["ENGLISH, BACK ON TRACK — PEDAGOGICAL PROGRESS REVIEW",`Generated: ${new Date().toLocaleString()}`,"","CURRENT PRIORITIES"];skills.slice(0,3).forEach((x,i)=>lines.push(`${i+1}. ${x.label}: ${x.score}%`));lines.push("","EVIDENCE OF PRACTICE",`- Real Listening: ${m.realListening}/6 human-voice missions`,`- Client simulations completed: ${m.simulations}`,`- Work-based missions completed: ${m.workMissions}`,`- Grammar Repair units: ${m.grammarUnits}/9`,`- Pronunciation Lab units: ${m.pronunciationUnits}/7`,`- Controlled Listening Lab tasks: ${m.listeningTasks}/5`,`- Speaking attempts: ${m.speakingAttempts}`,`- Writing attempts: ${m.writingAttempts}`,"","STILL FRAGILE");tutorFragile(p.results,m).forEach(x=>lines.push(`- ${x.label}: ${x.detail}`));lines.push("","RECENT WORK");tutorRecent(p,m).forEach(x=>lines.push(`- ${x.label}: ${x.detail}`));lines.push("","RECOMMENDED NEXT FOCUS");tutorRecs(p.results,m).forEach((x,i)=>lines.push(`${i+1}. ${x.title} — ${x.text}`));if(document.getElementById("includeTutorNotesExport")?.checked&&s.notes.trim())lines.push("","TUTOR / COACH NOTES",s.notes.trim());lines.push("","METHOD NOTE","Closed-task scores and activity metadata do not automatically measure spontaneous spoken or written performance. Human review remains valuable.");return lines.join("\n");}
+function copyTutorReview(){const fb=document.getElementById("tutorReviewFeedback");if(navigator.clipboard?.writeText)navigator.clipboard.writeText(tutorReviewPlainText()).then(()=>{fb.className="activity-summary correct";fb.textContent="Pedagogical summary copied ✓";}).catch(()=>{fb.className="activity-summary neutral";fb.textContent="Clipboard access was blocked by this browser.";});else{fb.className="activity-summary neutral";fb.textContent="Clipboard access is not available in this browser.";}}
+function downloadTutorReview(){const blob=new Blob([tutorReviewPlainText()],{type:"text/plain;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`english-back-on-track-tutor-review-${new Date().toISOString().slice(0,10)}.txt`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);const fb=document.getElementById("tutorReviewFeedback");fb.className="activity-summary correct";fb.textContent="Text review downloaded ✓";}
+function printTutorReview(){refreshTutorPrintNotes();document.body.classList.add("printing-tutor-review");document.body.classList.toggle("tutor-print-no-notes",!document.getElementById("includeTutorNotesExport")?.checked);const done=()=>{document.body.classList.remove("printing-tutor-review","tutor-print-no-notes");window.removeEventListener("afterprint",done);};window.addEventListener("afterprint",done);window.print();setTimeout(()=>{if(document.body.classList.contains("printing-tutor-review"))done();},2500);}
+function initTutorReview(){if(!document.getElementById("tutor-review"))return;document.getElementById("saveTutorSnapshotBtn")?.addEventListener("click",saveTutorReviewSnapshot);document.getElementById("copyTutorReviewBtn")?.addEventListener("click",copyTutorReview);document.getElementById("downloadTutorReviewBtn")?.addEventListener("click",downloadTutorReview);document.getElementById("printTutorReviewBtn")?.addEventListener("click",printTutorReview);document.getElementById("tutorNotes")?.addEventListener("input",queueTutorNotesSave);document.getElementById("includeTutorNotesExport")?.addEventListener("change",refreshTutorPrintNotes);renderTutorReview();}
+
+
 // V17 · My Data & Progress Vault
 const vaultMetaKey="ebackontrack-v17-vault-meta";
 const vaultSchemaVersion=1;
@@ -376,6 +403,11 @@ const vaultGroups=[
     id:"diagnostic",icon:"◎",title:"Diagnostic & current profile",
     description:"Diagnostic results/current profile and personalised module progress. In-progress diagnostic drafts stay on this device and are not included in backups.",
     keys:["ebackontrack-v2","ebackontrack-v3-progress","ebackontrack-v10-progress"]
+  },
+  {
+    id:"tutor",icon:"T",title:"Tutor Review",
+    description:"Tutor/coach notes and saved review snapshots containing scores and activity counts only. No drafts, audio or saved work-scenario content.",
+    keys:["ebackontrack-v25-tutor-review"]
   },
   {
     id:"daily",icon:"▦",title:"Daily Dashboard",
@@ -605,6 +637,9 @@ function buildVaultSummary(){
   lines.push(`- Weekly sprint sessions completed: ${sprint.active?.sessions?.filter(s=>s.completed).length||0}`);
   lines.push(`- Sprint history records: ${(sprint.history||[]).length}`);
   lines.push(`- Progress checkpoints/re-diagnostics: ${(progress.history||[]).length}`);
+  const tutor=typeof loadTutorReviewState==="function"?loadTutorReviewState():{snapshots:[],notes:""};
+  lines.push(`- Tutor Review snapshots: ${(tutor.snapshots||[]).length}`);
+  lines.push(`- Tutor notes stored locally: ${tutor.notes?.trim()?"yes":"no"}`);
   lines.push("");
   lines.push("PRIVACY");
   lines.push("- This summary contains progress metadata only.");
@@ -2078,6 +2113,13 @@ function uxToolStatus(anchor){
     case "#progress-check":
       if(checkpointReadiness().evidence>=4) return recommended();
       return (progress.history||[]).length?completed("Used"):optional();
+    case "#tutor-review":{
+      const tutor=loadTutorReviewState();
+      if(!results||!Object.keys(results).length)return optional();
+      if(checkpointReadiness().evidence>=4 && !(tutor.snapshots||[]).length)return recommended("Review ready");
+      if((tutor.snapshots||[]).length)return completed("Reviewed");
+      return optional();
+    }
     case "#progress-vault":{
       const hasData=vaultGroups.some(vaultActiveGroup);
       const old=!vault.lastBackup||Date.now()-vault.lastBackup>30*86400000;
@@ -2112,6 +2154,7 @@ function renderQuickLinks(){
     ]},
     {title:"Progress",icon:"✓",links:[
       ["#progress-check","Progress Check","Baseline · checkpoints"],
+      ["#tutor-review","Tutor Review","Clean pedagogical snapshot · print"],
       ["#progress-vault","My Data & Backup","Export · restore · privacy"]
     ]}
   ];
@@ -7187,6 +7230,7 @@ const appViewGroupMap={
   programme:"explore",
   "how-it-works":"explore",
   "progress-check":"progress",
+  "tutor-review":"progress",
   "progress-vault":"progress",
   diagnostic:"progress"
 };
@@ -7244,6 +7288,7 @@ function appNavigate(id,{push=true,focus=true,scroll=true}={}){
       setTimeout(()=>heading.focus({preventScroll:true}),80);
     }
   }
+  if(root.id==="tutor-review"&&typeof renderTutorReview==="function")renderTutorReview();
   if(typeof closeUxNavGroups==="function")closeUxNavGroups();
   if(window.innerWidth<=820&&typeof closeMobileNav==="function")closeMobileNav();
 }
@@ -7286,6 +7331,7 @@ const uxSectionMap={
   "goal-sprint":["Today","Goals & Sprint"],
   "progress-vault":["Progress","My Data & Backup"],
   "progress-check":["Progress","Progress Check"],
+  "tutor-review":["Progress","Tutor Review"],
   "how-it-works":["Explore","Programme overview"],
   "programme":["Explore","Job-specific roadmap"],
   "diagnostic":["Progress","Diagnostic"],
@@ -7371,6 +7417,7 @@ initGoalSprint();
 initRealListeningLab();
 initWorkEnglishLab();
 initClientCallSimulator();
+initTutorReview();
 initResourceMaintenance();
 initAuthenticResourcesHub();
 initPronunciationLab();
