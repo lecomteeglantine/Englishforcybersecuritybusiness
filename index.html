@@ -1448,6 +1448,48 @@
         <span>This site does not embed third-party trackers or copy full articles. Links open the original publisher in a new tab; only your local completion status is stored here.</span>
       </div>
 
+      <div class="resource-health-panel">
+        <div class="resource-health-head">
+          <div>
+            <p class="small-label">LIBRARY HEALTH</p>
+            <h3>Freshness & link maintenance</h3>
+            <p>External links change. The site tracks when each source was last genuinely verified, when it should be checked again, and any problem you report locally.</p>
+          </div>
+          <button class="secondary-button" id="toggleResourceMaintenanceBtn" type="button">Open maintenance view</button>
+        </div>
+
+        <div class="resource-health-kpis">
+          <div><strong id="resourceHealthVerified">0</strong><span>currently verified</span></div>
+          <div><strong id="resourceHealthDue">0</strong><span>recheck / overdue</span></div>
+          <div><strong id="resourceHealthIssues">0</strong><span>reported issues</span></div>
+          <div><strong id="resourceHealthUnchecked">0</strong><span>never verified</span></div>
+        </div>
+
+        <div class="resource-maintenance-workspace" id="resourceMaintenanceWorkspace" hidden>
+          <div class="resource-maintenance-note">
+            <strong>No fake automatic link checker.</strong>
+            <span>Browser security rules make cross-site status checks unreliable. “Verified” therefore means the source was actually checked, or you opened it and explicitly confirmed that it works.</span>
+          </div>
+
+          <div class="resource-maintenance-toolbar">
+            <label>
+              <span>Status</span>
+              <select id="resourceMaintenanceFilter">
+                <option value="all">All resources</option>
+                <option value="verified">Verified</option>
+                <option value="soon">Recheck soon</option>
+                <option value="overdue">Overdue</option>
+                <option value="unchecked">Never verified</option>
+                <option value="issue">Reported issue</option>
+              </select>
+            </label>
+            <button class="secondary-button" id="recalculateResourceHealthBtn" type="button">Recalculate dates</button>
+          </div>
+
+          <div id="resourceMaintenanceList" class="resource-maintenance-list"></div>
+        </div>
+      </div>
+
       <div class="resource-of-day-card">
         <div>
           <p class="small-label">RESOURCE OF THE DAY</p>

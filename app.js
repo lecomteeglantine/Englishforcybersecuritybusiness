@@ -224,7 +224,7 @@ const vaultGroups=[
   {
     id:"resources",icon:"↗",title:"Authentic Resources",
     description:"Saved/completed resource status and formats used.",
-    keys:["ebackontrack-v14-resources"]
+    keys:["ebackontrack-v14-resources","ebackontrack-v21-resource-maintenance"]
   },
   {
     id:"simulator",icon:"C",title:"Client Simulator",
@@ -401,6 +401,10 @@ function buildVaultSummary(){
   lines.push(`- Pronunciation Lab: ${(pron.completed||[]).length} units completed`);
   lines.push(`- Phrasebook: ${phrase.saved||0} saved · ${phrase.due||0} due · ${phrase.active||0} active`);
   lines.push(`- Authentic resources completed: ${(resources.completed||[]).length}`);
+  if(typeof resourceHealthStats==="function"){
+    const health=resourceHealthStats();
+    lines.push(`- Resource library health: ${health.verified} verified · ${health.soon+health.overdue} due/recheck · ${health.unchecked} never verified · ${health.issue} issue(s)`);
+  }
   lines.push(`- Client simulations completed: ${(sim.completed||[]).length}`);
   const work=typeof loadWorkEnglishState==="function"?loadWorkEnglishState():{attempts:[],saved:[]};
   lines.push(`- Work-based missions completed: ${(work.attempts||[]).length}`);
@@ -1855,9 +1859,12 @@ function uxToolStatus(anchor){
       if(work.attempts.length>=3) return completed();
       if(sim.completed.length>=1) return recommended();
       return optional();
-    case "#resources-hub":
+    case "#resources-hub":{
+      const health=typeof resourceHealthStats==="function"?resourceHealthStats():null;
+      if(health&&(health.issue>0||health.overdue>0))return recommended("Needs check");
       if(resources.completed.length>=6) return completed();
       return results.listening<75?recommended():optional();
+    }
     case "#progress-check":
       if(checkpointReadiness().evidence>=4) return recommended();
       return (progress.history||[]).length?completed("Used"):optional();
@@ -3610,6 +3617,198 @@ function initClientCallSimulator(){
 }
 
 
+
+
+// V21 · Resource maintenance & freshness
+const resourceMaintenanceStateKey="ebackontrack-v21-resource-maintenance";
+const resourceVerifiedBaseline={
+  "orange-navigator-2026":"2026-08-25",
+  "ncsc-recovery-2026":"2026-08-25",
+  "australia-zimbra-2026":"2026-08-25",
+  "reuters-ai-incidents-2026":"2026-08-25",
+  "techradar-mtta-2026":"2026-08-25",
+  "unit42-frontier-ai-2026":"2026-08-25",
+  "unit42-ir-2025":"2026-08-25",
+  "microsoft-defense-2025":"2026-08-25",
+  "ncsc-retail-2025":"2026-08-25",
+  "google-ti-overview-2025":"2026-08-25"
+};
+const resourceVerificationNotes={
+  "orange-navigator-2026":"Publisher page checked",
+  "ncsc-recovery-2026":"Publisher page checked",
+  "australia-zimbra-2026":"Government advisory checked",
+  "reuters-ai-incidents-2026":"Reuters result confirmed",
+  "techradar-mtta-2026":"Publisher page checked",
+  "unit42-frontier-ai-2026":"Publisher page checked",
+  "unit42-ir-2025":"Publisher page checked",
+  "microsoft-defense-2025":"Official PDF checked",
+  "ncsc-retail-2025":"Publisher page checked",
+  "google-ti-overview-2025":"YouTube result confirmed"
+};
+
+function loadResourceMaintenanceState(){
+  try{
+    const raw=JSON.parse(localStorage.getItem(resourceMaintenanceStateKey))||{};
+    return {
+      verified:raw.verified||{},
+      issues:raw.issues||{},
+      opened:raw.opened||{}
+    };
+  }catch(e){return {verified:{},issues:{},opened:{}};}
+}
+function saveResourceMaintenanceState(state){
+  localStorage.setItem(resourceMaintenanceStateKey,JSON.stringify(state));
+}
+function resourceVerificationDate(id){
+  const state=loadResourceMaintenanceState();
+  return state.verified[id]||resourceVerifiedBaseline[id]||null;
+}
+function resourceFreshnessDays(resource){
+  if(resource.format==="podcast")return 90;
+  if(resource.format==="video")return 180;
+  if(resource.format==="article")return resource.year>=2026?180:270;
+  if(resource.format==="report")return 365;
+  return 180;
+}
+function resourceHealth(resource){
+  const state=loadResourceMaintenanceState();
+  if(state.issues[resource.id]){
+    return {key:"issue",label:"Reported issue",className:"issue",verified:resourceVerificationDate(resource.id),daysLeft:null};
+  }
+  const verified=resourceVerificationDate(resource.id);
+  if(!verified)return {key:"unchecked",label:"Never verified",className:"unchecked",verified:null,daysLeft:null};
+  const verifiedDate=new Date(`${verified}T12:00:00`);
+  const age=Math.max(0,Math.floor((Date.now()-verifiedDate.getTime())/86400000));
+  const policy=resourceFreshnessDays(resource);
+  const left=policy-age;
+  if(left<0)return {key:"overdue",label:"Overdue",className:"overdue",verified,daysLeft:left};
+  if(left<=30)return {key:"soon",label:"Recheck soon",className:"soon",verified,daysLeft:left};
+  return {key:"verified",label:"Verified",className:"verified",verified,daysLeft:left};
+}
+function formatResourceVerified(date){
+  if(!date)return "Never";
+  const d=new Date(`${date}T12:00:00`);
+  return d.toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"});
+}
+function resourceNextCheck(resource){
+  const verified=resourceVerificationDate(resource.id);
+  if(!verified)return "Check now";
+  const d=new Date(`${verified}T12:00:00`);
+  d.setDate(d.getDate()+resourceFreshnessDays(resource));
+  return d.toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"});
+}
+function resourceHealthStats(){
+  const stats={verified:0,soon:0,overdue:0,unchecked:0,issue:0};
+  authenticResources.forEach(r=>stats[resourceHealth(r).key]++);
+  return stats;
+}
+function renderResourceHealthKPIs(){
+  const s=resourceHealthStats();
+  document.getElementById("resourceHealthVerified").textContent=s.verified;
+  document.getElementById("resourceHealthDue").textContent=s.soon+s.overdue;
+  document.getElementById("resourceHealthIssues").textContent=s.issue;
+  document.getElementById("resourceHealthUnchecked").textContent=s.unchecked;
+}
+function resourceHealthBadge(resource){
+  const h=resourceHealth(resource);
+  return `<span class="resource-health-badge ${h.className}">${h.label}</span>`;
+}
+function markResourceOpened(id){
+  const state=loadResourceMaintenanceState();
+  state.opened[id]=Date.now();saveResourceMaintenanceState(state);
+}
+function confirmResourceVerified(id){
+  const r=resourceById(id);if(!r)return;
+  const state=loadResourceMaintenanceState();
+  const opened=state.opened[id];
+  const recentlyOpened=opened && Date.now()-opened<30*60*1000;
+  const message=recentlyOpened
+    ?`Confirm that you opened “${r.title}” and the intended resource is still available?`
+    :`Mark “${r.title}” as verified today?\n\nUse this only after you have opened the original source and confirmed that it still works.`;
+  if(!confirm(message))return;
+  state.verified[id]=new Date().toISOString().slice(0,10);
+  delete state.issues[id];
+  saveResourceMaintenanceState(state);
+  renderResourceHub();
+  renderResourceMaintenance();
+  if(typeof renderProgressVault==="function")renderProgressVault();
+  if(typeof showAppToast==="function")showAppToast("Resource marked as verified today.");
+}
+function toggleResourceIssue(id){
+  const r=resourceById(id);if(!r)return;
+  const state=loadResourceMaintenanceState();
+  if(state.issues[id]){
+    delete state.issues[id];
+    saveResourceMaintenanceState(state);
+    if(typeof showAppToast==="function")showAppToast("Local resource issue cleared.");
+  }else{
+    const note=prompt("What is wrong with this resource? (Optional — stored locally only)", "Link unavailable or resource changed")||"Problem reported";
+    state.issues[id]={date:Date.now(),note:note.slice(0,240)};
+    saveResourceMaintenanceState(state);
+    if(typeof showAppToast==="function")showAppToast("Resource issue saved locally.");
+  }
+  renderResourceHub();renderResourceMaintenance();
+}
+function maintenanceFilterPass(resource,filter){
+  if(filter==="all")return true;
+  return resourceHealth(resource).key===filter;
+}
+function renderResourceMaintenance(){
+  if(!document.getElementById("resourceMaintenanceList"))return;
+  renderResourceHealthKPIs();
+  const filter=document.getElementById("resourceMaintenanceFilter")?.value||"all";
+  const state=loadResourceMaintenanceState();
+  const list=authenticResources
+    .filter(r=>maintenanceFilterPass(r,filter))
+    .sort((a,b)=>{
+      const order={issue:0,overdue:1,unchecked:2,soon:3,verified:4};
+      return order[resourceHealth(a).key]-order[resourceHealth(b).key];
+    });
+
+  document.getElementById("resourceMaintenanceList").innerHTML=list.length?list.map(r=>{
+    const h=resourceHealth(r);
+    const note=state.issues[r.id]?.note || resourceVerificationNotes[r.id] || "";
+    return `<article class="resource-maintenance-item ${h.key==="issue"?"issue":""}">
+      <div class="resource-maintenance-title">
+        ${resourceHealthBadge(r)}
+        <strong>${r.title}</strong>
+        <small>${r.publisher} · ${resourceFormatLabel(r.format)} · ${r.date}${note?` · ${note}`:""}</small>
+      </div>
+      <div class="resource-maintenance-dates">
+        <span>Last verified</span>
+        <strong>${formatResourceVerified(h.verified)}</strong>
+        <span>Next check</span>
+        <strong>${resourceNextCheck(r)}</strong>
+      </div>
+      <div class="resource-maintenance-actions">
+        <a href="${r.url}" target="_blank" rel="noopener noreferrer" data-resource-maint-open="${r.id}">Open source ↗</a>
+        <button type="button" data-resource-verify="${r.id}">Mark verified</button>
+        <button class="${h.key==="issue"?"clear-issue-btn":"issue-btn"}" type="button" data-resource-issue="${r.id}">${h.key==="issue"?"Clear issue":"Report issue"}</button>
+      </div>
+    </article>`;
+  }).join(""):`<div class="dashboard-empty">No resource currently matches this maintenance status.</div>`;
+
+  document.querySelectorAll("[data-resource-maint-open]").forEach(a=>a.addEventListener("click",()=>markResourceOpened(a.dataset.resourceMaintOpen)));
+  document.querySelectorAll("[data-resource-verify]").forEach(b=>b.addEventListener("click",()=>confirmResourceVerified(b.dataset.resourceVerify)));
+  document.querySelectorAll("[data-resource-issue]").forEach(b=>b.addEventListener("click",()=>toggleResourceIssue(b.dataset.resourceIssue)));
+}
+function initResourceMaintenance(){
+  if(!document.getElementById("resource-health-panel") && !document.querySelector(".resource-health-panel"))return;
+  document.getElementById("toggleResourceMaintenanceBtn")?.addEventListener("click",()=>{
+    const box=document.getElementById("resourceMaintenanceWorkspace");
+    box.hidden=!box.hidden;
+    document.getElementById("toggleResourceMaintenanceBtn").textContent=box.hidden?"Open maintenance view":"Close maintenance view";
+    if(!box.hidden)renderResourceMaintenance();
+  });
+  document.getElementById("resourceMaintenanceFilter")?.addEventListener("change",renderResourceMaintenance);
+  document.getElementById("recalculateResourceHealthBtn")?.addEventListener("click",()=>{
+    renderResourceMaintenance();renderResourceHub();
+    if(typeof showAppToast==="function")showAppToast("Freshness dates recalculated.");
+  });
+  renderResourceHealthKPIs();
+}
+
+
 // V14 · Authentic Resources Hub
 const authenticResourceStateKey="ebackontrack-v14-resources";
 
@@ -3865,9 +4064,11 @@ function toggleResourceSaved(id){
   s.saved=[...set];saveAuthenticResourceState(s);renderResourceHub();
 }
 function resourceOfDay(){
+  const available=authenticResources.filter(r=>resourceHealth(r).key!=="issue");
+  const pool=available.length?available:authenticResources;
   const d=new Date();
-  const index=(d.getFullYear()*31+d.getMonth()*7+d.getDate())%authenticResources.length;
-  return authenticResources[index];
+  const index=(d.getFullYear()*31+d.getMonth()*7+d.getDate())%pool.length;
+  return pool[index];
 }
 function renderResourceOfDay(){
   const r=resourceOfDay();
@@ -3903,19 +4104,23 @@ function renderResourceHub(){
       <div class="resource-publisher">${r.publisher}</div>
       <p>${r.why}</p>
       <div class="resource-tags"><span>${r.topic}</span><span>${r.level}</span></div>
+      <div class="resource-card-health">${resourceHealthBadge(r)}<small>Last verified: ${formatResourceVerified(resourceVerificationDate(r.id))}</small></div>
       <div class="resource-card-footer">
         <div class="resource-meta-line">${r.date} · ${r.time}${done?" · ✓ completed":""}</div>
         <div class="resource-card-actions">
           <button class="secondary-button" type="button" data-resource-task="${r.id}">Open task</button>
-          <a class="text-link" href="${r.url}" target="_blank" rel="noopener noreferrer">Source ↗</a>
+          <a class="text-link" href="${r.url}" target="_blank" rel="noopener noreferrer" data-resource-source-open="${r.id}">Source ↗</a>
           <button class="secondary-button resource-save-btn ${saved?"saved":""}" type="button" data-resource-save="${r.id}">${saved?"★ Saved":"☆ Save"}</button>
+          <button class="secondary-button resource-maintenance-mini" type="button" data-resource-card-verify="${r.id}">Verify</button>
         </div>
       </div>
     </article>`;
   }).join(""):`<div class="dashboard-empty">No resource matches these filters.</div>`;
   document.querySelectorAll("[data-resource-task]").forEach(btn=>btn.addEventListener("click",()=>openResourceTask(btn.dataset.resourceTask)));
   document.querySelectorAll("[data-resource-save]").forEach(btn=>btn.addEventListener("click",()=>toggleResourceSaved(btn.dataset.resourceSave)));
-  renderResourceStats();renderResourceOfDay();
+  document.querySelectorAll("[data-resource-source-open]").forEach(a=>a.addEventListener("click",()=>markResourceOpened(a.dataset.resourceSourceOpen)));
+  document.querySelectorAll("[data-resource-card-verify]").forEach(btn=>btn.addEventListener("click",()=>confirmResourceVerified(btn.dataset.resourceCardVerify)));
+  renderResourceStats();renderResourceOfDay();renderResourceHealthKPIs();
 }
 let currentAuthenticResourceId=null;
 let currentResourceGistPassed=false;
@@ -3959,6 +4164,7 @@ function openResourceTask(id){
   document.getElementById("resourceTaskTags").innerHTML=`<span class="module-tag">${r.topic}</span><span class="module-tag">${r.year}</span>`;
   document.getElementById("resourceTaskPublisher").textContent=r.publisher;
   document.getElementById("resourceTaskExternalLink").href=r.url;
+  document.getElementById("resourceTaskExternalLink").onclick=()=>markResourceOpened(r.id);
   document.getElementById("resourceBeforeTask").textContent=r.before;
   document.getElementById("resourceBeforeInput").value="";
   document.getElementById("resourceDuringQuestion").textContent=r.gist.q;
@@ -3973,7 +4179,10 @@ function openResourceTask(id){
   document.querySelectorAll("[data-resource-check]").forEach(x=>x.checked=false);
   document.getElementById("resourceCompleteFeedback").textContent="";
   document.getElementById("resourceCompleteFeedback").className="activity-summary";
-  document.getElementById("resourceTaskStatus").textContent="Authentic input";
+  {
+    const health=resourceHealth(r);
+    document.getElementById("resourceTaskStatus").textContent=`${health.label} · Authentic input`;
+  }
   document.getElementById("resourceTaskWorkspace").hidden=false;
   document.getElementById("resourceLibrary").hidden=true;
   document.querySelector(".resource-toolbar").hidden=true;
@@ -6571,6 +6780,7 @@ initSpeakingLab();
 initGoalSprint();
 initWorkEnglishLab();
 initClientCallSimulator();
+initResourceMaintenance();
 initAuthenticResourcesHub();
 initPronunciationLab();
 initWritingLab();
